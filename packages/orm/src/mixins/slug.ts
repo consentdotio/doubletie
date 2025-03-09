@@ -62,6 +62,27 @@ export type Options<TDatabase, TTableName extends keyof TDatabase> = {
 };
 
 /**
+ * Type for values that can be inserted or updated
+ *
+ * @typeParam TDatabase - Database schema type
+ * @typeParam TTableName - Table name in the database
+ */
+export type TableValues<
+	TDatabase,
+	TTableName extends keyof TDatabase,
+> = Partial<Record<keyof TDatabase[TTableName] & string, unknown>>;
+
+/**
+ * Type guard to check if a value is a string
+ *
+ * @param value - Value to check
+ * @returns Whether the value is a string
+ */
+function isString(value: unknown): value is string {
+	return typeof value === 'string';
+}
+
+/**
  * Generates a slug value from data using the provided options
  *
  * @typeParam TDatabase - Database schema type
@@ -71,15 +92,16 @@ export type Options<TDatabase, TTableName extends keyof TDatabase> = {
  * @returns Generated slug string or undefined if no source data
  */
 function generateSlugValue<TDatabase, TTableName extends keyof TDatabase>(
-	data: Record<string, unknown>,
+	data: TableValues<TDatabase, TTableName>,
 	options: Options<TDatabase, TTableName>
 ): string | undefined {
 	const { field, sources, operation, slugOptions = {} } = options;
 	const { separator = '-', truncate, dictionary } = slugOptions;
 
 	// Skip if data already has a valid slug
-	if (typeof data[field] === 'string' && data[field] !== '') {
-		return data[field] as string;
+	const fieldValue = data[field];
+	if (isString(fieldValue) && fieldValue !== '') {
+		return fieldValue;
 	}
 
 	// Collect values from source fields
@@ -179,6 +201,7 @@ function implementSlug<
 ) {
 	type Table = TDatabase[TTableName];
 	type TableRecord = Selectable<Table>;
+	type TableInsertValues = TableValues<TDatabase, TTableName>;
 
 	/**
 	 * Checks if data already has a valid slug field
@@ -186,13 +209,14 @@ function implementSlug<
 	 * @param values - Values to check
 	 * @returns Whether the values already have a slug
 	 */
-	const hasValidSlugField = (values: Record<string, unknown>): boolean => {
+	const hasValidSlugField = (values: TableInsertValues): boolean => {
 		const { field } = options;
+		const fieldValue = values[field];
 		return (
 			field in values &&
-			values[field] != null &&
-			typeof values[field] === 'string' &&
-			(values[field] as string).trim() !== ''
+			fieldValue != null &&
+			isString(fieldValue) &&
+			fieldValue.trim() !== ''
 		);
 	};
 
@@ -202,7 +226,7 @@ function implementSlug<
 	 * @param values - Values to add slug to
 	 * @returns Values with slug added
 	 */
-	const addSlugToValues = <T extends Record<string, unknown>>(values: T): T => {
+	const addSlugToValues = <T extends TableInsertValues>(values: T): T => {
 		if (hasValidSlugField(values)) {
 			return values;
 		}
@@ -216,6 +240,45 @@ function implementSlug<
 			...values,
 			[options.field]: slug,
 		};
+	};
+
+	/**
+	 * Converts a value to the appropriate column type for queries
+	 *
+	 * @param value - Value to convert
+	 * @returns Value with the appropriate type for the column
+	 */
+	const convertToColumnValue = <TColumnName extends keyof Table & string>(
+		value: string,
+		column: TColumnName
+	): Readonly<SelectType<Table[TColumnName]>> => {
+		// For most cases, the string value can be directly used
+		return value as unknown as Readonly<SelectType<Table[TColumnName]>>;
+	};
+
+	/**
+	 * Safely converts values for insertion
+	 *
+	 * @param values - Values to convert
+	 * @returns Values with the appropriate types for insertion
+	 */
+	const prepareForInsert = (
+		values: TableInsertValues
+	): InsertObject<TDatabase, TTableName> => {
+		// This is a safer approach than using double type assertions
+		return values as unknown as InsertObject<TDatabase, TTableName>;
+	};
+
+	/**
+	 * Creates a proper select expression for returning all columns
+	 *
+	 * @returns Select expression for all columns
+	 */
+	const allColumnsExpression = (): SelectExpression<
+		TDatabase,
+		TTableName
+	>[] => {
+		return ['*'] as unknown as SelectExpression<TDatabase, TTableName>[];
 	};
 
 	return {
@@ -232,13 +295,7 @@ function implementSlug<
 			value: string,
 			column: keyof Table & string = options.field
 		): Promise<TableRecord | undefined> {
-			// Cast string to the appropriate column type
-			return model.findOne(
-				column,
-				value as unknown as Readonly<
-					SelectType<TDatabase[TTableName][keyof Table & string]>
-				>
-			);
+			return model.findOne(column, convertToColumnValue(value, column));
 		},
 
 		/**
@@ -248,20 +305,13 @@ function implementSlug<
 		 * @returns Inserted record
 		 * @throws {Error} If insert fails
 		 */
-		async insertWithSlug(
-			values: Record<string, unknown>
-		): Promise<TableRecord> {
+		async insertWithSlug(values: TableInsertValues): Promise<TableRecord> {
 			const processedValues = addSlugToValues(values);
 
 			const result = await model
 				.insertInto()
-				.values(
-					processedValues as unknown as InsertObject<TDatabase, TTableName>
-				)
-				.returning(['*'] as unknown as SelectExpression<
-					TDatabase,
-					TTableName
-				>[])
+				.values(prepareForInsert(processedValues))
+				.returning(allColumnsExpression())
 				.executeTakeFirst();
 
 			if (!result) {
@@ -279,7 +329,7 @@ function implementSlug<
 		 * @returns Inserted or found record
 		 */
 		async insertIfNotExistsWithSlug(
-			values: Record<string, unknown>,
+			values: TableInsertValues,
 			uniqueColumn: keyof Table & string
 		): Promise<TableRecord | undefined> {
 			const processedValues = addSlugToValues(values);
@@ -305,7 +355,7 @@ function implementSlug<
 					return model.findOne(
 						uniqueColumn,
 						uniqueValue as unknown as Readonly<
-							SelectType<TDatabase[TTableName][keyof Table & string]>
+							SelectType<Table[keyof Table & string]>
 						>
 					);
 				}
@@ -323,14 +373,14 @@ function implementSlug<
 		 */
 		async upsertWithSlug(
 			criteria: { column: keyof Table & string; value: unknown },
-			insertValues: Record<string, unknown>,
-			updateValues: Record<string, unknown>
+			insertValues: TableInsertValues,
+			updateValues: TableInsertValues
 		): Promise<TableRecord | undefined> {
 			// First try to find the record
 			const existing = await model.findOne(
 				criteria.column,
 				criteria.value as unknown as Readonly<
-					SelectType<TDatabase[TTableName][keyof Table & string]>
+					SelectType<Table[keyof Table & string]>
 				>
 			);
 
@@ -354,10 +404,7 @@ function implementSlug<
 							keyof Table & string
 						>
 					)
-					.returning(['*'] as unknown as SelectExpression<
-						TDatabase,
-						TTableName
-					>[])
+					.returning(allColumnsExpression())
 					.executeTakeFirst();
 
 				return result as TableRecord;
@@ -379,11 +426,11 @@ function implementSlug<
 			// Handle both single object and array of objects
 			if (Array.isArray(data)) {
 				return data.map((item) =>
-					addSlugToValues(item as unknown as Record<string, unknown>)
+					addSlugToValues(item as unknown as TableInsertValues)
 				) as typeof data;
 			}
 			return addSlugToValues(
-				data as unknown as Record<string, unknown>
+				data as unknown as TableInsertValues
 			) as typeof data;
 		},
 	};
