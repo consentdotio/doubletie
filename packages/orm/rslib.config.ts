@@ -1,12 +1,6 @@
-import { pluginNodePolyfill } from '@rsbuild/plugin-node-polyfill';
 import { defineConfig } from '@rslib/core';
 
 export default defineConfig({
-	plugins: [
-		pluginNodePolyfill({
-			force: true,
-		}),
-	],
 	source: {
 		entry: {
 			index: ['./src/index.ts'],
