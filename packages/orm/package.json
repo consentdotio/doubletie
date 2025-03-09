@@ -1,0 +1,50 @@
+{
+	"name": "@doubletie/orm",
+	"version": "0.0.1",
+	"description": "Type safe ORM for kysely",
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/seeden/kysely-orm.git"
+	},
+	"engines": {
+		"node": ">=16.2.0"
+	},
+	"main": "dist/cjs/index.js",
+	"module": "dist/esm/index.js",
+	"exports": {
+		".": {
+			"import": "./dist/esm/index.js",
+			"require": "./dist/cjs/index.js"
+		}
+	},
+	"scripts": {
+		"clean": "rm -rf dist",
+		"fmt": "pnpm biome format --write . && biome check --formatter-enabled=false --linter-enabled=false --organize-imports-enabled=true --write",
+		"lint": "pnpm biome lint ./src",
+		"build": "rslib build",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"prepublishOnly": "npm run build",
+		"valid": "tsc --noEmit"
+	},
+	"author": "Christopher Burns <christopher@doubletie.com>",
+	"license": "MIT",
+	"dependencies": {
+		"base-x": "^5.0.0",
+		"url-slug": "^3.0.4"
+	},
+	"devDependencies": {
+		"@rsbuild/plugin-node-polyfill": "^1.3.0",
+		"@types/better-sqlite3": "^7.6.4",
+		"@types/node": "^20.2.5",
+		"@types/pg": "^8.10.1",
+		"better-sqlite3": "^8.4.0",
+		"dotenv": "^16.0.3",
+		"kysely": "0.27.6",
+		"typescript": "5.0.4",
+		"vitest": "^3.0.8"
+	},
+	"peerDependencies": {
+		"kysely": "~0.27.0"
+	}
+}
