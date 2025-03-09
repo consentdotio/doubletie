@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import createModel from '~/model';
+import createModel from '../../model';
 
 describe('Error Handling - Unit Tests', () => {
 	// Mock database for unit tests

@@ -1,6 +1,6 @@
 import { sql } from 'kysely';
 import { describe, expect, it, vi } from 'vitest';
-import createModel from '~/model';
+import createModel from '../../model';
 
 describe('Advanced Model Operations - Unit Tests', () => {
 	it('should support creating custom query builders', async () => {

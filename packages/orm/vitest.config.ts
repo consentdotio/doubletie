@@ -8,7 +8,10 @@ export default defineConfig({
 		globals: true,
 
 		// Test organization
-		include: ['tests/**/*.{test,spec}.{js,ts}', 'tests/**/*.test-d.ts'],
+		include: [
+			'src/__tests__/**/*.{test,spec}.{js,ts}',
+			'src/__tests__/**/*.test-d.ts',
+		],
 		exclude: ['**/node_modules/**', '**/dist/**'],
 
 		// Type checking
@@ -30,13 +33,13 @@ export default defineConfig({
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'json', 'html'],
-			exclude: ['tests/fixtures/**', 'tests/types/**'],
+			exclude: ['src/__tests__/fixtures/**', 'src/__tests__/types/**'],
 		},
 
 		// Configure path aliases
 		alias: {
 			'~': resolve(__dirname, './src'),
-			tests: resolve(__dirname, './tests/*'),
+			'~/tests': resolve(__dirname, './src/__tests__'),
 		},
 	},
 });

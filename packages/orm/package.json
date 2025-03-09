@@ -9,6 +9,7 @@
 	"engines": {
 		"node": ">=16.2.0"
 	},
+	"type": "module",
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.js",
 	"exports": {

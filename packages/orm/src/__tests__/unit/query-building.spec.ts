@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import createModel from '~/model';
+import { Database } from '../../database';
+import createModel from '../../model';
+import { createMockDatabase, createMockReturnThis } from '../fixtures/mock-db';
 
 describe('unit: query building functionality', () => {
 	// Define test database types
@@ -29,38 +31,32 @@ describe('unit: query building functionality', () => {
 		};
 	}
 
-	let mockDb;
-	let mockUserBuilder;
-	let userModel;
+	let mockDb: any;
+	let userModel: any;
 
 	beforeEach(() => {
-		// Set up mock query builder with chaining methods
-		mockUserBuilder = {
-			selectFrom: vi.fn().mockReturnThis(),
-			select: vi.fn().mockReturnThis(),
-			where: vi.fn().mockReturnThis(),
-			whereIn: vi.fn().mockReturnThis(),
-			whereLike: vi.fn().mockReturnThis(),
-			whereNotNull: vi.fn().mockReturnThis(),
-			whereNull: vi.fn().mockReturnThis(),
-			orWhere: vi.fn().mockReturnThis(),
-			andWhere: vi.fn().mockReturnThis(),
-			innerJoin: vi.fn().mockReturnThis(),
-			leftJoin: vi.fn().mockReturnThis(),
-			on: vi.fn().mockReturnThis(),
-			orderBy: vi.fn().mockReturnThis(),
-			groupBy: vi.fn().mockReturnThis(),
-			having: vi.fn().mockReturnThis(),
-			limit: vi.fn().mockReturnThis(),
-			offset: vi.fn().mockReturnThis(),
+		// Set up all the mock methods
+		const mockMethods = {
+			selectFrom: createMockReturnThis(),
+			select: createMockReturnThis(),
+			where: createMockReturnThis(),
+			whereIn: createMockReturnThis(),
+			whereLike: createMockReturnThis(),
+			whereNotNull: createMockReturnThis(),
+			whereNull: createMockReturnThis(),
+			orWhere: createMockReturnThis(),
+			andWhere: createMockReturnThis(),
+			innerJoin: createMockReturnThis(),
+			leftJoin: createMockReturnThis(),
+			on: createMockReturnThis(),
+			orderBy: createMockReturnThis(),
+			groupBy: createMockReturnThis(),
+			having: createMockReturnThis(),
+			limit: createMockReturnThis(),
+			offset: createMockReturnThis(),
 			execute: vi.fn().mockResolvedValue([]),
 			executeTakeFirst: vi.fn().mockResolvedValue(null),
 			$dynamic: vi.fn(),
-		};
-
-		// Set up mock database
-		mockDb = {
-			...mockUserBuilder,
 			fn: {
 				count: vi.fn().mockReturnValue('COUNT expression'),
 				avg: vi.fn().mockReturnValue('AVG expression'),
@@ -68,8 +64,15 @@ describe('unit: query building functionality', () => {
 			},
 		};
 
-		// Create model with mock db
-		userModel = createModel<TestDB, 'users', 'id'>(mockDb, 'users', 'id');
+		// Create a mock database with all our methods
+		mockDb = createMockDatabase<TestDB>(mockMethods);
+
+		// Create model with mock db - explicitly provide type parameters
+		userModel = createModel<TestDB, 'users', 'id'>(
+			mockDb as unknown as Database<TestDB>,
+			'users',
+			'id'
+		);
 	});
 
 	describe('basic query building', () => {
@@ -100,7 +103,7 @@ describe('unit: query building functionality', () => {
 				2,
 				'created_at',
 				'>',
-				expect.any(Date)
+				new Date('2023-01-01')
 			);
 		});
 
@@ -141,20 +144,21 @@ describe('unit: query building functionality', () => {
 		});
 
 		it('should build a query with dynamic conditions', async () => {
+			// Set up some test filters
 			const filters = {
 				status: 'active',
-				name: 'John',
+				createdAfter: new Date('2023-01-01'),
 			};
 
-			mockDb.$dynamic.mockImplementation((callback) => {
+			mockDb.$dynamic.mockImplementation((callback: any) => {
 				// Mock implementation that handles the callback
 				const mockExpressionBuilder = {
 					and: vi.fn().mockReturnValue('AND expression'),
 				};
 
-				// Create a simple version of eb that doesn't really use the parameters
 				// but returns something that can be added to conditions array
-				const eb = vi.fn().mockReturnValue('condition');
+				const eb: any = vi.fn().mockReturnValue('condition');
+				// Add and method to the mock function
 				eb.and = mockExpressionBuilder.and;
 
 				return callback(eb);
@@ -162,18 +166,18 @@ describe('unit: query building functionality', () => {
 
 			await userModel
 				.selectFrom()
-				.where((eb) => {
+				.where((eb: any) => {
 					const conditions = [];
 
 					if (filters.status) {
 						conditions.push(eb('status', '=', filters.status));
 					}
 
-					if (filters.name) {
-						conditions.push(eb('name', 'like', `%${filters.name}%`));
+					if (filters.createdAfter) {
+						conditions.push(eb('created_at', '>', filters.createdAfter));
 					}
 
-					return conditions.length ? eb.and(conditions) : undefined;
+					return eb.and(conditions);
 				})
 				.execute();
 
@@ -212,7 +216,7 @@ describe('unit: query building functionality', () => {
 
 		it('should build a query with complex join conditions', async () => {
 			// Mock the callback for complex joins
-			mockDb.innerJoin.mockImplementation((table, callback) => {
+			mockDb.innerJoin.mockImplementation((table: any, callback: any) => {
 				if (typeof callback === 'function') {
 					const mockJoinBuilder = {
 						onRef: vi.fn().mockReturnThis(),
@@ -225,7 +229,7 @@ describe('unit: query building functionality', () => {
 
 			await userModel
 				.selectFrom()
-				.innerJoin('posts', (join) =>
+				.innerJoin('posts', (join: any) =>
 					join
 						.onRef('posts.user_id', '=', 'users.id')
 						.on('posts.published', '=', true)
@@ -238,7 +242,7 @@ describe('unit: query building functionality', () => {
 
 	describe('aggregations and grouping', () => {
 		it('should build a query with count aggregation', async () => {
-			mockDb.select.mockImplementation((callback) => {
+			mockDb.select.mockImplementation((callback: any) => {
 				if (typeof callback === 'function') {
 					const mockExpressionBuilder = {
 						fn: mockDb.fn,
@@ -250,7 +254,7 @@ describe('unit: query building functionality', () => {
 
 			await userModel
 				.selectFrom()
-				.select((eb) => ['status', eb.fn.count('id').as('user_count')])
+				.select((eb: any) => ['status', eb.fn.count('id').as('user_count')])
 				.groupBy(['status'])
 				.execute();
 
@@ -259,7 +263,7 @@ describe('unit: query building functionality', () => {
 		});
 
 		it('should build a query with having clause', async () => {
-			mockDb.having.mockImplementation((callback) => {
+			mockDb.having.mockImplementation((callback: any) => {
 				if (typeof callback === 'function') {
 					const mockExpressionBuilder = {
 						fn: mockDb.fn,
@@ -271,9 +275,9 @@ describe('unit: query building functionality', () => {
 
 			await userModel
 				.selectFrom()
-				.select((eb) => ['status', eb.fn.count('id').as('user_count')])
+				.select((eb: any) => ['status', eb.fn.count('id').as('user_count')])
 				.groupBy(['status'])
-				.having((eb) => eb.fn.count('id'), '>', 10)
+				.having((eb: any) => eb.fn.count('id'), '>', 10)
 				.execute();
 
 			expect(mockDb.having).toHaveBeenCalled();
@@ -305,15 +309,13 @@ describe('unit: query building functionality', () => {
 			expect(mockDb.limit).toHaveBeenCalledWith(10);
 			expect(mockDb.offset).toHaveBeenCalledWith(20);
 		});
-	});
 
-	describe('search functionality', () => {
-		it('should implement a search function', async () => {
+		it('should allow building complex search queries', async () => {
 			// Mock the implementation of a search function
 			const searchUsers = async (searchTerm: string, limit = 10) => {
 				return userModel
 					.selectFrom()
-					.where((eb) =>
+					.where((eb: any) =>
 						eb.or([
 							eb('name', 'like', `%${searchTerm}%`),
 							eb('email', 'like', `%${searchTerm}%`),
@@ -329,15 +331,14 @@ describe('unit: query building functionality', () => {
 		});
 	});
 
-	describe('raw SQL expressions', () => {
-		it('should support raw SQL expressions', async () => {
-			// Mock SQL implementation
+	describe('raw SQL', () => {
+		it('should allow using raw SQL expressions', async () => {
 			const sqlSpy = vi.fn().mockReturnValue('RAW SQL EXPRESSION');
 
 			await userModel
 				.selectFrom()
 				.where(() =>
-					sqlSpy('status = ? AND created_at > ?', ['active', new Date()])
+					sqlSpy('status = ? and created_at > ?', ['active', new Date()])
 				)
 				.execute();
 

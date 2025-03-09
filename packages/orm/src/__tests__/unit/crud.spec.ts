@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import createModel from '~/model';
+import createModel from '../../model';
 
 // Helper function to convert date to SQLite format
 const toSqliteDate = (date: Date): string => date.toISOString();

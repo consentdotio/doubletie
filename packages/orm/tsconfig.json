@@ -1,20 +1,13 @@
 {
-	"include": ["src/**/*", "tests/**/*"],
+	"extends": "@doubletie/typescript-config/base.json",
 	"compilerOptions": {
-		"module": "ESNext",
-		"outDir": "dist/esm",
-		"moduleResolution": "node",
-		"target": "ESNext",
-		"declaration": true,
-		"strict": true,
-		"noImplicitAny": true,
-		"esModuleInterop": true,
-		"types": ["node"],
-		"skipLibCheck": true,
 		"baseUrl": ".",
+		"esModuleInterop": true,
+		"lib": ["dom", "dom.iterable", "esnext"],
 		"paths": {
-			"~/*": ["src/*"],
-			"tests/*": ["tests/*"]
+			"~/*": ["./src/*"]
 		}
-	}
+	},
+	"include": ["src"],
+	"exclude": ["node_modules"]
 }
