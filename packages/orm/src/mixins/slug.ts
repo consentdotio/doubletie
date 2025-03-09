@@ -91,7 +91,10 @@ function isString(value: unknown): value is string {
  * @param options - Slug generation options
  * @returns Generated slug string or undefined if no source data
  */
-function generateSlugValue<TDatabase, TTableName extends keyof TDatabase>(
+export function generateSlugValue<
+	TDatabase,
+	TTableName extends keyof TDatabase,
+>(
 	data: TableValues<TDatabase, TTableName>,
 	options: Options<TDatabase, TTableName>
 ): string | undefined {
