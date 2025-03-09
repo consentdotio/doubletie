@@ -20,7 +20,7 @@ export { default as withGlobalId } from './globalId';
 export {
 	default as withIdGenerator,
 	type IdGeneratorOptions,
-} from './idGenerator';
+} from './id-generator';
 export { default as withCursorable } from './cursorable';
 export { default as withAssignProperties } from './assign';
 
