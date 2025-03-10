@@ -19,6 +19,7 @@
 		}
 	},
 	"scripts": {
+		"check-types": "tsc --noEmit",
 		"clean": "rm -rf dist",
 		"fmt": "pnpm biome format --write . && biome check --formatter-enabled=false --linter-enabled=false --organize-imports-enabled=true --write",
 		"lint": "pnpm biome lint ./src",
