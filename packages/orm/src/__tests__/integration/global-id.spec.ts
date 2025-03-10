@@ -6,7 +6,7 @@ import {
 	teardownTestDatabase,
 } from 'tests/fixtures/test-db';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import {withGlobalId} from '~/mixins/global-id';
+import { withGlobalId } from '~/mixins/global-id';
 import createModel from '~/model';
 
 // Test database type

@@ -1,15 +1,15 @@
 import { sql } from 'kysely';
+import type { UpdateResult } from 'kysely';
 import { describe, expect, it, vi } from 'vitest';
-import createModel from '../../model';
 import type { Database } from '../../database';
+import createModel from '../../model';
 import {
+	type MockExpressionBuilder,
 	type TestMockDatabase,
 	createMockDatabase,
-	createMockReturnThis,
 	createMockExpressionBuilder,
-	type MockExpressionBuilder
+	createMockReturnThis,
 } from '../fixtures/mock-db';
-import type { UpdateResult } from 'kysely';
 
 // Define test database types
 interface TestDB {
@@ -70,11 +70,11 @@ describe('Advanced Model Operations - Unit Tests', () => {
 			userIds: number[],
 			status: string
 		): Promise<BatchUpdateResult> => {
-			return await mockDb
+			return (await mockDb
 				.updateTable('users')
 				.set({ status })
 				.whereIn('id', userIds)
-				.execute() as BatchUpdateResult;
+				.execute()) as BatchUpdateResult;
 		};
 
 		// Test the batch update function
@@ -152,26 +152,35 @@ describe('Advanced Model Operations - Unit Tests', () => {
 			{ id: 'product1', name: 'Product A' },
 			{ id: 'product2', name: 'Product B' },
 		];
-		
+
 		// Create mock query chain with properly typed methods
 		const mockQueryChain: MockChain = {
 			selectAll: vi.fn().mockReturnThis(),
-			where: vi.fn().mockImplementation(function(this: MockChain, callbackOrColumn: any, operator?: string, value?: any) {
+			where: vi.fn().mockImplementation(function (
+				this: MockChain,
+				callbackOrColumn: any,
+				operator?: string,
+				value?: any
+			) {
 				// If this is a column-based call
-				if (typeof callbackOrColumn === 'string' && operator && value !== undefined) {
+				if (
+					typeof callbackOrColumn === 'string' &&
+					operator &&
+					value !== undefined
+				) {
 					return this;
 				}
-				
+
 				// Otherwise, it's a callback with expression builder
 				if (typeof callbackOrColumn === 'function') {
 					// Create a mock expression builder
 					const eb = createMockExpressionBuilder();
-					
+
 					// Call the callback with our mocked expression builder
 					callbackOrColumn(eb);
 					return this;
 				}
-				
+
 				return this;
 			}),
 			execute: vi.fn().mockResolvedValue(testProducts),
@@ -232,7 +241,7 @@ describe('Advanced Model Operations - Unit Tests', () => {
 				}),
 			},
 		];
-		
+
 		// Create mock query chain
 		const mockQueryChain = {
 			selectAll: vi.fn().mockReturnThis(),
@@ -278,10 +287,8 @@ describe('Advanced Model Operations - Unit Tests', () => {
 
 	it('should support generic finders', async () => {
 		// Create test data
-		const testProducts = [
-			{ id: 'product1', name: 'Product A' },
-		];
-		
+		const testProducts = [{ id: 'product1', name: 'Product A' }];
+
 		// Create mock query chain with properly typed methods
 		const mockQueryChain = {
 			selectAll: vi.fn().mockReturnThis(),
@@ -313,7 +320,10 @@ describe('Advanced Model Operations - Unit Tests', () => {
 		};
 
 		// Test the generic finder
-		const products = await findByTuple(['name', 'id'], ['Product A', 'product1']);
+		const products = await findByTuple(
+			['name', 'id'],
+			['Product A', 'product1']
+		);
 
 		// Verify the results
 		expect(products).toHaveLength(1);
@@ -322,7 +332,17 @@ describe('Advanced Model Operations - Unit Tests', () => {
 
 		// Verify that where was called twice with the correct parameters
 		expect(mockQueryChain.where).toHaveBeenCalledTimes(2);
-		expect(mockQueryChain.where).toHaveBeenNthCalledWith(1, 'name', '=', 'Product A');
-		expect(mockQueryChain.where).toHaveBeenNthCalledWith(2, 'id', '=', 'product1');
+		expect(mockQueryChain.where).toHaveBeenNthCalledWith(
+			1,
+			'name',
+			'=',
+			'Product A'
+		);
+		expect(mockQueryChain.where).toHaveBeenNthCalledWith(
+			2,
+			'id',
+			'=',
+			'product1'
+		);
 	});
 });

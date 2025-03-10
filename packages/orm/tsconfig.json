@@ -4,9 +4,11 @@
 		"baseUrl": ".",
 		"esModuleInterop": true,
 		"lib": ["dom", "dom.iterable", "esnext"],
-		"paths": {
-			"~/*": ["./src/*"]
-		}
+		"paths": { "~/*": ["./src/*"] },
+		"target": "ES2022",
+		"skipLibCheck": true,
+		"noImplicitAny": false,
+		"moduleResolution": "node"
 	},
 	"include": ["src"],
 	"exclude": ["node_modules"]

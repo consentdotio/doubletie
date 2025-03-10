@@ -24,7 +24,7 @@ export default function withUpdatedAt<
 	// Save the original processDataBeforeUpdate function
 	const originalProcessDataBeforeUpdate =
 		model.processDataBeforeUpdate ||
-		((data: UpdateObjectExpression<TDatabase, TTableName, TTableName>) => data);
+		((data: UpdateObjectExpression<TDatabase, TTableName>) => data);
 
 	// Add a method to easily update a record with automatic timestamp
 	const updateById = async <
@@ -54,23 +54,15 @@ export default function withUpdatedAt<
 	return {
 		...model,
 		// Override processDataBeforeUpdate to add the timestamp
-		processDataBeforeUpdate(
-			data:
-				| UpdateObjectExpression<TDatabase, TTableName, TTableName>
-				| UpdateObjectExpression<
-						OnConflictDatabase<TDatabase, TTableName>,
-						OnConflictTables<TTableName>,
-						OnConflictTables<TTableName>
-				  >
-		) {
+		processDataBeforeUpdate: (data) => {
 			// Process with original function first
-			const processedData = originalProcessDataBeforeUpdate(data);
+			const processedData = originalProcessDataBeforeUpdate(data as any);
 
 			// Add the updated_at timestamp
 			return {
 				...processedData,
 				[field]: new Date(),
-			};
+			} as any;
 		},
 
 		// Add the new direct update method

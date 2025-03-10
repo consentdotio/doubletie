@@ -1,3 +1,4 @@
+import type { SelectQueryBuilder } from 'kysely';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	Operation,
@@ -6,7 +7,6 @@ import {
 	default as withSlug,
 } from '../../../mixins/slug';
 import type { ModelFunctions } from '../../../model';
-import type { SelectQueryBuilder } from 'kysely';
 
 // Define test database type for testing
 interface TestDB {
@@ -227,7 +227,7 @@ describe('unit: slug mixin', () => {
 				field: 'slug',
 				sources: ['title'],
 			};
-			
+
 			// Fix incorrect mixin application
 			modelWithSlug = withSlug(mockModel, 'slug' as any, 'title' as any);
 		});

@@ -27,8 +27,7 @@ import {
 } from 'kysely';
 
 import { sql } from 'kysely';
-import type { InsertObjectOrList } from 'kysely/dist/esm/parser/insert-values-parser';
-import type { UpdateObjectExpression } from 'kysely/dist/esm/parser/update-set-parser';
+import type { InsertObject, UpdateObject } from 'kysely';
 import type { Database, TransactionCallback } from './database';
 import type {
 	FieldDefinition,
@@ -137,17 +136,15 @@ export type ModelFunctions<
 	// Data processing hooks
 	processDataBeforeUpdate: (
 		data:
-			| UpdateObjectExpression<DatabaseSchema, TableName, TableName>
+			| UpdateObjectExpression<DatabaseSchema, TableName>
 			| UpdateObjectExpression<
 					OnConflictDatabase<DatabaseSchema, TableName>,
-					OnConflictTables<TableName>,
 					OnConflictTables<TableName>
 			  >
 	) =>
-		| UpdateObjectExpression<DatabaseSchema, TableName, TableName>
+		| UpdateObjectExpression<DatabaseSchema, TableName>
 		| UpdateObjectExpression<
 				OnConflictDatabase<DatabaseSchema, TableName>,
-				OnConflictTables<TableName>,
 				OnConflictTables<TableName>
 		  >;
 
@@ -328,6 +325,17 @@ export type PrimaryKeySpecification<T> = {
 	type?: 'uuid' | 'nanoid' | 'autoincrement' | 'custom';
 };
 
+// Type alias for insert objects or arrays of insert objects
+type InsertObjectOrList<TDatabase, TTableName extends keyof TDatabase> =
+	| InsertObject<TDatabase, TTableName>
+	| Array<InsertObject<TDatabase, TTableName>>;
+
+// Type alias for update object expressions
+type UpdateObjectExpression<
+	TDatabase,
+	TTableName extends keyof TDatabase,
+> = UpdateObject<TDatabase, TTableName>;
+
 /**
  * Creates a model with database operations
  *
@@ -367,10 +375,9 @@ export default function createModel<
 	// Data processing hooks
 	const processDataBeforeUpdate = (
 		data:
-			| UpdateObjectExpression<TDatabase, TTableName, TTableName>
+			| UpdateObjectExpression<TDatabase, TTableName>
 			| UpdateObjectExpression<
 					OnConflictDatabase<TDatabase, TTableName>,
-					OnConflictTables<TTableName>,
 					OnConflictTables<TTableName>
 			  >
 	) => {

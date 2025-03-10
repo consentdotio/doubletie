@@ -8,10 +8,14 @@
  * @module
  */
 
-import type { Selectable } from 'kysely';
-import type { InsertObjectOrList } from 'kysely/dist/esm/parser/insert-values-parser';
+import type { InsertObject, Selectable } from 'kysely';
 import { generateId } from '../id-generator';
 import type { ModelFunctions } from '../model';
+
+// Type alias for insert objects or arrays of insert objects
+type InsertObjectOrList<TDatabase, TTableName extends keyof TDatabase> =
+	| InsertObject<TDatabase, TTableName>
+	| Array<InsertObject<TDatabase, TTableName>>;
 
 /**
  * Configuration options for the ID generator mixin
@@ -57,12 +61,12 @@ export interface IdGeneratorOptions {
  * ```
  */
 export default function withIdGenerator<
-	TDatabase,
-	TTableName extends keyof TDatabase & string,
-	TIdColumnName extends keyof TDatabase[TTableName] & string,
+	TDatabase extends Record<string, any> = any,
+	TTableName extends keyof TDatabase & string = string,
+	TIdField extends keyof TDatabase[TTableName] & string = string,
 >(
-	model: ModelFunctions<TDatabase, TTableName, TIdColumnName>,
-	options: IdGeneratorOptions
+	model: ModelFunctions<TDatabase, TTableName, TIdField>,
+	options: IdGeneratorOptions = { prefix: 'id' }
 ) {
 	// Determine the ID column to use (default to model's primary key)
 	const idColumn = options.idColumn || model.id;
@@ -131,7 +135,7 @@ export default function withIdGenerator<
 		 * @returns The inserted record
 		 */
 		async insertWithGeneratedId(
-			data: Omit<InsertObjectOrList<TDatabase, TTableName>, TIdColumnName>
+			data: Omit<InsertObjectOrList<TDatabase, TTableName>, TIdField>
 		) {
 			// Generate a unique ID
 			const id = generateId(options.prefix);
@@ -162,3 +166,6 @@ export default function withIdGenerator<
 		},
 	};
 }
+
+// Add default export to match import pattern
+export { withIdGenerator };

@@ -6,7 +6,7 @@ import type {
 	Selectable,
 	UpdateObject,
 } from 'kysely';
-import type { InsertObjectOrList } from 'kysely/dist/esm/parser/insert-values-parser';
+
 /**
  * Slug generation mixin for models
  *
@@ -15,10 +15,15 @@ import type { InsertObjectOrList } from 'kysely/dist/esm/parser/insert-values-pa
 import slugify from 'url-slug';
 import type { ModelFunctions } from '../model';
 
+// Type alias for insert objects or arrays of insert objects
+type InsertObjectOrList<TDatabase, TTableName extends keyof TDatabase> =
+	| InsertObject<TDatabase, TTableName>
+	| Array<InsertObject<TDatabase, TTableName>>;
+
 /**
  * Available slug operations
  */
-export const Operation = {
+const Operation = {
 	/** Convert to lowercase */
 	LOWERCASE: 'lowercase',
 	/** Convert to uppercase */
@@ -30,7 +35,7 @@ export const Operation = {
 /**
  * Type for slug operations
  */
-export type Operation = (typeof Operation)[keyof typeof Operation];
+type Operation = (typeof Operation)[keyof typeof Operation];
 
 /**
  * Options for slug generation
@@ -91,10 +96,7 @@ function isString(value: unknown): value is string {
  * @param options - Slug generation options
  * @returns Generated slug string or undefined if no source data
  */
-export function generateSlugValue<
-	TDatabase,
-	TTableName extends keyof TDatabase,
->(
+function generateSlugValue<TDatabase, TTableName extends keyof TDatabase>(
 	data: TableValues<TDatabase, TTableName>,
 	options: Options<TDatabase, TTableName>
 ): string | undefined {
@@ -167,7 +169,7 @@ export function generateSlugValue<
  * @param options - Slug configuration options
  * @returns Enhanced model with slug methods
  */
-export default function withSlug<
+function withSlug<
 	TDatabase,
 	TTableName extends keyof TDatabase & string,
 	TIdColumnName extends keyof TDatabase[TTableName] & string,
@@ -438,3 +440,7 @@ function implementSlug<
 		},
 	};
 }
+
+// Make sure the withSlug function is exported both as default and named export
+export default withSlug;
+export { withSlug, Operation, generateSlugValue };

@@ -1,9 +1,13 @@
+import { NoResultError } from 'kysely';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Database } from '../../../database';
 import { withGlobalId } from '../../../mixins/globalId';
 import createModel from '../../../model';
-import { MockFn, createMockDatabase, createMockReturnThis } from '../../fixtures/mock-db';
-import type { Database } from '../../../database';
-import { NoResultError } from 'kysely';
+import {
+	MockFn,
+	createMockDatabase,
+	createMockReturnThis,
+} from '../../fixtures/mock-db';
 
 describe('unit: Global ID mixin', () => {
 	// Define test database types and model
@@ -55,11 +59,7 @@ describe('unit: Global ID mixin', () => {
 	describe('global ID generation', () => {
 		it('should generate a global ID from a numeric ID', () => {
 			// Use type assertion to make TypeScript happy
-			const userModel = withGlobalId(
-				baseUserModel as any,
-				'id',
-				'User'
-			);
+			const userModel = withGlobalId(baseUserModel as any, 'id', 'User');
 
 			const globalId = userModel.getGlobalId(123);
 
@@ -69,16 +69,8 @@ describe('unit: Global ID mixin', () => {
 		});
 
 		it('should include the type name in the global ID', () => {
-			const userModel = withGlobalId(
-				baseUserModel as any,
-				'id',
-				'User'
-			);
-			const postModel = withGlobalId(
-				basePostModel as any,
-				'id',
-				'Post'
-			);
+			const userModel = withGlobalId(baseUserModel as any, 'id', 'User');
+			const postModel = withGlobalId(basePostModel as any, 'id', 'Post');
 
 			const userGlobalId = userModel.getGlobalId(1);
 			const postGlobalId = postModel.getGlobalId(1);
@@ -90,7 +82,7 @@ describe('unit: Global ID mixin', () => {
 		it('should support custom ID encoders', () => {
 			// Create a mock parser function that returns appropriate ID type
 			const customEncoder = vi.fn((id: string) => parseInt(id, 10));
-			
+
 			const userModel = withGlobalId(
 				baseUserModel as any,
 				customEncoder as any,
@@ -113,8 +105,8 @@ describe('unit: Global ID mixin', () => {
 			};
 
 			const enhancedModel = withGlobalId(
-				stringIdModel as any, 
-				'id', 
+				stringIdModel as any,
+				'id',
 				'StringUser'
 			);
 
@@ -127,16 +119,12 @@ describe('unit: Global ID mixin', () => {
 
 	describe('global ID decoding', () => {
 		it('should decode a global ID to type and ID', () => {
-			const userModel = withGlobalId(
-				baseUserModel as any,
-				'id',
-				'User'
-			);
+			const userModel = withGlobalId(baseUserModel as any, 'id', 'User');
 
 			const globalId = userModel.getGlobalId(123);
 			// We need to parse the result ourselves since decodeGlobalId isn't included
 			const parts = globalId.split('_');
-			
+
 			expect(parts.length).toBe(2);
 			expect(parts[0]).toBe('User');
 			// Add null check/assertion to fix string | undefined error
@@ -148,7 +136,7 @@ describe('unit: Global ID mixin', () => {
 		it('should handle custom ID decoders', () => {
 			// Create a custom parser function
 			const customParser = vi.fn((id: string) => parseInt(id, 10));
-			
+
 			const userModel = withGlobalId(
 				baseUserModel as any,
 				customParser as any,
@@ -156,24 +144,16 @@ describe('unit: Global ID mixin', () => {
 			);
 
 			const globalId = userModel.getGlobalId(123);
-			
+
 			// Get local ID to simulate decoding
 			const localId = userModel.getLocalId(globalId);
-			
+
 			expect(localId).toBe(123);
 		});
 
 		it('should validate type when decoding', () => {
-			const userModel = withGlobalId(
-				baseUserModel as any,
-				'id',
-				'User'
-			);
-			const postModel = withGlobalId(
-				basePostModel as any,
-				'id',
-				'Post'
-			);
+			const userModel = withGlobalId(baseUserModel as any, 'id', 'User');
+			const postModel = withGlobalId(basePostModel as any, 'id', 'Post');
 
 			const globalId = userModel.getGlobalId(123);
 			const postGlobalId = postModel.getGlobalId(123);
@@ -194,11 +174,7 @@ describe('unit: Global ID mixin', () => {
 				name: 'Test User',
 			});
 
-			const userModel = withGlobalId(
-				baseUserModel as any,
-				'id',
-				'User'
-			);
+			const userModel = withGlobalId(baseUserModel as any, 'id', 'User');
 
 			// Add a mock implementation for findById with proper typing
 			baseUserModel.findById = vi.fn().mockImplementation((id) => {
@@ -218,20 +194,12 @@ describe('unit: Global ID mixin', () => {
 		});
 
 		it('should return null for invalid global IDs', async () => {
-			const userModel = withGlobalId(
-				baseUserModel as any,
-				'id',
-				'User'
-			);
-			const postModel = withGlobalId(
-				basePostModel as any,
-				'id',
-				'Post'
-			);
-			
+			const userModel = withGlobalId(baseUserModel as any, 'id', 'User');
+			const postModel = withGlobalId(basePostModel as any, 'id', 'Post');
+
 			// Add a mock implementation for findById that never gets called
 			baseUserModel.findById = vi.fn();
-			
+
 			// Use post global ID with user model
 			const postGlobalId = postModel.getGlobalId(123);
 
@@ -254,15 +222,11 @@ describe('unit: Global ID mixin', () => {
 				return mockDb.executeTakeFirst();
 			});
 
-			const userModel = withGlobalId(
-				baseUserModel as any,
-				'id',
-				'User'
-			);
-			
+			const userModel = withGlobalId(baseUserModel as any, 'id', 'User');
+
 			const globalId = userModel.getGlobalId(123);
 			const result = await userModel.findByGlobalId(globalId);
-			
+
 			expect(result).toEqual({
 				id: 123,
 				name: 'Test User',
@@ -284,15 +248,11 @@ describe('unit: Global ID mixin', () => {
 				return mockDb.executeTakeFirst();
 			});
 
-			const userModel = withGlobalId(
-				baseUserModel as any,
-				'id',
-				'User'
-			);
-			
+			const userModel = withGlobalId(baseUserModel as any, 'id', 'User');
+
 			// Find by regular ID
 			const user = await baseUserModel.findById(123);
-			
+
 			// Find by global ID
 			const globalId = userModel.getGlobalId(123);
 			const userByGlobalId = await userModel.findByGlobalId(globalId);
@@ -303,7 +263,7 @@ describe('unit: Global ID mixin', () => {
 		it('should handle multiple records with global IDs', async () => {
 			// Define the user type for proper typing
 			type User = { id: number; name: string };
-			
+
 			// Mock the execute method with properly typed users
 			const mockUsers: User[] = [
 				{ id: 1, name: 'User 1' },
@@ -316,20 +276,13 @@ describe('unit: Global ID mixin', () => {
 				return Promise.resolve(mockUsers);
 			});
 
-			const userModel = withGlobalId(
-				baseUserModel as any,
-				'id',
-				'User'
-			);
-			
+			const userModel = withGlobalId(baseUserModel as any, 'id', 'User');
+
 			// Find by global IDs
-			const globalIds = [
-				userModel.getGlobalId(1),
-				userModel.getGlobalId(2)
-			];
-			
-			const users = await userModel.findByGlobalIds(globalIds) as User[];
-			
+			const globalIds = [userModel.getGlobalId(1), userModel.getGlobalId(2)];
+
+			const users = (await userModel.findByGlobalIds(globalIds)) as User[];
+
 			// Now we can use proper typing for the users array
 			expect(users).toHaveLength(2);
 			expect(users[0]!.id).toBe(1);

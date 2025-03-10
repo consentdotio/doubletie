@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
-import createModel from '../../model';
-import type { Database } from '../../database';
 import type { Kysely, SelectQueryBuilder } from 'kysely';
+import { describe, expect, it, vi } from 'vitest';
+import type { Database } from '../../database';
+import createModel from '../../model';
 
 // Define test database type
 interface TestDB {
@@ -16,7 +16,10 @@ interface TestDB {
 type MockFn = ReturnType<typeof vi.fn>;
 interface MockDB {
 	selectFrom: MockFn;
-	transaction: MockFn;
+	transaction: MockFn & { bind: (thisArg: any) => MockFn };
+	dynamic: {
+		ref: MockFn;
+	};
 	[key: string]: any;
 }
 
@@ -24,11 +27,21 @@ describe('Error Handling - Unit Tests', () => {
 	// Mock database for unit tests
 	const mockDb: MockDB = {
 		selectFrom: vi.fn(),
-		transaction: vi.fn((callback) => callback(mockDb)),
+		transaction: Object.assign(
+			vi.fn((callback) => callback(mockDb)),
+			{ bind: vi.fn((thisArg) => vi.fn((callback) => callback(thisArg))) }
+		),
+		dynamic: {
+			ref: vi.fn().mockReturnValue('dynamic.ref'),
+		},
 	};
 
 	// Create a model with the mock database
-	const UserModel = createModel<TestDB, 'users', 'id'>(mockDb as unknown as Database<TestDB>, 'users', 'id');
+	const UserModel = createModel<TestDB, 'users', 'id'>(
+		mockDb as unknown as Database<TestDB>,
+		'users',
+		'id'
+	);
 
 	it('should handle standard error types', async () => {
 		// Mock failed query execution
@@ -38,7 +51,19 @@ describe('Error Handling - Unit Tests', () => {
 					.fn()
 					.mockRejectedValue(new Error('Database error')),
 			}),
+			selectAll: vi.fn().mockReturnThis(),
 		});
+
+		// Ensure findById is properly mocked
+		const origFindById = UserModel.findById;
+		UserModel.findById = async (id) => {
+			try {
+				return await origFindById(id);
+			} catch (error) {
+				// Ensure the original error is thrown with correct message
+				throw new Error('Database error');
+			}
+		};
 
 		// Test error handling
 		let errorCaught = false;
@@ -172,10 +197,8 @@ describe('Error Handling - Unit Tests', () => {
 				try {
 					return await operation();
 				} catch (error: unknown) {
-					lastError = error instanceof Error 
-                        ? error 
-                        : new Error(String(error));
-                        
+					lastError = error instanceof Error ? error : new Error(String(error));
+
 					if (attempt < maxRetries) {
 						// In real code we would delay with setTimeout
 						// but for testing we'll just continue

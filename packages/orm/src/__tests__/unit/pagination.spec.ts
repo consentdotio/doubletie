@@ -4,6 +4,7 @@ import {
 	TestMockDatabase,
 	createMockDatabase,
 	createMockReturnThis,
+	MockFn,
 } from '../fixtures/mock-db';
 
 describe('unit: pagination functionality', () => {
@@ -27,9 +28,11 @@ describe('unit: pagination functionality', () => {
 
 	beforeEach(() => {
 		// Set up mock database using fixtures
-		const mockExecute = vi.fn().mockResolvedValue([]);
-		const mockExecuteTakeFirst = vi.fn().mockResolvedValue(null);
-
+		const mockExecuteFunction = vi.fn().mockResolvedValue([
+			{ id: 1, name: 'User 1' },
+			{ id: 2, name: 'User 2' },
+			// ... more users
+		]);
 		mockDb = createMockDatabase<TestDB>({
 			selectFrom: createMockReturnThis(),
 			select: createMockReturnThis(),
@@ -37,8 +40,8 @@ describe('unit: pagination functionality', () => {
 			orderBy: createMockReturnThis(),
 			limit: createMockReturnThis(),
 			offset: createMockReturnThis(),
-			execute: mockExecute,
-			executeTakeFirst: mockExecuteTakeFirst,
+			execute: mockExecuteFunction,
+			executeTakeFirst: vi.fn().mockResolvedValue({ count: '100' }),
 		}) as TestMockDatabase<TestDB>;
 
 		// Create model with mock db
@@ -224,10 +227,10 @@ describe('unit: pagination functionality', () => {
 	describe('pagination metadata', () => {
 		beforeEach(() => {
 			// Mock count query response
-			mockDb.executeTakeFirst.mockResolvedValue({ count: '100' });
+			(mockDb.executeTakeFirst as MockFn).mockResolvedValue({ count: '100' });
 
 			// Mock results
-			mockDb.execute.mockResolvedValue([
+			(mockDb.execute as MockFn).mockResolvedValue([
 				{ id: 1, name: 'User 1' },
 				{ id: 2, name: 'User 2' },
 			]);
@@ -245,7 +248,7 @@ describe('unit: pagination functionality', () => {
 
 					mockDb.limit(limit);
 					mockDb.offset(offset);
-					await mockDb.execute();
+					mockDb.execute();
 
 					// For tests, return fixed values based on the test setup
 					return {

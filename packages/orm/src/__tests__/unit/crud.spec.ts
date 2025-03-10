@@ -1,18 +1,18 @@
+import type { DeleteResult, UpdateResult } from 'kysely';
 import { describe, expect, it, vi } from 'vitest';
-import createModel from '../../model';
 import type { Database } from '../../database';
+import createModel from '../../model';
 import {
 	type TestMockDatabase,
 	createMockDatabase,
-	createMockSelectChain,
-	createMockUpdateChain,
 	createMockDeleteChain,
 	createMockInsertChain,
+	createMockReturnThis,
+	createMockSelectChain,
+	createMockUpdateChain,
 	createTestData,
 	toSqliteDate,
-	createMockReturnThis,
 } from '../fixtures/mock-db';
-import type { UpdateResult, DeleteResult } from 'kysely';
 
 // Define test database type
 interface TestDB {
@@ -85,13 +85,13 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 
 	it('should handle read operations with mocked DB', async () => {
 		// Create mock database with select chain returning test user
-		const mockUser = { 
-			id: 1, 
-			email: 'test@example.com', 
-			name: 'Test User', 
-			username: 'testuser' 
+		const mockUser = {
+			id: 1,
+			email: 'test@example.com',
+			name: 'Test User',
+			username: 'testuser',
 		};
-		
+
 		const mockSelectChain = {
 			where: vi.fn().mockReturnThis(),
 			selectAll: vi.fn().mockReturnThis(),
@@ -138,9 +138,11 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 		const mockUpdateChain = {
 			set: vi.fn().mockReturnThis(),
 			where: vi.fn().mockReturnThis(),
-			execute: vi.fn().mockResolvedValue({ numUpdatedRows: BigInt(1) } as unknown as UpdateResult),
+			execute: vi.fn().mockResolvedValue({
+				numUpdatedRows: BigInt(1),
+			} as unknown as UpdateResult),
 		};
-		
+
 		const mockDb = createMockDatabase<TestDB>({
 			updateTable: vi.fn().mockReturnValue(mockUpdateChain),
 		});
@@ -179,9 +181,11 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 		// Create mock database with delete chain
 		const mockDeleteChain = {
 			where: vi.fn().mockReturnThis(),
-			execute: vi.fn().mockResolvedValue({ numDeletedRows: BigInt(1) } as unknown as DeleteResult),
+			execute: vi.fn().mockResolvedValue({
+				numDeletedRows: BigInt(1),
+			} as unknown as DeleteResult),
 		};
-		
+
 		const mockDb = createMockDatabase<TestDB>();
 		// Override the default implementation
 		(mockDb.deleteFrom as any) = vi.fn().mockReturnValue(mockDeleteChain);
@@ -213,21 +217,27 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 		const mockUpdateChain = {
 			set: vi.fn().mockReturnThis(),
 			where: vi.fn().mockReturnThis(),
-			execute: vi.fn().mockResolvedValue({ numUpdatedRows: BigInt(1) } as unknown as UpdateResult),
+			execute: vi.fn().mockResolvedValue({
+				numUpdatedRows: BigInt(1),
+			} as unknown as UpdateResult),
 		};
-		
+
 		const mockUpdateColumnChain = {
 			where: vi.fn().mockReturnThis(),
-			execute: vi.fn().mockResolvedValue({ numUpdatedRows: BigInt(1) } as unknown as UpdateResult),
+			execute: vi.fn().mockResolvedValue({
+				numUpdatedRows: BigInt(1),
+			} as unknown as UpdateResult),
 		};
 
 		// Create mock database with required methods
 		const mockDb = createMockDatabase<TestDB>({
 			updateTable: vi.fn().mockReturnValue(mockUpdateChain),
 		});
-		
+
 		// Add updateColumn method (not in standard MockDatabase)
-		(mockDb as any).updateColumn = vi.fn().mockReturnValue(mockUpdateColumnChain);
+		(mockDb as any).updateColumn = vi
+			.fn()
+			.mockReturnValue(mockUpdateColumnChain);
 
 		// Create a model
 		const UserModel = createModel<TestDB, 'users', 'id'>(
@@ -257,15 +267,34 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 			.execute();
 
 		// Verify the helper update
-		expect((mockDb as any).updateColumn).toHaveBeenCalledWith('users', 'email', 'another@example.com');
+		expect((mockDb as any).updateColumn).toHaveBeenCalledWith(
+			'users',
+			'email',
+			'another@example.com'
+		);
 	});
 
 	it('should handle pagination with cursors and limits', async () => {
 		// Create test data
 		const testUsers = [
-			{ id: 1, name: 'User A', email: 'usera@example.com', createdAt: '2023-01-01T00:00:00.000Z' },
-			{ id: 2, name: 'User B', email: 'userb@example.com', createdAt: '2023-01-02T00:00:00.000Z' },
-			{ id: 3, name: 'User C', email: 'userc@example.com', createdAt: '2023-01-03T00:00:00.000Z' }
+			{
+				id: 1,
+				name: 'User A',
+				email: 'usera@example.com',
+				createdAt: '2023-01-01T00:00:00.000Z',
+			},
+			{
+				id: 2,
+				name: 'User B',
+				email: 'userb@example.com',
+				createdAt: '2023-01-02T00:00:00.000Z',
+			},
+			{
+				id: 3,
+				name: 'User C',
+				email: 'userc@example.com',
+				createdAt: '2023-01-03T00:00:00.000Z',
+			},
 		];
 
 		// Create mock query chain returning paginated users
@@ -339,7 +368,7 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 	it('should handle relational queries', async () => {
 		// Get test data from our central mock data function
 		const testData = createTestData();
-		
+
 		// Create a mock user
 		const mockUser = {
 			id: 1,
@@ -355,8 +384,18 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 
 		// Mock user-comments joined result
 		const mockUserWithComments = [
-			{ userId: 1, commentId: 1, userName: 'Relation User', message: 'Test comment 1' },
-			{ userId: 1, commentId: 2, userName: 'Relation User', message: 'Test comment 2' },
+			{
+				userId: 1,
+				commentId: 1,
+				userName: 'Relation User',
+				message: 'Test comment 1',
+			},
+			{
+				userId: 1,
+				commentId: 2,
+				userName: 'Relation User',
+				message: 'Test comment 2',
+			},
 		];
 
 		// Create a simple implementation that doesn't rely on the mocks

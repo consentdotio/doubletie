@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Database } from '../../database';
 import createModel from '../../model';
-import {
-	MockFn,
-	createMockDatabase,
-
-} from '../fixtures/mock-db';
+import { MockFn, createMockDatabase } from '../fixtures/mock-db';
 
 describe('unit: transaction handling', () => {
 	// Define test database types
@@ -25,7 +21,7 @@ describe('unit: transaction handling', () => {
 	beforeEach(() => {
 		// Set up mocks
 		mockExecuteTakeFirst = vi.fn();
-		
+
 		// Create a proper mock transaction function that calls the callback with a transaction object
 		mockTransaction = vi.fn().mockImplementation((callback) => {
 			// Create a transaction object with required methods
@@ -37,10 +33,10 @@ describe('unit: transaction handling', () => {
 				},
 				afterCommit: vi.fn(),
 			};
-			
+
 			// Actually call the callback with the transaction
 			const result = callback(transaction);
-			
+
 			// Return the result wrapped in a promise
 			return Promise.resolve(result);
 		});
@@ -96,7 +92,7 @@ describe('unit: transaction handling', () => {
 
 	it('should return the result from the callback', async () => {
 		const expectedResult = { id: 1, name: 'Test' };
-		
+
 		// Updated mockImplementation to return the callback's return value
 		mockTransaction.mockImplementationOnce((callback) => {
 			return Promise.resolve(expectedResult);
@@ -121,15 +117,17 @@ describe('unit: transaction handling', () => {
 	});
 
 	it('should use transaction for database operations within callback', async () => {
-		const mockFindById = vi.fn().mockResolvedValue({ id: 1, name: 'Test User' });
-		
+		const mockFindById = vi
+			.fn()
+			.mockResolvedValue({ id: 1, name: 'Test User' });
+
 		// Create a transaction object that includes the find method
 		mockTransaction.mockImplementationOnce((callback) => {
 			const transaction = {
 				transaction: {
 					selectFrom: vi.fn().mockReturnThis(),
 					where: vi.fn().mockReturnThis(),
-					executeTakeFirst: mockFindById
+					executeTakeFirst: mockFindById,
 				},
 				afterCommit: vi.fn(),
 			};

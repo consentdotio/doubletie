@@ -1,10 +1,15 @@
-import type { InsertObjectOrList } from 'kysely/dist/esm/parser/insert-values-parser';
+import type { InsertObject } from 'kysely';
 import type { ModelFunctions } from '../model';
 /**
  * Provides automatic created_at timestamp functionality for models
  *
  * @module createdAt
  */
+
+// Type alias for insert objects or arrays of insert objects
+type InsertObjectOrList<TDatabase, TTableName extends keyof TDatabase> =
+	| InsertObject<TDatabase, TTableName>
+	| Array<InsertObject<TDatabase, TTableName>>;
 
 /**
  * Enhances a model with automatic created_at timestamp functionality
