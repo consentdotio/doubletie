@@ -3,7 +3,7 @@ import type { Kysely } from 'kysely';
 import {
 	setupTestDatabase,
 	teardownTestDatabase,
-} from 'tests/fixtures/test-db';
+} from '../fixtures/test-db';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import createModel from '~/model';
 

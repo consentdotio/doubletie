@@ -4,7 +4,7 @@ import createModel from '~/model';
 import {
 	setupTestDatabase,
 	teardownTestDatabase,
-} from '../utils/test-db-setup';
+} from '../fixtures/test-db';
 
 // Helper function to convert date to SQLite format
 const toSqliteDate = (date: Date): string => date.toISOString();

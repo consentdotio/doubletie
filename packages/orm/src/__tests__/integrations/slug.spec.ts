@@ -1,8 +1,8 @@
 import type { Kysely } from 'kysely';
-import {
-	setupTestDatabase,
-	teardownTestDatabase,
-} from 'tests/fixtures/test-db';
+	import {
+		setupTestDatabase,
+		teardownTestDatabase,
+	} from '../fixtures/test-db';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import withSlug from '~/mixins/slug';
 import createModel from '~/model';

@@ -1,7 +1,8 @@
 import { sql } from 'kysely';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import createModel from '~/model';
-import { setupDatabase, teardownDatabase } from '../utils/test-db-setup';
+import { setupTestDatabase, teardownTestDatabase } from '../fixtures/test-db';
+
 
 describe('Error Handling - Integration Tests', () => {
 	// Setup test database
@@ -10,7 +11,7 @@ describe('Error Handling - Integration Tests', () => {
 
 	beforeEach(async () => {
 		// Set up fresh database for each test
-		db = await setupDatabase();
+		db = await setupTestDatabase();
 
 		// Create User model
 		UserModel = createModel(db, 'users', 'id');
@@ -45,7 +46,7 @@ describe('Error Handling - Integration Tests', () => {
 	});
 
 	afterEach(async () => {
-		await teardownDatabase(db);
+		await teardownTestDatabase(db);
 	});
 
 	it('should throw appropriate error when record not found', async () => {

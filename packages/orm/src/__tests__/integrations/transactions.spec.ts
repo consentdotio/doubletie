@@ -1,13 +1,12 @@
 // tests/integration/transactions.spec.ts
 
+import { fail } from 'assert';
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
-import {
-	setupTestDatabase,
-	teardownTestDatabase,
-} from 'tests/fixtures/test-db';
+
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import createModel from '~/model';
+import { setupTestDatabase, teardownTestDatabase } from '../fixtures/test-db';
 
 // Test database schema
 interface TestDB {

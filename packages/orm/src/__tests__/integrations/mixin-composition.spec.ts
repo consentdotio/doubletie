@@ -4,9 +4,9 @@ import type { Kysely } from 'kysely';
 import {
 	setupTestDatabase,
 	teardownTestDatabase,
-} from 'tests/fixtures/test-db';
+} from '../fixtures/test-db';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import withGlobalId from '~/mixins/global-id';
+import { withGlobalId } from '~/mixins/globalId';
 import withSlug from '~/mixins/slug';
 import createModel from '~/model';
 
