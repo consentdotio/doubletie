@@ -169,7 +169,7 @@ describe('unit: Global ID mixin', () => {
 	describe('finding records by global ID', () => {
 		it('should find a record by global ID', async () => {
 			// Mock the executeTakeFirst to return a user
-			mockDb.executeTakeFirst.mockResolvedValue({
+			(mockDb.executeTakeFirst as MockFn).mockResolvedValue({
 				id: 123,
 				name: 'Test User',
 			});
@@ -210,7 +210,7 @@ describe('unit: Global ID mixin', () => {
 		});
 
 		it('should handle custom find logic', async () => {
-			mockDb.executeTakeFirst.mockResolvedValue({
+			(mockDb.executeTakeFirst as MockFn).mockResolvedValue({
 				id: 123,
 				name: 'Test User',
 			});
@@ -236,7 +236,7 @@ describe('unit: Global ID mixin', () => {
 
 	describe('integration with model operations', () => {
 		it('should be able to find records by their IDs', async () => {
-			mockDb.executeTakeFirst.mockResolvedValue({
+			(mockDb.executeTakeFirst as MockFn).mockResolvedValue({
 				id: 123,
 				name: 'Test User',
 			});

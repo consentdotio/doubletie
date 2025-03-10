@@ -253,11 +253,11 @@ describe('unit: mixin composition', () => {
 			// Apply mixins with different options
 			const ModelWithStatus = withStatus(UserModel, {
 				defaultStatus: 'active',
-			}) as ModelFunctions<TestDB, 'users', 'id'> & { 
+			}) as ModelFunctions<TestDB, 'users', 'id'> & {
 				getStatusLabel: () => string;
 				getExtensions: () => any;
 			};
-			
+
 			const EnhancedUserModel = withSlugTest(ModelWithStatus, {
 				field: 'slug',
 				sources: ['name'],
@@ -315,7 +315,12 @@ describe('unit: mixin composition', () => {
 				baseModel: ModelFunctions<TestDB, 'users', 'id'>,
 				config: Record<string, boolean>
 			) => {
-				let resultModel = { ...baseModel } as ModelFunctions<TestDB, 'users', 'id'> & CustomModelProps;
+				let resultModel = { ...baseModel } as ModelFunctions<
+					TestDB,
+					'users',
+					'id'
+				> &
+					CustomModelProps;
 
 				if (config.withSlug) {
 					resultModel = {
