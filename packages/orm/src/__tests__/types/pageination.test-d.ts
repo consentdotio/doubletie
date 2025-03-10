@@ -1,5 +1,3 @@
-// tests/types/pagination.test-d.ts
-
 import type { Selectable } from 'kysely';
 import { assertType, expectTypeOf, test } from 'vitest';
 import createModel from '~/model';

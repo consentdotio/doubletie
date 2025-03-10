@@ -9,6 +9,7 @@
 		"ci:version": "pnpm changeset version",
 		"dev:libs": "turbo dev --filter=./packages/*",
 		"dev:docs": "turbo dev --filter=./apps/docs/*",
+		"test": "turbo test",
 		"fmt": "turbo fmt",
 		"lint": "turbo lint",
 		"lint:fix": "turbo lint -- --write",

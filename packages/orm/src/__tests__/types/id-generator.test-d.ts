@@ -1,5 +1,3 @@
-// tests/types/id-generator.test-d.ts
-
 import { assertType, expectTypeOf, test } from 'vitest';
 import withIdGenerator from '~/mixins/id-generator';
 import createModel from '~/model';

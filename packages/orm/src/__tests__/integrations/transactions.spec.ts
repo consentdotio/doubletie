@@ -1,5 +1,3 @@
-// tests/integration/transactions.spec.ts
-
 import { fail } from 'assert';
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';

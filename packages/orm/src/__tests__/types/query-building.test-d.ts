@@ -1,5 +1,3 @@
-// tests/types/query-building.test-d.ts
-
 import { sql } from 'kysely';
 import type {
 	ReferenceExpression as RefExp,

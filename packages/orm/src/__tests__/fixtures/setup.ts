@@ -1,4 +1,3 @@
-// tests/fixtures/setup.ts
 import { afterAll, vi } from 'vitest';
 
 // Set up global test environment

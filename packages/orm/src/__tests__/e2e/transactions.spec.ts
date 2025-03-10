@@ -1,10 +1,7 @@
-// tests/e2e/transactions.spec.ts
-
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import createModel from '~/model';
-import { setupRealDatabase, teardownRealDatabase } from '../fixtures/test-db';
 
 // Test database schema
 interface TestDB {

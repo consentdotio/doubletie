@@ -1,5 +1,3 @@
-// tests/integration/global-id.spec.ts
-
 import type { Kysely } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Database, ModelRegistry } from '~/database';

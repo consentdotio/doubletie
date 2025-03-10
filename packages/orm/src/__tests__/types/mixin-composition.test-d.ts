@@ -1,5 +1,3 @@
-// tests/types/mixin-composition.test-d.ts
-
 import type { Selectable } from 'kysely';
 import { assertType, expectTypeOf, test } from 'vitest';
 import { withGlobalId } from '~/mixins/global-id';
