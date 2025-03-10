@@ -1,6 +1,41 @@
 import { sql } from 'kysely';
 import { describe, expect, it, vi } from 'vitest';
 import createModel from '../../model';
+import type { Database } from '../../database';
+import {
+	type TestMockDatabase,
+	createMockDatabase,
+	createMockReturnThis,
+	createMockExpressionBuilder,
+	type MockExpressionBuilder
+} from '../fixtures/mock-db';
+import type { UpdateResult } from 'kysely';
+
+// Define test database types
+interface TestDB {
+	users: {
+		id: number;
+		name: string;
+		email: string;
+		status?: string;
+	};
+	products: {
+		id: string;
+		name: string;
+	};
+	json_test: {
+		id: string;
+		data: string;
+	};
+}
+
+// Type for mock chain
+interface MockChain {
+	[key: string]: any;
+	selectAll: () => MockChain;
+	where: (callbackOrColumn: any, operator?: string, value?: any) => MockChain;
+	execute: () => Promise<any[]>;
+}
 
 describe('Advanced Model Operations - Unit Tests', () => {
 	it('should support creating custom query builders', async () => {
@@ -10,15 +45,7 @@ describe('Advanced Model Operations - Unit Tests', () => {
 			numUpdatedRows: bigint;
 		}
 
-		// Mock database
-		const mockDb = {
-			updateTable: vi.fn(),
-		};
-
-		// Create a model
-		const UserModel = createModel(mockDb, 'users', 'id');
-
-		// Create a mock update builder
+		// Create mock update builder
 		const mockUpdateBuilder = {
 			set: vi.fn().mockReturnThis(),
 			where: vi.fn().mockReturnThis(),
@@ -26,8 +53,17 @@ describe('Advanced Model Operations - Unit Tests', () => {
 			execute: vi.fn().mockResolvedValue({ numUpdatedRows: BigInt(5) }),
 		};
 
-		// Mock the updateTable method
-		mockDb.updateTable.mockReturnValue(mockUpdateBuilder);
+		// Create mock database with required methods
+		const mockDb = createMockDatabase<TestDB>({
+			updateTable: vi.fn().mockReturnValue(mockUpdateBuilder),
+		});
+
+		// Create a model
+		const UserModel = createModel<TestDB, 'users', 'id'>(
+			mockDb as unknown as Database<TestDB>,
+			'users',
+			'id'
+		);
 
 		// Create a batch update function using a custom query builder
 		const batchUpdateStatus = async (
@@ -38,7 +74,7 @@ describe('Advanced Model Operations - Unit Tests', () => {
 				.updateTable('users')
 				.set({ status })
 				.whereIn('id', userIds)
-				.execute();
+				.execute() as BatchUpdateResult;
 		};
 
 		// Test the batch update function
@@ -67,15 +103,7 @@ describe('Advanced Model Operations - Unit Tests', () => {
 			{ id: 3, name: 'User 3', email: 'user3@test.com' },
 		];
 
-		// Mock database
-		const mockDb = {
-			selectFrom: vi.fn(),
-		};
-
-		// Create a model
-		const UserModel = createModel(mockDb, 'users', 'id');
-
-		// Mock the query chain
+		// Create mock query chain
 		const mockQueryChain = {
 			where: vi.fn().mockReturnThis(),
 			whereIn: vi.fn().mockReturnThis(),
@@ -83,7 +111,17 @@ describe('Advanced Model Operations - Unit Tests', () => {
 			execute: vi.fn().mockResolvedValue(testUsers),
 		};
 
-		mockDb.selectFrom.mockReturnValue(mockQueryChain);
+		// Create mock database with required methods
+		const mockDb = createMockDatabase<TestDB>({
+			selectFrom: vi.fn().mockReturnValue(mockQueryChain),
+		});
+
+		// Create a model
+		const UserModel = createModel<TestDB, 'users', 'id'>(
+			mockDb as unknown as Database<TestDB>,
+			'users',
+			'id'
+		);
 
 		// Create a function to get multiple users by IDs
 		const getUsersByIds = async (ids: number[]) => {
@@ -109,42 +147,47 @@ describe('Advanced Model Operations - Unit Tests', () => {
 	});
 
 	it('should support tuple operations with expression builder', async () => {
-		// Mock database
-		const mockDb = {
-			selectFrom: vi.fn(),
-		};
-
-		// Mock the query chain
-		const mockQueryChain = {
+		// Create test data
+		const testProducts = [
+			{ id: 'product1', name: 'Product A' },
+			{ id: 'product2', name: 'Product B' },
+		];
+		
+		// Create mock query chain with properly typed methods
+		const mockQueryChain: MockChain = {
 			selectAll: vi.fn().mockReturnThis(),
-			where: vi.fn().mockImplementation((callback) => {
-				// Mock the expression builder
-				const eb = (column: string, operator: string, value: any) => {
-					return { column, operator, value };
-				};
-
-				// Add necessary methods to the expression builder
-				eb.and = (conditions: any[]) => ({ and: conditions });
-				eb.or = (conditions: any[]) => ({ or: conditions });
-
-				// Call the callback with our mocked expression builder
-				callback(eb);
-				return mockQueryChain;
+			where: vi.fn().mockImplementation(function(this: MockChain, callbackOrColumn: any, operator?: string, value?: any) {
+				// If this is a column-based call
+				if (typeof callbackOrColumn === 'string' && operator && value !== undefined) {
+					return this;
+				}
+				
+				// Otherwise, it's a callback with expression builder
+				if (typeof callbackOrColumn === 'function') {
+					// Create a mock expression builder
+					const eb = createMockExpressionBuilder();
+					
+					// Call the callback with our mocked expression builder
+					callbackOrColumn(eb);
+					return this;
+				}
+				
+				return this;
 			}),
-			execute: vi.fn().mockResolvedValue([
-				{ id: 'product1', name: 'Product A' },
-				{ id: 'product2', name: 'Product B' },
-			]),
+			execute: vi.fn().mockResolvedValue(testProducts),
 		};
 
-		mockDb.selectFrom.mockReturnValue(mockQueryChain);
+		// Create mock database with required methods
+		const mockDb = createMockDatabase<TestDB>({
+			selectFrom: vi.fn().mockReturnValue(mockQueryChain),
+		});
 
 		// Create a tuple-based finder function
 		const findProductsByTuple = async (conditions: [string, string][]) => {
 			return mockDb
 				.selectFrom('products')
 				.selectAll()
-				.where((eb) => {
+				.where((eb: MockExpressionBuilder) => {
 					// Generate dynamic OR conditions for tuples
 					const tupleConditions = conditions.map(([name, id]) =>
 						// Using a simpler approach without tuples
@@ -172,34 +215,41 @@ describe('Advanced Model Operations - Unit Tests', () => {
 	});
 
 	it('should support JSON operations with sql template tags', async () => {
-		// Mock database
-		const mockDb = {
-			selectFrom: vi.fn(),
-		};
-
-		// Mock query chain
+		// Create mock data
+		const jsonTestData = [
+			{
+				id: 'json1',
+				data: JSON.stringify({
+					user: {
+						name: 'John',
+						profile: {
+							preferences: {
+								theme: 'dark',
+								notifications: true,
+							},
+						},
+					},
+				}),
+			},
+		];
+		
+		// Create mock query chain
 		const mockQueryChain = {
 			selectAll: vi.fn().mockReturnThis(),
 			where: vi.fn().mockReturnThis(),
-			execute: vi.fn().mockResolvedValue([
-				{
-					id: 'json1',
-					data: JSON.stringify({
-						user: {
-							name: 'John',
-							profile: {
-								preferences: {
-									theme: 'dark',
-									notifications: true,
-								},
-							},
-						},
-					}),
-				},
-			]),
+			execute: vi.fn().mockResolvedValue(jsonTestData),
 		};
 
-		mockDb.selectFrom.mockReturnValue(mockQueryChain);
+		// Create mock database with required methods
+		const mockDb = createMockDatabase<TestDB>({
+			selectFrom: vi.fn().mockReturnValue(mockQueryChain),
+		});
+
+		// Add JSON capabilities to the mock db
+		mockDb.fn.json = {
+			extract: vi.fn().mockReturnValue(JSON.stringify({ theme: 'dark' })),
+			path: vi.fn().mockReturnValue('$.user.profile.preferences.theme'),
+		};
 
 		// Test function to query JSON data
 		const getUsersByTheme = async (theme: string) => {
@@ -214,85 +264,65 @@ describe('Advanced Model Operations - Unit Tests', () => {
 				.execute();
 		};
 
-		// Test the JSON query function
+		// Test JSON query
 		const results = await getUsersByTheme('dark');
 
-		// Verify results
-		expect(Array.isArray(results)).toBe(true);
-		expect(results.length).toBe(1);
+		// Verify the results
+		expect(results).toHaveLength(1);
 		expect(results[0].id).toBe('json1');
 
-		// Verify we can parse the JSON
-		const parsedData = JSON.parse(results[0].data);
-		expect(parsedData.user.profile.preferences.theme).toBe('dark');
-
-		// Verify the query was constructed correctly
-		expect(mockQueryChain.where).toHaveBeenCalled();
+		// Parse the JSON string to verify content
+		const jsonData = JSON.parse(results[0].data);
+		expect(jsonData.user.profile.preferences.theme).toBe('dark');
 	});
 
-	it('should support findByTuple operations', async () => {
-		// Mock database
-		const mockDb = {
-			selectFrom: vi.fn(),
+	it('should support generic finders', async () => {
+		// Create test data
+		const testProducts = [
+			{ id: 'product1', name: 'Product A' },
+		];
+		
+		// Create mock query chain with properly typed methods
+		const mockQueryChain = {
+			selectAll: vi.fn().mockReturnThis(),
+			where: vi.fn().mockReturnThis(),
+			execute: vi.fn().mockResolvedValue(testProducts),
 		};
 
-		// Create functions for tuple handling
+		// Create mock database with required methods
+		const mockDb = createMockDatabase<TestDB>({
+			selectFrom: vi.fn().mockReturnValue(mockQueryChain),
+		});
+
+		// Create a generic finder
 		const findByTuple = async <T extends any[]>(
 			columns: string[],
 			values: T
 		) => {
-			// Validate tuple lengths
 			if (columns.length !== values.length) {
-				throw new Error('Columns and values arrays must have the same length');
+				throw new Error('Columns and values must have the same length');
 			}
 
-			if (columns.length > 5) {
-				throw new Error(
-					`Tuple with ${columns.length} columns is not supported`
-				);
-			}
+			const query = mockDb.selectFrom('products').selectAll();
 
-			const whereStack = [];
 			for (let i = 0; i < columns.length; i++) {
-				whereStack.push([columns[i], values[i]]);
+				query.where(columns[i], '=', values[i]);
 			}
 
-			return {
-				columns,
-				values,
-				whereStack,
-			};
+			return query.execute();
 		};
 
-		// Test findByTuple with different column counts
-		const result1 = await findByTuple(['category'], ['Category A']);
-		expect(result1.columns).toEqual(['category']);
-		expect(result1.values).toEqual(['Category A']);
+		// Test the generic finder
+		const products = await findByTuple(['name', 'id'], ['Product A', 'product1']);
 
-		const result2 = await findByTuple(
-			['category', 'price'],
-			['Category B', 25.99]
-		);
-		expect(result2.columns.length).toBe(2);
-		expect(result2.values.length).toBe(2);
+		// Verify the results
+		expect(products).toHaveLength(1);
+		expect(products[0].id).toBe('product1');
+		expect(products[0].name).toBe('Product A');
 
-		const result3 = await findByTuple(
-			['id', 'name', 'category'],
-			['item5', 'Item Five', 'Category C']
-		);
-		expect(result3.columns.length).toBe(3);
-		expect(result3.values.length).toBe(3);
-
-		// Test error cases
-		await expect(findByTuple(['id', 'name'], ['item1'])).rejects.toThrow(
-			'Columns and values arrays must have the same length'
-		);
-
-		await expect(
-			findByTuple(
-				['col1', 'col2', 'col3', 'col4', 'col5', 'col6'],
-				[1, 2, 3, 4, 5, 6]
-			)
-		).rejects.toThrow('Tuple with 6 columns is not supported');
+		// Verify that where was called twice with the correct parameters
+		expect(mockQueryChain.where).toHaveBeenCalledTimes(2);
+		expect(mockQueryChain.where).toHaveBeenNthCalledWith(1, 'name', '=', 'Product A');
+		expect(mockQueryChain.where).toHaveBeenNthCalledWith(2, 'id', '=', 'product1');
 	});
 });

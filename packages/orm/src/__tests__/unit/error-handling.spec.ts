@@ -1,15 +1,34 @@
 import { describe, expect, it, vi } from 'vitest';
 import createModel from '../../model';
+import type { Database } from '../../database';
+import type { Kysely, SelectQueryBuilder } from 'kysely';
+
+// Define test database type
+interface TestDB {
+	users: {
+		id: number;
+		name: string;
+		email: string;
+	};
+}
+
+// Define mock types
+type MockFn = ReturnType<typeof vi.fn>;
+interface MockDB {
+	selectFrom: MockFn;
+	transaction: MockFn;
+	[key: string]: any;
+}
 
 describe('Error Handling - Unit Tests', () => {
 	// Mock database for unit tests
-	const mockDb = {
+	const mockDb: MockDB = {
 		selectFrom: vi.fn(),
 		transaction: vi.fn((callback) => callback(mockDb)),
 	};
 
 	// Create a model with the mock database
-	const UserModel = createModel(mockDb, 'users', 'id');
+	const UserModel = createModel<TestDB, 'users', 'id'>(mockDb as unknown as Database<TestDB>, 'users', 'id');
 
 	it('should handle standard error types', async () => {
 		// Mock failed query execution
@@ -25,10 +44,12 @@ describe('Error Handling - Unit Tests', () => {
 		let errorCaught = false;
 		try {
 			await UserModel.findById(1);
-		} catch (error) {
+		} catch (error: unknown) {
 			errorCaught = true;
 			expect(error).toBeInstanceOf(Error);
-			expect(error.message).toBe('Database error');
+			if (error instanceof Error) {
+				expect(error.message).toBe('Database error');
+			}
 		}
 		expect(errorCaught).toBe(true);
 	});
@@ -67,11 +88,13 @@ describe('Error Handling - Unit Tests', () => {
 		try {
 			await findWithCustomError('nonexistent@example.com');
 			expect(true).toBe(false); // This line should not be reached
-		} catch (error) {
+		} catch (error: unknown) {
 			expect(error).toBeInstanceOf(CustomNotFoundError);
-			expect(error.message).toBe(
-				'User with email nonexistent@example.com not found'
-			);
+			if (error instanceof CustomNotFoundError) {
+				expect(error.message).toBe(
+					'User with email nonexistent@example.com not found'
+				);
+			}
 		}
 	});
 
@@ -102,10 +125,10 @@ describe('Error Handling - Unit Tests', () => {
 					.selectFrom('users')
 					.where('id', '=', id)
 					.executeTakeFirst();
-			} catch (error) {
+			} catch (error: unknown) {
 				throw new DatabaseOperationError(
 					`Failed to retrieve user with id ${id}`,
-					error
+					error instanceof Error ? error : new Error(String(error))
 				);
 			}
 		};
@@ -114,12 +137,14 @@ describe('Error Handling - Unit Tests', () => {
 		try {
 			await findWithErrorWrapping(1);
 			expect(true).toBe(false); // This line should not be reached
-		} catch (error) {
+		} catch (error: unknown) {
 			expect(error).toBeInstanceOf(DatabaseOperationError);
-			expect(error.message).toBe(
-				'Failed to retrieve user with id 1: Connection refused'
-			);
-			expect(error.originalError).toBe(originalError);
+			if (error instanceof DatabaseOperationError) {
+				expect(error.message).toBe(
+					'Failed to retrieve user with id 1: Connection refused'
+				);
+				expect(error.originalError).toBe(originalError);
+			}
 		}
 	});
 
@@ -141,13 +166,16 @@ describe('Error Handling - Unit Tests', () => {
 			operation: () => Promise<any>,
 			{ maxRetries = 3, delay = 0 } = {}
 		) => {
-			let lastError;
+			let lastError: Error | undefined;
 
 			for (let attempt = 1; attempt <= maxRetries; attempt++) {
 				try {
 					return await operation();
-				} catch (error) {
-					lastError = error;
+				} catch (error: unknown) {
+					lastError = error instanceof Error 
+                        ? error 
+                        : new Error(String(error));
+                        
 					if (attempt < maxRetries) {
 						// In real code we would delay with setTimeout
 						// but for testing we'll just continue
@@ -172,8 +200,10 @@ describe('Error Handling - Unit Tests', () => {
 		try {
 			await withRetry(unreliableOperation, { maxRetries: 2 });
 			expect(true).toBe(false); // This line should not be reached
-		} catch (error) {
-			expect(error.message).toBe('Attempt 2 failed');
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				expect(error.message).toBe('Attempt 2 failed');
+			}
 		}
 	});
 });

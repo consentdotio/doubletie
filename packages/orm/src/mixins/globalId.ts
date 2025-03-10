@@ -69,7 +69,7 @@ export function decodeTypeFromGlobalId(globalId: string): string | null {
  * @param type - Global ID type prefix (e.g., "USER" for "USER_123")
  * @returns Enhanced model with global ID capabilities
  */
-export default function withGlobalId<
+export function withGlobalId<
 	TDatabase,
 	TTableName extends keyof TDatabase & string,
 	TIdColumnName extends keyof TDatabase[TTableName] & string,

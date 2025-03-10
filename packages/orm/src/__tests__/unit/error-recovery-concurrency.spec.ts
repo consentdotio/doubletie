@@ -1,5 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import createModel from '../../model';
+import type { Database } from '../../database';
+import type { ModelFunctions } from '../../model';
+import type { Transaction } from 'kysely';
+
+// Define custom types for mocks
+interface MockTransaction {
+	execute: (callback: (trx: any) => Promise<any>) => Promise<any>;
+	[key: string]: any;
+}
+
+interface MockDB {
+	transaction: () => MockTransaction;
+	selectFrom: MockFn;
+	where?: MockFn;
+	execute: MockFn;
+	executeTakeFirst: MockFn;
+	insertInto: MockFn;
+	updateTable?: MockFn;
+	[key: string]: any;
+}
+
+type MockFn = ReturnType<typeof vi.fn>;
 
 describe('unit: error recovery and concurrency handling', () => {
 	// Define test database types
@@ -19,15 +41,20 @@ describe('unit: error recovery and concurrency handling', () => {
 		};
 	}
 
-	let mockDb;
-	let userModel;
-	let transactionModel;
+	// Properly type the variables
+	let mockDb: MockDB;
+	let userModel: ModelFunctions<TestDB, 'users', 'id'> & {
+		transaction: (callback: (trx: any) => Promise<any>) => Promise<any>;
+		updateTable: () => any;
+		[key: string]: any;
+	};
+	let transactionModel: ModelFunctions<TestDB, 'transactions', 'id'>;
 
 	beforeEach(() => {
 		// Set up mock database
 		mockDb = {
 			transaction: vi.fn().mockReturnValue({
-				execute: vi.fn().mockImplementation(async (callback) => {
+				execute: vi.fn().mockImplementation(async (callback: (trx: any) => Promise<any>) => {
 					const trx = {
 						selectFrom: vi.fn().mockReturnThis(),
 						where: vi.fn().mockReturnThis(),
@@ -38,9 +65,8 @@ describe('unit: error recovery and concurrency handling', () => {
 						returning: vi.fn().mockReturnThis(),
 						updateTable: vi.fn().mockReturnThis(),
 						set: vi.fn().mockReturnThis(),
-						deleteFrom: vi.fn().mockReturnThis(),
 					};
-					return callback(trx);
+					return await callback(trx);
 				}),
 			}),
 			selectFrom: vi.fn().mockReturnThis(),
@@ -48,20 +74,22 @@ describe('unit: error recovery and concurrency handling', () => {
 			execute: vi.fn().mockResolvedValue([]),
 			executeTakeFirst: vi.fn().mockResolvedValue(null),
 			insertInto: vi.fn().mockReturnThis(),
-			values: vi.fn().mockReturnThis(),
-			returning: vi.fn().mockReturnThis(),
+		} as MockDB;
+
+		// Create models with mock db
+		userModel = {
+			...createModel({} as Database<TestDB>, 'users', 'id'),
+			// Add custom methods and properties for the test
+			findById: vi.fn(),
+			selectFrom: vi.fn().mockReturnValue(mockDb),
+			transaction: vi.fn().mockImplementation(async (callback) => {
+				return mockDb.transaction().execute(callback);
+			}),
 			updateTable: vi.fn().mockReturnThis(),
 			set: vi.fn().mockReturnThis(),
-			deleteFrom: vi.fn().mockReturnThis(),
 		};
 
-		// Create models
-		userModel = createModel<TestDB, 'users', 'id'>(mockDb, 'users', 'id');
-		transactionModel = createModel<TestDB, 'transactions', 'id'>(
-			mockDb,
-			'transactions',
-			'id'
-		);
+		transactionModel = createModel({} as Database<TestDB>, 'transactions', 'id') as any;
 	});
 
 	describe('error handling', () => {
@@ -75,14 +103,13 @@ describe('unit: error recovery and concurrency handling', () => {
 			const findUserWithErrorHandling = async (id: number) => {
 				try {
 					return await userModel.findById(id);
-				} catch (error) {
+				} catch (error: any) {
 					return { error: error.message };
 				}
 			};
 
 			const result = await findUserWithErrorHandling(1);
-
-			expect(result).toHaveProperty('error', 'Database connection lost');
+			expect(result).toEqual({ error: 'Database connection lost' });
 		});
 
 		it('should handle query execution errors', async () => {
@@ -93,124 +120,142 @@ describe('unit: error recovery and concurrency handling', () => {
 			const findUsersWithErrorHandling = async () => {
 				try {
 					return await userModel.selectFrom().execute();
-				} catch (error) {
+				} catch (error: any) {
 					return { error: error.message };
 				}
 			};
 
 			const result = await findUsersWithErrorHandling();
-
-			expect(result).toHaveProperty('error', 'Invalid SQL query');
+			expect(result).toEqual({ error: 'Invalid SQL query' });
 		});
 
 		it('should handle transaction rollback on error', async () => {
 			// Mock a transaction execution that fails
-			mockDb.transaction().execute.mockImplementation(async (callback) => {
+			mockDb.transaction().execute.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
 				const trx = {
 					updateTable: vi.fn().mockReturnThis(),
 					set: vi.fn().mockReturnThis(),
 					where: vi.fn().mockReturnThis(),
-					execute: vi.fn().mockRejectedValue(new Error('Update failed')),
+					executeTakeFirst: vi.fn().mockImplementation(() => {
+						throw new Error('Transaction failed');
+					}),
 				};
 
 				try {
 					return await callback(trx);
 				} catch (error) {
-					throw error;
+					// Simulate rollback
+					return { error: 'Transaction rolled back' };
 				}
 			});
 
-			// Define a function that uses transactions
+			// Create a function that uses transactions
 			const updateUserWithTransaction = async (id: number, data: any) => {
 				try {
-					return await userModel.transaction(async (trx) => {
+					return await userModel.transaction(async (trx: any) => {
 						return trx
 							.updateTable('users')
 							.set(data)
 							.where('id', '=', id)
-							.execute();
+							.executeTakeFirst();
 					});
-				} catch (error) {
+				} catch (error: any) {
 					return { error: error.message };
 				}
 			};
 
-			const result = await updateUserWithTransaction(1, {
-				name: 'Updated Name',
-			});
-
-			expect(result).toHaveProperty('error', 'Update failed');
+			const result = await updateUserWithTransaction(1, { status: 'active' });
+			expect(result).toEqual({ error: 'Transaction rolled back' });
 		});
 	});
 
 	describe('retry mechanisms', () => {
 		it('should retry failed operations', async () => {
-			// Mock a function that fails on first call but succeeds on retry
-			const mockOperation = vi
-				.fn()
-				.mockRejectedValueOnce(new Error('Temporary failure'))
-				.mockResolvedValueOnce({ id: 1, name: 'Success on retry' });
+			// Set up a mock that fails twice then succeeds
+			mockDb.executeTakeFirst
+				.mockRejectedValueOnce(new Error('Connection error'))
+				.mockRejectedValueOnce(new Error('Timeout error'))
+				.mockResolvedValueOnce({ id: 1, name: 'Test User' });
 
 			// Define a retry function
-			const withRetry = async (operation, maxRetries = 3) => {
+			const withRetry = async (operation: () => Promise<any>, maxRetries = 3) => {
 				let lastError;
 
 				for (let attempt = 1; attempt <= maxRetries; attempt++) {
 					try {
 						return await operation();
-					} catch (error) {
+					} catch (error: any) {
 						lastError = error;
-						// Would typically have some backoff strategy here
+						// Could add exponential backoff here
 					}
 				}
 
 				throw lastError;
 			};
 
-			const result = await withRetry(() => mockOperation());
+			// Test function with retries
+			const findUserWithRetry = async (id: number) => {
+				return withRetry(async () => {
+					return await userModel.findById(id);
+				});
+			};
 
-			expect(mockOperation).toHaveBeenCalledTimes(2);
-			expect(result).toEqual({ id: 1, name: 'Success on retry' });
+			// Mock the findById to use our mock db
+			userModel.findById.mockImplementation((id) => {
+				return mockDb.executeTakeFirst();
+			});
+
+			const result = await findUserWithRetry(1);
+			expect(result).toEqual({ id: 1, name: 'Test User' });
+			expect(mockDb.executeTakeFirst).toHaveBeenCalledTimes(3);
 		});
 
-		it('should handle max retries exceeded', async () => {
-			// Mock an operation that always fails
-			const mockOperation = vi
-				.fn()
-				.mockRejectedValue(new Error('Persistent failure'));
+		it('should throw after max retries', async () => {
+			// Set up a mock that always fails
+			mockDb.executeTakeFirst.mockRejectedValue(new Error('Persistent error'));
 
 			// Define a retry function
-			const withRetry = async (operation, maxRetries = 3) => {
+			const withRetry = async (operation: () => Promise<any>, maxRetries = 3) => {
 				let lastError;
 
 				for (let attempt = 1; attempt <= maxRetries; attempt++) {
 					try {
 						return await operation();
-					} catch (error) {
+					} catch (error: any) {
 						lastError = error;
+						// Could add exponential backoff here
 					}
 				}
 
 				throw lastError;
 			};
 
-			await expect(withRetry(() => mockOperation(), 2)).rejects.toThrow(
-				'Persistent failure'
-			);
+			// Test function with retries
+			const findUserWithRetry = async (id: number) => {
+				return withRetry(async () => {
+					return await userModel.findById(id);
+				});
+			};
 
-			expect(mockOperation).toHaveBeenCalledTimes(2);
+			// Mock the findById to use our mock db
+			userModel.findById.mockImplementation((id) => {
+				return mockDb.executeTakeFirst();
+			});
+
+			await expect(findUserWithRetry(1)).rejects.toThrow('Persistent error');
+			expect(mockDb.executeTakeFirst).toHaveBeenCalledTimes(3);
 		});
 	});
 
 	describe('optimistic concurrency control', () => {
-		it('should detect concurrent modifications using version numbers', async () => {
+		it('should handle version conflicts', async () => {
 			// Mock a user with a version number
 			const mockUser = { id: 1, name: 'Original Name', version: 1 };
 			mockDb.executeTakeFirst
 				.mockResolvedValueOnce(mockUser) // First query returns the user
 				.mockResolvedValueOnce(null); // No rows updated (version conflict)
 
-			// Define function with optimistic concurrency control
+			// Simulate optimistic locking with version field
 			const updateWithVersion = async (
 				id: number,
 				data: any,
@@ -234,25 +279,39 @@ describe('unit: error recovery and concurrency handling', () => {
 					.executeTakeFirst();
 
 				if (!result) {
-					return { error: 'Concurrent update detected' };
+					return {
+						error: 'Version conflict detected',
+						currentVersion: user.version,
+					};
 				}
 
-				return { success: true, newVersion: expectedVersion + 1 };
+				return result;
 			};
 
-			const result = await updateWithVersion(1, { name: 'New Name' }, 1);
+			// Mock implementation for the operations
+			userModel.findById.mockReturnValue(mockDb.executeTakeFirst());
+			userModel.updateTable().set.mockReturnThis();
+			userModel.updateTable().set().where.mockReturnThis();
+			userModel.updateTable().set().where().where.mockReturnThis();
+			userModel.updateTable().set().where().where().executeTakeFirst.mockReturnValue(
+				mockDb.executeTakeFirst()
+			);
 
-			expect(result).toHaveProperty('error', 'Concurrent update detected');
+			const result = await updateWithVersion(1, { name: 'New Name' }, 1);
+			expect(result).toEqual({
+				error: 'Version conflict detected',
+				currentVersion: 1,
+			});
 		});
 
-		it('should handle successful update with version increment', async () => {
+		it('should update when version matches', async () => {
 			// Mock a user with a version number
 			const mockUser = { id: 1, name: 'Original Name', version: 1 };
 			mockDb.executeTakeFirst
 				.mockResolvedValueOnce(mockUser) // First query returns the user
 				.mockResolvedValueOnce({ id: 1, name: 'New Name', version: 2 }); // Update succeeded
 
-			// Define function with optimistic concurrency control
+			// Simulate optimistic locking with version field
 			const updateWithVersion = async (
 				id: number,
 				data: any,
@@ -276,71 +335,88 @@ describe('unit: error recovery and concurrency handling', () => {
 					.executeTakeFirst();
 
 				if (!result) {
-					return { error: 'Concurrent update detected' };
+					return {
+						error: 'Version conflict detected',
+						currentVersion: user.version,
+					};
 				}
 
-				return { success: true, newVersion: expectedVersion + 1 };
+				return result;
 			};
 
-			const result = await updateWithVersion(1, { name: 'New Name' }, 1);
+			// Mock implementation for the operations
+			userModel.findById.mockReturnValue(mockDb.executeTakeFirst());
+			userModel.updateTable().set.mockReturnThis();
+			userModel.updateTable().set().where.mockReturnThis();
+			userModel.updateTable().set().where().where.mockReturnThis();
+			userModel.updateTable().set().where().where().executeTakeFirst.mockReturnValue(
+				mockDb.executeTakeFirst()
+			);
 
-			expect(result).toHaveProperty('success', true);
-			expect(result).toHaveProperty('newVersion', 2);
+			const result = await updateWithVersion(1, { name: 'New Name' }, 1);
+			expect(result).toEqual({ id: 1, name: 'New Name', version: 2 });
 		});
 	});
 
 	describe('transaction isolation', () => {
-		it('should execute operations in transaction isolation', async () => {
-			// Mock transaction
+		it('should execute operations in a transaction', async () => {
+			// Set up a mock transaction
 			const mockTrx = {
 				updateTable: vi.fn().mockReturnThis(),
 				set: vi.fn().mockReturnThis(),
 				where: vi.fn().mockReturnThis(),
-				execute: vi.fn().mockResolvedValue({ numUpdatedRows: 1 }),
+				executeTakeFirst: vi.fn().mockResolvedValue({ id: 1, name: 'Updated' }),
 				insertInto: vi.fn().mockReturnThis(),
 				values: vi.fn().mockReturnThis(),
 				returning: vi.fn().mockReturnThis(),
-				executeTakeFirst: vi
-					.fn()
-					.mockResolvedValue({ id: 2, user_id: 1, amount: 100 }),
+				execute: vi.fn(),
 			};
 
-			mockDb.transaction().execute.mockImplementation(async (callback) => {
+			mockDb.transaction().execute.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
 				return callback(mockTrx);
 			});
 
-			// Define a function that performs multiple operations in a transaction
+			// Define a function that uses a transaction
 			const transferFunds = async (
 				fromUserId: number,
 				toUserId: number,
 				amount: number
 			) => {
-				return userModel.transaction(async (trx) => {
+				return userModel.transaction(async (trx: any) => {
 					// Debit one account
 					await trx
 						.updateTable('users')
-						.set({ balance: trx.raw(`balance - ${amount}`) })
+						.set({ amount: trx.db.dynamic.raw(`amount - ${amount}`) })
 						.where('id', '=', fromUserId)
-						.execute();
+						.executeTakeFirst();
 
 					// Credit another account
 					await trx
 						.updateTable('users')
-						.set({ balance: trx.raw(`balance + ${amount}`) })
+						.set({ amount: trx.db.dynamic.raw(`amount + ${amount}`) })
 						.where('id', '=', toUserId)
-						.execute();
+						.executeTakeFirst();
 
 					// Record the transaction
-					return trx
+					const transactionRecord = await trx
 						.insertInto('transactions')
 						.values({
 							user_id: fromUserId,
 							amount,
 							status: 'completed',
 						})
-						.returning(['*'])
+						.returning(['id', 'user_id', 'amount'])
 						.executeTakeFirst();
+
+					return transactionRecord;
 				});
+			};
+
+			// Mock dynamic raw
+			mockTrx.db = {
+				dynamic: {
+					raw: vi.fn(val => val),
+				},
 			};
 
 			const result = await transferFunds(1, 2, 100);

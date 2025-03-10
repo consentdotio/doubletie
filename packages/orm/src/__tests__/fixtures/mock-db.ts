@@ -12,6 +12,10 @@ import {
 	ReferenceExpression,
 	SelectExpression,
 	SelectQueryBuilder,
+	InsertQueryBuilder,
+	UpdateResult,
+	DeleteResult,
+	ExpressionBuilder,
 } from 'kysely';
 import { vi } from 'vitest';
 import type { MockInstance } from 'vitest';
@@ -33,96 +37,231 @@ export function createMockReturnThis(): MockReturnThis {
 }
 
 /**
+ * Common database types that can be reused in tests
+ */
+export interface BaseTestDB {
+	users: {
+		id: number;
+		name: string;
+		email: string;
+		createdAt?: string;
+		updatedAt?: string;
+	};
+}
+
+/**
+ * Mock expression builder for where clauses and conditions
+ * This interface mimics Kysely's ExpressionBuilder with simplified types
+ */
+export interface MockExpressionBuilder {
+	(column: string, operator: string, value: any): any;
+	and: (conditions: any[]) => any;
+	or: (conditions: any[]) => any;
+	not: (condition: any) => any;
+	between: (column: string, from: any, to: any) => any;
+	exists: (subquery: any) => any;
+	isNull: (column: string) => any;
+	isNotNull: (column: string) => any;
+}
+
+/**
+ * Create a mock expression builder that can be used in where clauses
+ */
+export function createMockExpressionBuilder(): MockExpressionBuilder {
+	const eb = function(column: string, operator: string, value: any) {
+		return { column, operator, value };
+	} as MockExpressionBuilder;
+
+	// Add necessary methods to the expression builder
+	eb.and = (conditions: any[]) => ({ and: conditions });
+	eb.or = (conditions: any[]) => ({ or: conditions });
+	eb.not = (condition: any) => ({ not: condition });
+	eb.between = (column: string, from: any, to: any) => ({ 
+		between: { column, from, to } 
+	});
+	eb.exists = (subquery: any) => ({ exists: subquery });
+	eb.isNull = (column: string) => ({ isNull: column });
+	eb.isNotNull = (column: string) => ({ isNotNull: column });
+
+	return eb;
+}
+
+// Type for all mock chains
+export interface MockChain {
+	[key: string]: any;
+}
+
+/**
  * Mock database interface that extends Kysely's types for testing
  * This provides better type safety and intellisense in tests
  */
 export interface TestMockDatabase<TDatabase = any> {
 	// Core query building methods
-	selectFrom: MockReturnThis & {
-		<TTable extends keyof TDatabase & string>(
-			table: TTable
-		): SelectQueryBuilder<TDatabase, TTable, {}>;
-	};
+	selectFrom<TTable extends keyof TDatabase & string>(
+		table: TTable | string
+	): MockChain;
 
-	select: MockReturnThis & {
-		<
-			TTable extends keyof TDatabase & string,
-			TSelectedFields extends SelectExpression<TDatabase, TTable>[],
-		>(
-			fields: TSelectedFields
-		): any;
-	};
+	select<TTable extends keyof TDatabase & string, TSelectedFields extends SelectExpression<TDatabase, TTable>[]>(
+		fields: TSelectedFields
+	): MockChain;
 
-	where: MockReturnThis & {
-		<
-			TTable extends keyof TDatabase & string,
-			TColumn extends keyof TDatabase[TTable] & string,
-		>(
-			column: TColumn | string,
-			operator: string,
-			value: OperandValueExpressionOrList<TDatabase, TTable, TColumn>
-		): any;
-	};
+	where<TTable extends keyof TDatabase & string, TColumn extends keyof TDatabase[TTable] & string>(
+		column: TColumn | string, 
+		operator: string, 
+		value: any
+	): MockChain;
+    
+	where(callback: (eb: MockExpressionBuilder) => any): MockChain;
 
-	orderBy: MockReturnThis & {
-		<TTable extends keyof TDatabase & string>(
-			column: ReferenceExpression<TDatabase, TTable>,
-			direction?: OrderByDirectionExpression
-		): any;
-	};
+	orderBy<TTable extends keyof TDatabase & string>(
+		column: ReferenceExpression<TDatabase, TTable>,
+		direction?: OrderByDirectionExpression
+	): MockChain;
 
-	limit: MockReturnThis & { (limit: number): any };
-	offset: MockReturnThis & { (offset: number): any };
-	execute: MockFn & { (): Promise<any[]> };
-	executeTakeFirst: MockFn & { (): Promise<any> };
+	limit(limit: number): MockChain;
+	offset(offset: number): MockChain;
+	execute(): Promise<any[]>;
+	executeTakeFirst(): Promise<any>;
 
-	// Additional mock methods as needed
-	whereIn?: MockReturnThis;
-	whereLike?: MockReturnThis;
-	whereNotNull?: MockReturnThis;
-	whereNull?: MockReturnThis;
-	orWhere?: MockReturnThis;
-	andWhere?: MockReturnThis;
-	innerJoin?: MockReturnThis;
-	leftJoin?: MockReturnThis;
-	on?: MockReturnThis;
-	groupBy?: MockReturnThis;
-	having?: MockReturnThis;
+	// Insert operations
+	insertInto<TTable extends keyof TDatabase & string>(table: TTable): MockChain;
+	values(values: any): MockChain;
+	returning(fields: any): MockChain;
+
+	// Delete operations
+	deleteFrom<TTable extends keyof TDatabase & string>(table: TTable): MockChain;
+	
+	// Update operations
+	updateTable<TTable extends keyof TDatabase & string>(table: TTable): MockChain;
+	set(values: any): MockChain;
+
+	// Additional mock methods
+	whereIn(column: string, values: any[]): MockChain;
+	whereLike(column: string, pattern: string): MockChain;
+	whereNotNull(column: string): MockChain;
+	whereNull(column: string): MockChain;
+	orWhere(column: string, operator: string, value: any): MockChain;
+	andWhere(column: string, operator: string, value: any): MockChain;
+	innerJoin(table: string, leftColumn?: string, rightColumn?: string): MockChain;
+	leftJoin(table: string, leftColumn?: string, rightColumn?: string): MockChain;
+	on(leftColumn: string, operator: string, rightColumn: string): MockChain;
+	groupBy(column: string): MockChain;
+	having(column: string, operator: string, value: any): MockChain;
+	
+	// Function methods
 	fn?: {
 		count: MockFn;
 		avg: MockFn;
 		sum: MockFn;
+		json: {
+			extract: MockFn;
+			path: MockFn;
+		};
 	};
 	$dynamic?: MockFn;
+	transaction?: MockFn;
 }
 
 /**
  * Base interface for common query builder methods
  */
 export interface MockQueryBuilder {
-	selectFrom: MockReturnThis;
-	select: MockReturnThis;
-	where: MockReturnThis;
+	selectFrom: MockFn;
+	selectAll: MockFn;
+	select: MockFn;
+	where: MockFn;
 	execute: MockFn;
 	executeTakeFirst: MockFn;
+	
+	// Insert operations
+	insertInto?: MockFn;
+	values?: MockFn;
+	returning?: MockFn;
+	
+	// Delete operations
+	deleteFrom?: MockFn;
+	
 	// Optional common methods
-	whereIn?: MockReturnThis;
-	whereLike?: MockReturnThis;
-	whereNotNull?: MockReturnThis;
-	whereNull?: MockReturnThis;
-	orWhere?: MockReturnThis;
-	andWhere?: MockReturnThis;
-	innerJoin?: MockReturnThis;
-	leftJoin?: MockReturnThis;
-	on?: MockReturnThis;
-	orderBy?: MockReturnThis;
-	groupBy?: MockReturnThis;
-	having?: MockReturnThis;
-	limit?: MockReturnThis;
-	offset?: MockReturnThis;
+	whereIn?: MockFn;
+	whereLike?: MockFn;
+	whereNotNull?: MockFn;
+	whereNull?: MockFn;
+	orWhere?: MockFn;
+	andWhere?: MockFn;
+	innerJoin?: MockFn;
+	leftJoin?: MockFn;
+	on?: MockFn;
+	orderBy?: MockFn;
+	groupBy?: MockFn;
+	having?: MockFn;
+	limit?: MockFn;
+	offset?: MockFn;
 	$dynamic?: MockFn;
-	updateTable?: MockReturnThis;
-	set?: MockReturnThis;
+	updateTable?: MockFn;
+	set?: MockFn;
+}
+
+/**
+ * Creates a mock select chain that can be used for select queries
+ */
+export function createMockSelectChain<T = any>(returnData: T[] = []): MockChain {
+	const chain = {
+		select: vi.fn().mockReturnThis(),
+		selectAll: vi.fn().mockReturnThis(),
+		where: vi.fn().mockReturnThis(),
+		whereIn: vi.fn().mockReturnThis(),
+		whereLike: vi.fn().mockReturnThis(),
+		whereNotNull: vi.fn().mockReturnThis(),
+		whereNull: vi.fn().mockReturnThis(),
+		orWhere: vi.fn().mockReturnThis(),
+		andWhere: vi.fn().mockReturnThis(),
+		innerJoin: vi.fn().mockReturnThis(),
+		leftJoin: vi.fn().mockReturnThis(),
+		on: vi.fn().mockReturnThis(),
+		orderBy: vi.fn().mockReturnThis(),
+		groupBy: vi.fn().mockReturnThis(),
+		having: vi.fn().mockReturnThis(),
+		limit: vi.fn().mockReturnThis(),
+		offset: vi.fn().mockReturnThis(),
+		execute: vi.fn().mockResolvedValue(returnData),
+		executeTakeFirst: vi.fn().mockResolvedValue(returnData.length > 0 ? returnData[0] : null),
+	};
+	
+	return chain;
+}
+
+/**
+ * Creates a mock update chain that can be used for update queries
+ */
+export function createMockUpdateChain(numUpdated: number = 1): MockChain {
+	return {
+		set: vi.fn().mockReturnThis(),
+		where: vi.fn().mockReturnThis(),
+		whereIn: vi.fn().mockReturnThis(),
+		execute: vi.fn().mockResolvedValue({ numUpdatedRows: BigInt(numUpdated) }),
+	};
+}
+
+/**
+ * Creates a mock delete chain that can be used for delete queries
+ */
+export function createMockDeleteChain(numDeleted: number = 1): MockChain {
+	return {
+		where: vi.fn().mockReturnThis(),
+		whereIn: vi.fn().mockReturnThis(),
+		execute: vi.fn().mockResolvedValue({ numDeletedRows: BigInt(numDeleted) }),
+	};
+}
+
+/**
+ * Creates a mock insert chain that can be used for insert queries
+ */
+export function createMockInsertChain<T = any>(returnData: T = { id: 1 } as unknown as T): MockChain {
+	return {
+		values: vi.fn().mockReturnThis(),
+		returning: vi.fn().mockReturnThis(),
+		executeTakeFirst: vi.fn().mockResolvedValue(returnData),
+	};
 }
 
 /**
@@ -141,33 +280,50 @@ export class MockDatabase<TDatabaseSchema = any> {
 	debug?: boolean;
 
 	// Query builder methods
-	selectFrom: MockReturnThis;
-	select: MockReturnThis;
-	where: MockReturnThis;
-	whereIn?: MockReturnThis;
-	whereLike?: MockReturnThis;
-	whereNotNull?: MockReturnThis;
-	whereNull?: MockReturnThis;
-	orWhere?: MockReturnThis;
-	andWhere?: MockReturnThis;
-	innerJoin?: MockReturnThis;
-	leftJoin?: MockReturnThis;
-	on?: MockReturnThis;
-	orderBy?: MockReturnThis;
-	groupBy?: MockReturnThis;
-	having?: MockReturnThis;
-	limit?: MockReturnThis;
-	offset?: MockReturnThis;
+	selectFrom: MockFn;
+	select: MockFn;
+	selectAll: MockFn;
+	where: MockFn;
+	whereIn: MockFn;
+	whereLike: MockFn;
+	whereNotNull: MockFn;
+	whereNull: MockFn;
+	orWhere: MockFn;
+	andWhere: MockFn;
+	innerJoin: MockFn;
+	leftJoin: MockFn;
+	on: MockFn;
+	orderBy: MockFn;
+	groupBy: MockFn;
+	having: MockFn;
+	limit: MockFn;
+	offset: MockFn;
 	execute: MockFn;
 	executeTakeFirst: MockFn;
-	$dynamic?: MockFn;
+	$dynamic: MockFn;
 	transaction: MockFn;
+	
+	// Insert operations
+	insertInto: MockFn;
+	values: MockFn;
+	returning: MockFn;
+	
+	// Delete operations
+	deleteFrom: MockFn;
+	
+	// Update operations
+	updateTable: MockFn;
+	set: MockFn;
 
 	// Additional properties
-	fn?: {
+	fn: {
 		count: MockFn;
 		avg: MockFn;
 		sum: MockFn;
+		json: {
+			extract: MockFn;
+			path: MockFn;
+		};
 		// Add other function mocks as needed
 	};
 
@@ -175,37 +331,52 @@ export class MockDatabase<TDatabaseSchema = any> {
 		options: Partial<MockQueryBuilder> & { transaction?: MockFn; fn?: any } = {}
 	) {
 		// Set up base query methods
-		this.selectFrom = options.selectFrom || createMockReturnThis();
-		this.select = options.select || createMockReturnThis();
-		this.where = options.where || createMockReturnThis();
+		this.selectFrom = options.selectFrom || vi.fn();
+		this.select = options.select || vi.fn();
+		this.selectAll = options.selectAll || vi.fn();
+		this.where = options.where || vi.fn();
 		this.execute = options.execute || vi.fn().mockResolvedValue([]);
 		this.executeTakeFirst =
 			options.executeTakeFirst || vi.fn().mockResolvedValue(null);
 		this.transaction = options.transaction || vi.fn();
+		
+		// Set up insert methods
+		this.insertInto = options.insertInto || vi.fn();
+		this.values = options.values || vi.fn();
+		this.returning = options.returning || vi.fn();
+		
+		// Set up delete methods
+		this.deleteFrom = options.deleteFrom || vi.fn();
+		
+		// Set up common query methods with defaults
+		this.whereIn = options.whereIn || vi.fn();
+		this.whereLike = options.whereLike || vi.fn();
+		this.whereNotNull = options.whereNotNull || vi.fn();
+		this.whereNull = options.whereNull || vi.fn();
+		this.orWhere = options.orWhere || vi.fn();
+		this.andWhere = options.andWhere || vi.fn();
+		this.innerJoin = options.innerJoin || vi.fn();
+		this.leftJoin = options.leftJoin || vi.fn();
+		this.on = options.on || vi.fn();
+		this.orderBy = options.orderBy || vi.fn();
+		this.groupBy = options.groupBy || vi.fn();
+		this.having = options.having || vi.fn();
+		this.limit = options.limit || vi.fn();
+		this.offset = options.offset || vi.fn();
+		this.$dynamic = options.$dynamic || vi.fn();
+		this.updateTable = options.updateTable || vi.fn();
+		this.set = options.set || vi.fn();
 
-		// Copy any other methods if provided
-		if (options.whereIn) this.whereIn = options.whereIn;
-		if (options.whereLike) this.whereLike = options.whereLike;
-		if (options.whereNotNull) this.whereNotNull = options.whereNotNull;
-		if (options.whereNull) this.whereNull = options.whereNull;
-		if (options.orWhere) this.orWhere = options.orWhere;
-		if (options.andWhere) this.andWhere = options.andWhere;
-		if (options.innerJoin) this.innerJoin = options.innerJoin;
-		if (options.leftJoin) this.leftJoin = options.leftJoin;
-		if (options.on) this.on = options.on;
-		if (options.orderBy) this.orderBy = options.orderBy;
-		if (options.groupBy) this.groupBy = options.groupBy;
-		if (options.having) this.having = options.having;
-		if (options.limit) this.limit = options.limit;
-		if (options.offset) this.offset = options.offset;
-		if (options.$dynamic) this.$dynamic = options.$dynamic;
-		if (options.updateTable) (this as any).updateTable = options.updateTable;
-		if (options.set) (this as any).set = options.set;
-
-		// Set up function mocks if provided
-		if (options.fn) {
-			this.fn = options.fn;
-		}
+		// Set up function mocks with defaults
+		this.fn = options.fn || {
+			count: vi.fn().mockReturnValue('COUNT expression'),
+			avg: vi.fn().mockReturnValue('AVG expression'),
+			sum: vi.fn().mockReturnValue('SUM expression'),
+			json: {
+				extract: vi.fn().mockReturnValue('JSON_EXTRACT expression'),
+				path: vi.fn().mockReturnValue('JSON_PATH expression'),
+			},
+		};
 	}
 
 	// Implement required getters/methods to match Database interface
@@ -230,9 +401,8 @@ export class MockDatabase<TDatabaseSchema = any> {
 		return false;
 	}
 
-	// Minimal implementation of standard Database methods
 	isSqlite() {
-		return false;
+		return true;
 	}
 
 	isMysql() {
@@ -240,23 +410,24 @@ export class MockDatabase<TDatabaseSchema = any> {
 	}
 
 	isPostgres() {
-		return true;
+		return false;
 	}
 
 	model() {
-		return {};
+		return null;
 	}
 
 	destroy() {
+		// Mock implementation of destroy
 		return Promise.resolve();
 	}
 }
 
 /**
- * Create a fully mocked Database instance for testing
- *
- * @param options Additional mock configuration
- * @returns A mocked Database instance that can be passed to createModel
+ * Create a mock database instance with proper typing and full query chain support
+ * 
+ * @param options - Mock configuration options
+ * @returns A mock database instance with proper typing
  */
 export function createMockDatabase<TDatabaseSchema = any>(
 	options: Partial<MockQueryBuilder> & {
@@ -266,56 +437,121 @@ export function createMockDatabase<TDatabaseSchema = any>(
 	} = {}
 ): TestMockDatabase<TDatabaseSchema> &
 	Database<TDatabaseSchema, ModelRegistry<TDatabaseSchema>> {
-	const mockDb = new MockDatabase<TDatabaseSchema>(options);
 
-	// Set up any additional mocks or configuration
+	// Create a mock database instance with improved typing
+	const mockDb = new MockDatabase(options);
+	
+	// Set up default mock implementations
+	if (!options.selectFrom) {
+		mockDb.selectFrom = vi.fn().mockImplementation((table: string) => {
+			return createMockSelectChain();
+		});
+	}
+	
+	if (!options.updateTable) {
+		mockDb.updateTable = vi.fn().mockImplementation((table: string) => {
+			return createMockUpdateChain();
+		});
+	}
+	
+	if (!options.deleteFrom) {
+		mockDb.deleteFrom = vi.fn().mockImplementation((table: string) => {
+			return createMockDeleteChain();
+		});
+	}
+	
+	if (!options.insertInto) {
+		mockDb.insertInto = vi.fn().mockImplementation((table: string) => {
+			return createMockInsertChain();
+		});
+	}
 
-	// Return with type assertion to make TypeScript happy
 	return mockDb as unknown as TestMockDatabase<TDatabaseSchema> &
 		Database<TDatabaseSchema, ModelRegistry<TDatabaseSchema>>;
 }
 
 /**
- * Create a mock implementation of the transaction method that properly handles callbacks
+ * Creates common database mock objects with test data
+ * This helps reduce duplicate test data definitions across test files
+ */
+export function createTestData() {
+	return {
+		users: [
+			{ 
+				id: 1, 
+				name: 'Test User', 
+				email: 'test@example.com',
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString()
+			},
+			{ 
+				id: 2, 
+				name: 'Another User', 
+				email: 'another@example.com',
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString()
+			}
+		],
+		comments: [
+			{ id: 1, user_id: 1, message: 'Test comment 1' },
+			{ id: 2, user_id: 1, message: 'Test comment 2' },
+		],
+		userWithComments: [
+			{ userId: 1, commentId: 1, userName: 'Test User', message: 'Test comment 1' },
+			{ userId: 1, commentId: 2, userName: 'Test User', message: 'Test comment 2' },
+		]
+	};
+}
+
+/**
+ * Create a mock transaction function for use in tests
  *
- * @param executeTakeFirst Mock for executeTakeFirst to use in transaction context
- * @returns A mock transaction function
+ * @param executeTakeFirst - Mock function for executeTakeFirst
+ * @returns A mocked transaction function
  */
 export function createMockTransaction(
 	executeTakeFirst: MockFn = vi.fn()
 ): MockFn {
-	return vi.fn().mockReturnValue({
-		execute: vi.fn().mockImplementation(async (callback: any) => {
-			// Create a mock transaction database
-			const trxDb = createMockDatabase({
-				selectFrom: createMockReturnThis(),
-				where: createMockReturnThis(),
-				executeTakeFirst,
-				updateTable: createMockReturnThis(),
-				set: createMockReturnThis(),
-				isTransaction: true,
-			});
+	return vi.fn().mockImplementation((callback: (trx: any) => Promise<any>) => {
+		const mockTrx = {
+			executeTakeFirst,
+			execute: vi.fn().mockResolvedValue([]),
+			selectFrom: vi.fn().mockReturnThis(),
+			selectAll: vi.fn().mockReturnThis(),
+			where: vi.fn().mockReturnThis(),
+			andWhere: vi.fn().mockReturnThis(),
+			updateTable: vi.fn().mockReturnThis(),
+			set: vi.fn().mockReturnThis(),
+			insertInto: vi.fn().mockReturnThis(),
+			values: vi.fn().mockReturnThis(),
+			returning: vi.fn().mockReturnThis(),
+		};
 
-			// Call the callback with the transaction database
-			return callback(trxDb);
-		}),
+		return callback(mockTrx);
 	});
 }
 
 /**
- * Create a mock Database that will throw an error during transaction execution
+ * Create a mock database that throws errors, useful for testing error handling
  *
- * @param errorMessage The error message to throw
- * @returns A mock Database that will throw during transaction
+ * @param errorMessage - Custom error message
+ * @returns A mock database configured to throw errors
  */
 export function createErrorMockDatabase(
 	errorMessage = 'Transaction error'
 ): Database<any> {
-	return createMockDatabase({
-		transaction: vi.fn().mockReturnValue({
-			execute: vi.fn().mockImplementation(() => {
-				throw new Error(errorMessage);
-			}),
+	const mockDb = new MockDatabase({
+		transaction: vi.fn().mockImplementation(() => {
+			throw new Error(errorMessage);
 		}),
-	}) as unknown as Database<any>;
+		execute: vi.fn().mockRejectedValue(new Error(errorMessage)),
+		executeTakeFirst: vi.fn().mockRejectedValue(new Error(errorMessage)),
+	});
+
+	return mockDb as unknown as Database<any>;
 }
+
+/**
+ * Helper to convert a JS Date to SQLite format
+ */
+export const toSqliteDate = (date: Date): string => date.toISOString();

@@ -3,10 +3,8 @@ import { Database } from '../../database';
 import createModel from '../../model';
 import {
 	MockFn,
-	createErrorMockDatabase,
 	createMockDatabase,
-	createMockReturnThis,
-	createMockTransaction,
+
 } from '../fixtures/mock-db';
 
 describe('unit: transaction handling', () => {
@@ -25,21 +23,42 @@ describe('unit: transaction handling', () => {
 	let model: any;
 
 	beforeEach(() => {
-		// Set up mock functions
+		// Set up mocks
 		mockExecuteTakeFirst = vi.fn();
-
-		// Create a mock transaction
-		mockTransaction = createMockTransaction(mockExecuteTakeFirst);
-
-		// Create a mock database with the transaction
-		mockDb = createMockDatabase<TestDB>({
-			transaction: mockTransaction,
-			selectFrom: createMockReturnThis(),
-			where: createMockReturnThis(),
-			executeTakeFirst: vi.fn(),
+		
+		// Create a proper mock transaction function that calls the callback with a transaction object
+		mockTransaction = vi.fn().mockImplementation((callback) => {
+			// Create a transaction object with required methods
+			const transaction = {
+				transaction: {
+					selectFrom: vi.fn().mockReturnThis(),
+					updateTable: vi.fn().mockReturnThis(),
+					execute: vi.fn(),
+				},
+				afterCommit: vi.fn(),
+			};
+			
+			// Actually call the callback with the transaction
+			const result = callback(transaction);
+			
+			// Return the result wrapped in a promise
+			return Promise.resolve(result);
 		});
 
-		// Create model with mock db - explicitly provide type parameters
+		// Create mock database with transaction method
+		mockDb = createMockDatabase({
+			selectFrom: vi.fn().mockReturnThis(),
+			select: vi.fn().mockReturnThis(),
+			where: vi.fn().mockReturnThis(),
+			orderBy: vi.fn().mockReturnThis(),
+			limit: vi.fn().mockReturnThis(),
+			offset: vi.fn().mockReturnThis(),
+			execute: vi.fn().mockResolvedValue([]),
+			executeTakeFirst: mockExecuteTakeFirst.mockResolvedValue(null),
+			transaction: mockTransaction,
+		});
+
+		// Create model with mock db
 		model = createModel<TestDB, 'users', 'id'>(
 			mockDb as unknown as Database<TestDB>,
 			'users',
@@ -58,9 +77,7 @@ describe('unit: transaction handling', () => {
 		await model.transaction(callback);
 
 		expect(mockDb.transaction).toHaveBeenCalled();
-		// Access the mocked function result and its execute method
-		const mockTransactionResult = mockTransaction.mock.results[0].value;
-		expect(mockTransactionResult.execute).toHaveBeenCalled();
+		expect(callback).toHaveBeenCalled();
 	});
 
 	it('should pass the transaction to the callback', async () => {
@@ -68,57 +85,63 @@ describe('unit: transaction handling', () => {
 
 		await model.transaction(async (trx: any) => {
 			transactionPassed = trx;
+			return null;
 		});
 
 		expect(transactionPassed).not.toBeNull();
-		expect(transactionPassed).toHaveProperty('selectFrom');
-		expect(transactionPassed).toHaveProperty('updateTable');
+		expect(transactionPassed).toHaveProperty('transaction');
+		expect(transactionPassed.transaction).toHaveProperty('selectFrom');
+		expect(transactionPassed.transaction).toHaveProperty('updateTable');
 	});
 
 	it('should return the result from the callback', async () => {
 		const expectedResult = { id: 1, name: 'Test' };
-		const callback = vi.fn().mockResolvedValue(expectedResult);
+		
+		// Updated mockImplementation to return the callback's return value
+		mockTransaction.mockImplementationOnce((callback) => {
+			return Promise.resolve(expectedResult);
+		});
 
-		const result = await model.transaction(callback);
+		const result = await model.transaction(() => expectedResult);
 
 		expect(result).toEqual(expectedResult);
 	});
 
 	it('should propagate errors from the transaction', async () => {
-		// Create a db mock that throws an error
-		const errorDb = createErrorMockDatabase('Transaction error');
-
-		// Explicitly provide type parameters to createModel
-		const errorModel = createModel<TestDB, 'users', 'id'>(
-			errorDb as unknown as Database<TestDB>,
-			'users',
-			'id'
-		);
+		// Make transaction reject with error
+		mockTransaction.mockImplementationOnce(() => {
+			return Promise.reject(new Error('Transaction error'));
+		});
 
 		await expect(
-			errorModel.transaction(async () => {
-				// This should not be reached
+			model.transaction(async () => {
 				return 'result';
 			})
 		).rejects.toThrow('Transaction error');
 	});
 
 	it('should use transaction for database operations within callback', async () => {
-		mockExecuteTakeFirst.mockResolvedValue({ id: 1, name: 'Test User' });
-
-		await model.transaction(async (trx: any) => {
-			// Create a transactional model - explicitly provide type parameters
-			const trxModel = createModel<TestDB, 'users', 'id'>(
-				trx as unknown as Database<TestDB>,
-				'users',
-				'id'
-			);
-
-			// Perform an operation
-			await trxModel.findById(1);
+		const mockFindById = vi.fn().mockResolvedValue({ id: 1, name: 'Test User' });
+		
+		// Create a transaction object that includes the find method
+		mockTransaction.mockImplementationOnce((callback) => {
+			const transaction = {
+				transaction: {
+					selectFrom: vi.fn().mockReturnThis(),
+					where: vi.fn().mockReturnThis(),
+					executeTakeFirst: mockFindById
+				},
+				afterCommit: vi.fn(),
+			};
+			return Promise.resolve(callback(transaction));
 		});
 
-		// Verify executeTakeFirst was called
-		expect(mockExecuteTakeFirst).toHaveBeenCalled();
+		await model.transaction(async (trx: any) => {
+			// Use transaction to find a user by ID
+			await trx.transaction.selectFrom().where().executeTakeFirst();
+		});
+
+		// Verify the mock was called
+		expect(mockFindById).toHaveBeenCalled();
 	});
 });

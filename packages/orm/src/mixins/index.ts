@@ -16,7 +16,7 @@
 export { default as withUpdatedAt } from './updated-at';
 export { default as withCreatedAt } from './created-at';
 export { default as withSlug } from './slug';
-export { default as withGlobalId } from './globalId';
+export {  withGlobalId } from './globalId';
 export {
 	default as withIdGenerator,
 	type IdGeneratorOptions,

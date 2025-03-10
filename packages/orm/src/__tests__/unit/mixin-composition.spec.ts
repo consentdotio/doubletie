@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { withGlobalId, withIdGenerator, withSlug } from '../../mixins';
 import createModel from '../../model';
+import { type Database, type ModelFunctions, type SelectQueryBuilder } from 'kysely';
 
 describe('unit: mixin composition', () => {
 	// Define test database types
@@ -14,8 +15,24 @@ describe('unit: mixin composition', () => {
 		};
 	}
 
-	let mockDb;
-	let UserModel;
+	// Define mock database type
+	type MockFn = ReturnType<typeof vi.fn>;
+	interface MockDB {
+		selectFrom: MockFn;
+		select: MockFn;
+		where: MockFn;
+		execute: MockFn;
+		executeTakeFirst: MockFn;
+		insertInto: MockFn;
+		values: MockFn;
+		returning: MockFn;
+		updateTable: MockFn;
+		set: MockFn;
+		[key: string]: any;
+	}
+
+	let mockDb: MockDB;
+	let UserModel: ModelFunctions<TestDB, 'users', 'id'>;
 
 	beforeEach(() => {
 		// Set up mock database with query builder
@@ -33,15 +50,15 @@ describe('unit: mixin composition', () => {
 		};
 
 		// Create base model
-		UserModel = createModel<TestDB, 'users', 'id'>(mockDb, 'users', 'id');
+		UserModel = createModel<TestDB, 'users', 'id'>(mockDb as unknown as Database<TestDB>, 'users', 'id');
 	});
 
 	describe('basic mixin application', () => {
 		it('should apply a single mixin to a model', () => {
-			const ModelWithSlug = withSlug(UserModel, {
-				field: 'slug',
-				sources: ['name'],
-			});
+			const ModelWithSlug = withSlug<TestDB, 'users', 'id'>(UserModel, {
+				field: 'slug' as keyof TestDB['users'] & string,
+				sources: ['name' as keyof TestDB['users'] & string],
+			} as any);
 
 			// Verify the mixin added methods
 			expect(ModelWithSlug).toHaveProperty('insertWithSlug');
@@ -53,14 +70,14 @@ describe('unit: mixin composition', () => {
 		});
 
 		it('should apply multiple mixins to a model', () => {
-			const ModelWithSlug = withSlug(UserModel, {
-				field: 'slug',
-				sources: ['name'],
-			});
+			const ModelWithSlug = withSlug<TestDB, 'users', 'id'>(UserModel, {
+				field: 'slug' as keyof TestDB['users'] & string,
+				sources: ['name' as keyof TestDB['users'] & string],
+			} as any);
 
-			const ModelWithSlugAndGlobalId = withGlobalId(ModelWithSlug, {
+			const ModelWithSlugAndGlobalId = withGlobalId<TestDB, 'users', 'id'>(ModelWithSlug as any, {
 				type: 'User',
-			});
+			} as any);
 
 			// Verify both mixins added their methods
 			expect(ModelWithSlugAndGlobalId).toHaveProperty('insertWithSlug');
@@ -77,20 +94,20 @@ describe('unit: mixin composition', () => {
 	describe('mixin interaction', () => {
 		it('should preserve functionality from all mixins', async () => {
 			// Apply multiple mixins
-			const MixinUserModel = withGlobalId(
-				withSlug(
-					withIdGenerator(UserModel, {
-						type: 'numeric',
+			const MixinUserModel = withGlobalId<TestDB, 'users', 'id'>(
+				withSlug<TestDB, 'users', 'id'>(
+					withIdGenerator<TestDB, 'users', 'id'>(UserModel, {
+						prefix: 'usr',
 						fieldName: 'id',
 					}),
 					{
-						field: 'slug',
-						sources: ['name'],
-					}
-				),
+						field: 'slug' as keyof TestDB['users'] & string,
+						sources: ['name' as keyof TestDB['users'] & string],
+					} as any
+				) as any,
 				{
 					type: 'User',
-				}
+				} as any
 			);
 
 			// Mock executeTakeFirst to return a user
@@ -108,7 +125,7 @@ describe('unit: mixin composition', () => {
 			expect(user).toHaveProperty('id', 1);
 
 			// Test findBySlug (slug mixin)
-			await MixinUserModel.findBySlug('test-user');
+			await (MixinUserModel as any).findBySlug('test-user');
 			expect(mockDb.where).toHaveBeenCalledWith(
 				'slug',
 				'=',
@@ -122,30 +139,30 @@ describe('unit: mixin composition', () => {
 
 			// Test generateId (ID generator mixin)
 			mockDb.executeTakeFirst.mockResolvedValueOnce({ maxId: 42 });
-			const nextId = await MixinUserModel.generateId();
+			const nextId = await (MixinUserModel as any).generateId();
 			expect(nextId).toBe(43);
 		});
 
 		it('should handle mixins that extend the same methods', async () => {
 			// Create mock mixins that extend the same method
-			const withLoggedFind = (model) => {
+			const withLoggedFind = (model: ModelFunctions<TestDB, 'users', 'id'>) => {
 				const findById = model.findById;
 
 				return {
 					...model,
-					findById: async (id) => {
+					findById: async (id: number) => {
 						console.log('Logged find called');
 						return findById.call(model, id);
 					},
 				};
 			};
 
-			const withCachedFind = (model) => {
+			const withCachedFind = (model: ModelFunctions<TestDB, 'users', 'id'>) => {
 				const findById = model.findById;
 
 				return {
 					...model,
-					findById: async (id) => {
+					findById: async (id: number) => {
 						console.log('Cached find called');
 						return findById.call(model, id);
 					},
@@ -177,13 +194,13 @@ describe('unit: mixin composition', () => {
 	describe('mixin with custom options', () => {
 		it('should handle custom options in mixins', () => {
 			// Define a custom mixin that takes options
-			const withStatus = (model, options: { defaultStatus: string }) => {
+			const withStatus = (model: ModelFunctions<TestDB, 'users', 'id'>, options: { defaultStatus: string }) => {
 				return {
 					...model,
 					findByStatus: async (status: string) => {
 						return model.selectFrom().where('status', '=', status).execute();
 					},
-					insertWithStatus: async (data) => {
+					insertWithStatus: async (data: Record<string, any>) => {
 						const dataWithStatus = {
 							...data,
 							status: data.status || options.defaultStatus,
@@ -200,10 +217,10 @@ describe('unit: mixin composition', () => {
 
 			// Apply multiple mixins with custom options
 			const EnhancedUserModel = withStatus(
-				withSlug(UserModel, {
-					field: 'slug',
-					sources: ['name'],
-				}),
+				withSlug<TestDB, 'users', 'id'>(UserModel, {
+					field: 'slug' as keyof TestDB['users'] & string,
+					sources: ['name' as keyof TestDB['users'] & string],
+				} as any),
 				{
 					defaultStatus: 'active',
 				}
@@ -223,11 +240,11 @@ describe('unit: mixin composition', () => {
 		it('should support mixin factories', () => {
 			// Define a mixin factory that returns a mixin function
 			const createUserExtensionMixin = (extensions: Record<string, any>) => {
-				return (model) => {
+				return (model: ModelFunctions<TestDB, 'users', 'id'>) => {
 					return {
 						...model,
 						getExtensions: () => extensions,
-						withExtensions: (data) => ({
+						withExtensions: (data: Record<string, any>) => ({
 							...data,
 							...extensions,
 						}),
@@ -263,25 +280,25 @@ describe('unit: mixin composition', () => {
 
 		it('should support dynamic mixin application', () => {
 			// Define a function that dynamically applies mixins based on config
-			const applyMixins = (baseModel, config) => {
+			const applyMixins = (baseModel: ModelFunctions<TestDB, 'users', 'id'>, config: Record<string, boolean>) => {
 				let model = baseModel;
 
 				if (config.withSlug) {
-					model = withSlug(model, {
-						field: 'slug',
-						sources: ['name'],
-					});
+					model = withSlug<TestDB, 'users', 'id'>(model, {
+						field: 'slug' as keyof TestDB['users'] & string,
+						sources: ['name' as keyof TestDB['users'] & string],
+					} as any);
 				}
 
 				if (config.withGlobalId) {
-					model = withGlobalId(model, {
+					model = withGlobalId<TestDB, 'users', 'id'>(model as any, {
 						type: 'User',
-					});
+					} as any);
 				}
 
 				if (config.withIdGenerator) {
-					model = withIdGenerator(model, {
-						type: 'numeric',
+					model = withIdGenerator<TestDB, 'users', 'id'>(model, {
+						prefix: 'usr',
 						fieldName: 'id',
 					});
 				}
@@ -315,12 +332,34 @@ describe('unit: mixin composition', () => {
 });
 
 describe('mixin order effects', () => {
+	let UserModel: ModelFunctions<TestDB, 'users', 'id'>;
+	let mockDb: MockDB;
+
+	beforeEach(() => {
+		// Set up mock database with query builder
+		mockDb = {
+			selectFrom: vi.fn().mockReturnThis(),
+			select: vi.fn().mockReturnThis(),
+			where: vi.fn().mockReturnThis(),
+			execute: vi.fn().mockResolvedValue([]),
+			executeTakeFirst: vi.fn().mockResolvedValue(null),
+			insertInto: vi.fn().mockReturnThis(),
+			values: vi.fn().mockReturnThis(),
+			returning: vi.fn().mockReturnThis(),
+			updateTable: vi.fn().mockReturnThis(),
+			set: vi.fn().mockReturnThis(),
+		};
+
+		// Create base model
+		UserModel = createModel<TestDB, 'users', 'id'>(mockDb as unknown as Database<TestDB>, 'users', 'id');
+	});
+
 	it('should respect the order of mixin application', async () => {
 		// Define a mixin that modifies data before insertion
-		const withTimestamps = (model) => {
+		const withTimestamps = (model: ModelFunctions<TestDB, 'users', 'id'>) => {
 			return {
 				...model,
-				processDataBeforeInsert: (data) => {
+				processDataBeforeInsert: (data: any) => {
 					const timestamp = new Date();
 
 					if (Array.isArray(data)) {
@@ -341,12 +380,12 @@ describe('mixin order effects', () => {
 		};
 
 		// Define a mixin that logs data before insertion
-		const withLogging = (model) => {
-			const originalProcess = model.processDataBeforeInsert || ((data) => data);
+		const withLogging = (model: ModelFunctions<TestDB, 'users', 'id'>) => {
+			const originalProcess = model.processDataBeforeInsert || ((data: any) => data);
 
 			return {
 				...model,
-				processDataBeforeInsert: (data) => {
+				processDataBeforeInsert: (data: any) => {
 					console.log('Processing data:', data);
 					return originalProcess(data);
 				},
