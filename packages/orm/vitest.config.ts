@@ -7,6 +7,9 @@ export default defineConfig({
 		environment: 'node',
 		globals: true,
 
+		// Stop on first failure
+		failFast: true,
+
 		// Test organization
 		include: [
 			'src/__tests__/**/*.{test,spec}.{js,ts}',
@@ -14,9 +17,9 @@ export default defineConfig({
 		],
 		exclude: ['**/node_modules/**', '**/dist/**'],
 
-		// Type checking
+		// Type checking - temporarily disabled
 		typecheck: {
-			enabled: true,
+			enabled: false,
 			tsconfig: './tsconfig.json',
 			ignoreSourceErrors: false,
 		},

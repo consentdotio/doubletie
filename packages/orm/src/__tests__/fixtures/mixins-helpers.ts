@@ -6,11 +6,11 @@
  */
 
 import { vi } from 'vitest';
-import { Database } from '../../database';
-import { withGlobalId } from '../../mixins/globalId';
-import withIdGenerator from '../../mixins/id-generator';
-import withSlug from '../../mixins/slug';
-import createModel from '../../model';
+import { Database } from '~/database';
+import { withGlobalId } from '~/mixins/global-id';
+import withIdGenerator from '~/mixins/id-generator';
+import withSlug from '~/mixins/slug';
+import createModel from '~/model';
 import { createMockDatabaseWithTransaction } from './mock-db';
 
 /**

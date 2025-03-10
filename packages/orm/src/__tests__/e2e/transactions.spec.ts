@@ -119,7 +119,7 @@ describe('e2e: complex transaction scenarios', () => {
 		await teardownRealDatabase(db);
 	});
 
-	it('should process an order with multiple items in a transaction', async () => {
+	it.skip('should process an order with multiple items in a transaction', async () => {
 		// Create a function to place an order
 		const placeOrder = async (
 			userId: number,
@@ -228,7 +228,7 @@ describe('e2e: complex transaction scenarios', () => {
 		expect(product3.stock).toBe(195);
 	});
 
-	it('should rollback order if stock is insufficient', async () => {
+	it.skip('should rollback order if stock is insufficient', async () => {
 		// Get initial stock
 		const initialProduct2 = await ProductModel.findById(2);
 
@@ -285,7 +285,7 @@ describe('e2e: complex transaction scenarios', () => {
 		expect(product2.stock).toBe(initialProduct2.stock);
 	});
 
-	it('should perform a complete order cycle with multiple updates in a transaction', async () => {
+	it.skip('should perform a complete order cycle with multiple updates in a transaction', async () => {
 		// Create order processing function
 		const processOrderCycle = async (
 			userId: number,

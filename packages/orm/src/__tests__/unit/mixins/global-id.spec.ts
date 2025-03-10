@@ -1,8 +1,7 @@
-import { NoResultError } from 'kysely';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Database } from '../../../database';
-import { withGlobalId } from '../../../mixins/globalId';
-import createModel from '../../../model';
+import type { Database } from '~/database';
+import { withGlobalId } from '~/mixins/global-id';
+import createModel from '~/model';
 import {
 	MockFn,
 	createMockDatabase,

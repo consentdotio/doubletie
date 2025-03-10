@@ -19,10 +19,10 @@ import {
 } from 'kysely';
 import { vi } from 'vitest';
 import type { MockInstance } from 'vitest';
-import { Database } from '../../database';
-import { ModelRegistry } from '../../database';
-import type { IdGeneratorOptions } from '../../mixins/id-generator';
-import createModel from '../../model';
+import { Database } from '~/database';
+import { ModelRegistry } from '~/database';
+import type { IdGeneratorOptions } from '~/mixins/id-generator';
+import createModel from '~/model';
 
 // Define helper types for mocks
 export type MockFn = ReturnType<typeof vi.fn> & {

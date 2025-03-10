@@ -1,8 +1,8 @@
 import { sql } from 'kysely';
 import type { UpdateResult } from 'kysely';
 import { describe, expect, it, vi } from 'vitest';
-import type { Database } from '../../database';
-import createModel from '../../model';
+import type { Database } from '~/database';
+import createModel from '~/model';
 import {
 	type MockExpressionBuilder,
 	type TestMockDatabase,

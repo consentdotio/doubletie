@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Database } from '../../database';
-import createModel from '../../model';
+import { Database } from '~/database';
+import createModel from '~/model';
 import { MockFn, createMockDatabase } from '../fixtures/mock-db';
 
 describe('unit: transaction handling', () => {

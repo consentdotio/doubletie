@@ -14,9 +14,9 @@ import type {
 } from 'kysely';
 import { vi } from 'vitest';
 
-import { Database } from '../../../database';
 import { withGlobalId, withSlug } from '../../../mixins';
-import createModel from '../../../model';
+import { Database } from '../~/database';
+import createModel from '../~/model';
 import type { TestDatabase } from './base-schema';
 
 /**

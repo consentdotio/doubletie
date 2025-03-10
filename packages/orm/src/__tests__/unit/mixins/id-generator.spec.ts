@@ -1,9 +1,9 @@
 import type { InsertObject } from 'kysely';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import withIdGenerator from '../../../mixins/id-generator';
 import { createModelWithIdGenerator } from '../../fixtures/mixins-helpers';
 import { MockFn } from '../../fixtures/mock-db';
 import { IdGeneratorTestDB } from '../../fixtures/test-db-types';
+import withIdGenerator from '../~/mixins/id-generator';
 
 // Create a type alias for compatibility
 type InsertObjectOrList<TDatabase, TTable extends keyof TDatabase> =

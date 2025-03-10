@@ -6,7 +6,7 @@ import {
 	generateSlugValue,
 	default as withSlug,
 } from '../../../mixins/slug';
-import type { ModelFunctions } from '../../../model';
+import type { ModelFunctions } from '../~/model';
 
 // Define test database type for testing
 interface TestDB {
