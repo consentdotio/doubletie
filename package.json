@@ -1,20 +1,23 @@
 {
 	"name": "doubletie",
-	"private": true,
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/consentdotio/doubletie.git"
+	},
 	"scripts": {
-		"build:libs": "turbo build --filter=./packages/*",
 		"build:apps": "turbo build --filter=./apps/*",
+		"build:libs": "turbo build --filter=./packages/*",
 		"check-types": "turbo check-types",
 		"ci:publish": "pnpm changeset tag && pnpm publish -r",
 		"ci:version": "pnpm changeset version",
-		"dev:libs": "turbo dev --filter=./packages/*",
 		"dev:docs": "turbo dev --filter=./apps/docs/*",
-		"test": "turbo test",
+		"dev:libs": "turbo dev --filter=./packages/*",
 		"fmt": "turbo fmt",
+		"knip": "knip",
 		"lint": "turbo lint",
 		"lint:fix": "turbo lint -- --write",
-		"knip": "knip",
 		"release": "pnpm build && changeset publish",
+		"test": "turbo test",
 		"version": "changeset version && pnpm install --lockfile-only"
 	},
 	"devDependencies": {
@@ -39,5 +42,8 @@
 	"packageManager": "pnpm@9.0.0",
 	"engines": {
 		"node": ">=18"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }
