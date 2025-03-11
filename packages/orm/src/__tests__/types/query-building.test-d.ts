@@ -6,7 +6,7 @@ import type {
 	Sql,
 } from 'kysely';
 import { assertType, expectTypeOf, test } from 'vitest';
-import createModel from '~/model';
+import { createModel } from '../../model.js';
 
 // Define test database schema
 interface TestDB {

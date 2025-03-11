@@ -15,11 +15,12 @@ import {
 	SqliteDialect,
 	sql,
 } from 'kysely';
-import type { CommonTableExpression } from 'kysely/dist/cjs/parser/with-parser';
-import createModel, {
+import {
 	type ModelSchema,
 	type PrimaryKeySpecification,
-} from './model';
+	createModel,
+} from './model.js';
+import { CommonTableExpression } from './utils/kysley-types.js';
 
 /**
  * Configuration options for the database

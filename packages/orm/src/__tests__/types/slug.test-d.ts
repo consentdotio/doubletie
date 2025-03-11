@@ -1,5 +1,5 @@
 import type { Selectable } from 'kysely';
-import { assertType, expectTypeOf } from 'vitest';
+import { assertType, expectTypeOf, test } from 'vitest';
 import {
 	type Operation,
 	type Options,
@@ -7,8 +7,8 @@ import {
 	type TableValues,
 	generateSlugValue,
 	default as withSlug,
-} from '~/mixins/slug';
-import type { ModelFunctions } from '~/model';
+} from '../../mixins/slug.js';
+import type { ModelFunctions } from '../../model.js';
 
 // Define test types
 interface TestDB {

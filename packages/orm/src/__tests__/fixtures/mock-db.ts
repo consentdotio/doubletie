@@ -19,10 +19,10 @@ import {
 } from 'kysely';
 import { vi } from 'vitest';
 import type { MockInstance } from 'vitest';
-import { Database } from '~/database';
-import { ModelRegistry } from '~/database';
-import type { IdGeneratorOptions } from '~/mixins/id-generator';
-import createModel from '~/model';
+import { Database } from '../../database.js';
+import { ModelRegistry } from '../../database.js';
+import type { IdGeneratorOptions } from '../../mixins/id-generator.js';
+import { createModel } from '../../model.js';
 
 // Define helper types for mocks
 export type MockFn = ReturnType<typeof vi.fn> & {
@@ -693,9 +693,11 @@ export function createMockTransactionWithBind(
 		});
 
 	// Add bind method to support model.transaction.bind(db) pattern
-	transaction.bind = vi.fn((thisArg) => (cb) => {
-		return transaction(cb);
-	});
+	transaction.bind = vi.fn(
+		(thisArg: any) => (cb: (trx: any) => Promise<any>) => {
+			return transaction(cb);
+		}
+	);
 
 	return transaction as MockFn & {
 		bind: (thisArg: any) => (cb: (trx: any) => Promise<any>) => Promise<any>;

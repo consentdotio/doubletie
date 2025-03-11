@@ -8,7 +8,7 @@ import { OrderByDirectionExpression, type Selectable, sql } from 'kysely';
  *
  * @module cursorable
  */
-import type { ModelFunctions } from '../model';
+import type { ModelFunctions } from '../model.js';
 
 /**
  * Configuration options for how a column should be sorted in cursor pagination.

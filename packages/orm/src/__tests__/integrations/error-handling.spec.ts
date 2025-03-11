@@ -1,65 +1,34 @@
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import createModel from '~/model';
-import { setupTestDatabase, teardownTestDatabase } from '../fixtures/test-db';
+import { createModel } from '../../model.js';
+import type { DB, Timestamp, Users } from '../fixtures/migration.js';
+import {
+	cleanupDatabase,
+	db,
+	initializeDatabase,
+	toSqliteDate,
+} from '../fixtures/migration.js';
 
-describe('Error Handling - Integration Tests', () => {
-	// Setup test database
-	let db: any;
-	let UserModel: any;
-
+describe('Integration: Error Handling', () => {
 	beforeEach(async () => {
-		// Set up fresh database for each test
-		db = await setupTestDatabase();
-
-		// Create User model
-		UserModel = createModel(db, 'users', 'id');
-
-		// Create users table
-		await db.schema
-			.createTable('users')
-			.ifNotExists()
-			.addColumn('id', 'integer', (col) => col.primaryKey().autoIncrement())
-			.addColumn('email', 'text', (col) => col.notNull().unique())
-			.addColumn('name', 'text', (col) => col.notNull())
-			.addColumn('username', 'text', (col) => col.notNull())
-			.addColumn('password', 'text', (col) => col.notNull())
-			.addColumn('followersCount', 'integer', (col) => col.defaultTo(0))
-			.addColumn('createdAt', 'text', (col) => col.notNull())
-			.addColumn('updatedAt', 'text', (col) => col.notNull())
-			.execute();
-
-		// Insert test data
-		await db
-			.insertInto('users')
-			.values({
-				email: 'test@example.com',
-				name: 'Test User',
-				username: 'testuser',
-				password: 'password123',
-				followersCount: 0,
-				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString(),
-			})
-			.execute();
+		await initializeDatabase();
 	});
 
 	afterEach(async () => {
-		await teardownTestDatabase(db);
+		await cleanupDatabase();
 	});
 
-	it.skip('should throw appropriate error when record not found', async () => {
-		let errorCaught = false;
-		try {
-			await UserModel.findById(9999);
-		} catch (err) {
-			errorCaught = true;
-			expect(err.message).toContain('no result');
-		}
-		expect(errorCaught).toBe(true);
+	it('handles record not found errors', async () => {
+		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+
+		const user = await UserModel.findById('nonexistent-id');
+
+		expect(user).toBeUndefined();
 	});
 
-	it.skip('should handle custom error types', async () => {
+	it('handles custom error types', async () => {
+		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+
 		// Create custom error class
 		class CustomNotFoundError extends Error {
 			constructor(message: string) {
@@ -70,7 +39,6 @@ describe('Error Handling - Integration Tests', () => {
 
 		// Function that throws custom error
 		const findWithCustomError = async (email: string) => {
-			// Try to find the user by email
 			const result = await db
 				.selectFrom('users')
 				.where('email', '=', email)
@@ -84,173 +52,211 @@ describe('Error Handling - Integration Tests', () => {
 			return result;
 		};
 
-		// Insert test data
-		await db
-			.insertInto('users')
-			.values({
-				email: 'custom@example.com',
-				name: 'Custom Error User',
-				username: 'customerror',
-				password: 'password123',
-				followersCount: 0,
-				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString(),
-			})
-			.execute();
+		// Create test user
+		const userData = {
+			email: 'custom@example.com',
+			name: 'Custom Error User',
+			username: 'customerror',
+			password: 'password123',
+			followersCount: 0,
+			status: 'active',
+			createdAt: toSqliteDate(new Date()),
+			updatedAt: toSqliteDate(new Date()),
+		};
 
-		// Test with valid email (should return user)
+		await UserModel.insertInto().values(userData).executeTakeFirstOrThrow();
+
+		// Test with valid email
 		const user = await findWithCustomError('custom@example.com');
 		expect(user).toBeDefined();
 		expect(user.email).toBe('custom@example.com');
 
-		// Test with invalid email (should throw custom error)
+		// Test with invalid email
 		try {
 			await findWithCustomError('nonexistent@example.com');
-			expect(true).toBe(false); // This line should not be reached
+			expect.fail('Should have thrown an error');
 		} catch (error) {
-			expect(error).toBeInstanceOf(CustomNotFoundError);
+			if (!(error instanceof CustomNotFoundError)) {
+				throw error;
+			}
 			expect(error.message).toBe(
 				'User with email nonexistent@example.com not found'
 			);
 		}
 	});
 
-	it.skip('should handle database constraint violations', async () => {
-		// Test unique constraint violation
-		try {
-			await db
-				.insertInto('users')
-				.values({
-					email: 'test@example.com', // This email already exists
-					name: 'Duplicate User',
-					username: 'duplicate',
-					password: 'password123',
-					followersCount: 0,
-					createdAt: new Date().toISOString(),
-					updatedAt: new Date().toISOString(),
-				})
-				.execute();
+	it('handles unique constraint violations', async () => {
+		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
 
-			expect(true).toBe(false); // This line should not be reached
-		} catch (error) {
-			expect(error.message).toContain('UNIQUE constraint failed');
+		// Create initial user
+		const userData = {
+			email: 'unique@example.com',
+			name: 'Unique User',
+			username: 'uniqueuser',
+			password: 'password123',
+			followersCount: 0,
+			status: 'active',
+			createdAt: toSqliteDate(new Date()),
+			updatedAt: toSqliteDate(new Date()),
+		};
+
+		await UserModel.insertInto().values(userData).executeTakeFirstOrThrow();
+
+		// Try to create duplicate user
+		try {
+			await UserModel.insertInto().values(userData).executeTakeFirstOrThrow();
+			expect.fail('Should have thrown a unique constraint error');
+		} catch (error: any) {
+			expect(error.toString()).toContain('UNIQUE constraint failed');
 		}
 	});
 
-	it.skip('should handle transaction rollbacks on error', async () => {
-		// Create a function that uses a transaction
-		const createUserWithTransaction = async (userData: any) => {
-			return await db.transaction().execute(async (trx) => {
-				// First insert the user
-				const result = await trx
+	it('handles foreign key constraint violations', async () => {
+		const CommentModel = createModel<DB, 'comments', 'id'>(
+			db,
+			'comments',
+			'id'
+		);
+
+		// Try to insert a comment with a non-existent user
+		try {
+			await CommentModel.insertInto()
+				.values({
+					userId: '999999', // Non-existent user ID
+					message: 'This comment should fail',
+					createdAt: toSqliteDate(new Date()),
+					updatedAt: toSqliteDate(new Date()),
+				})
+				.executeTakeFirstOrThrow();
+			expect.fail('Should have thrown a foreign key constraint error');
+		} catch (error: any) {
+			expect(error.toString()).toContain('FOREIGN KEY constraint failed');
+		}
+	});
+
+	it('handles transaction rollbacks', async () => {
+		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+
+		const createUserWithTransaction = async (userData: Partial<Users>) => {
+			const result = await UserModel.transaction(async (db) => {
+				// First insert
+				const firstInsertData = {
+					email: userData.email as string,
+					name: userData.name as string,
+					username: userData.username as string,
+					password: userData.password as string,
+					status: userData.status as string,
+					followersCount: userData.followersCount as number,
+					createdAt: toSqliteDate(new Date()),
+					updatedAt: toSqliteDate(new Date()),
+				};
+
+				await db.transaction
 					.insertInto('users')
-					.values(userData)
-					.returning(['id'])
+					.values(firstInsertData)
 					.executeTakeFirst();
 
-				// Then try to insert a record that will fail
-				await trx
-					.insertInto('users')
-					.values({
-						...userData,
-						email: 'test@example.com', // This will cause a unique constraint error
-					})
-					.execute();
+				// Second insert with same email to trigger unique constraint
+				const secondInsertData = {
+					email: userData.email as string, // Same email to trigger unique constraint
+					name: 'Another User',
+					username: 'anotheruser',
+					password: 'password456',
+					status: 'active',
+					followersCount: 0,
+					createdAt: toSqliteDate(new Date()),
+					updatedAt: toSqliteDate(new Date()),
+				};
 
-				return result;
+				// This should fail with unique constraint error
+				await db.transaction
+					.insertInto('users')
+					.values(secondInsertData)
+					.executeTakeFirst();
 			});
+
+			return result;
 		};
 
-		// Attempt to create a user with a transaction that will fail
-		try {
-			await createUserWithTransaction({
-				email: 'new@example.com',
-				name: 'New User',
-				username: 'newuser',
-				password: 'password123',
-				followersCount: 0,
-				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString(),
-			});
+		const userData = {
+			email: 'transaction@example.com',
+			name: 'Transaction User',
+			username: 'transactionuser',
+			password: 'password123',
+			followersCount: 0,
+			status: 'active',
+			createdAt: toSqliteDate(new Date()) as unknown as Timestamp,
+			updatedAt: new Date().toISOString() as unknown as Timestamp,
+		};
 
-			expect(true).toBe(false); // This line should not be reached
-		} catch (error) {
-			expect(error.message).toContain('UNIQUE constraint failed');
+		try {
+			await createUserWithTransaction(userData);
+			expect.fail('Should have thrown an error');
+		} catch (error: any) {
+			expect(error.toString()).toContain('UNIQUE constraint failed');
 		}
 
-		// Verify that the first insert was rolled back
-		const user = await db
-			.selectFrom('users')
-			.where('email', '=', 'new@example.com')
-			.executeTakeFirst();
+		// Verify transaction was rolled back
+		const user = await UserModel.findOne('email', userData.email);
 
 		expect(user).toBeUndefined();
 	});
 
-	it.skip('should support error recovery with retry', async () => {
-		// Create a table with a counter for testing retries
-		await db.schema
-			.createTable('retry_test')
-			.ifNotExists()
-			.addColumn('id', 'integer', (col) => col.primaryKey().autoIncrement())
-			.addColumn('counter', 'integer', (col) => col.notNull())
-			.execute();
+	it('supports error recovery with retry logic', async () => {
+		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
 
-		await db.insertInto('retry_test').values({ counter: 0 }).execute();
+		// Create initial user for testing
+		const userData = {
+			email: 'retry@example.com',
+			name: 'Retry User',
+			username: 'retryuser',
+			password: 'password123',
+			followersCount: 0,
+			status: 'active',
+			createdAt: toSqliteDate(new Date()),
+			updatedAt: toSqliteDate(new Date()),
+		};
 
-		// Create a function that fails initially but succeeds after retries
-		const updateWithRetry = async (maxRetries = 3, delay = 10) => {
+		await UserModel.insertInto().values(userData).executeTakeFirstOrThrow();
+
+		// Function that fails initially but succeeds after retries
+		const updateWithRetry = async (maxRetries = 3) => {
 			let attempts = 0;
 			let lastError: Error | null = null;
 
 			while (attempts < maxRetries) {
 				try {
-					// Get current counter
-					const record = await db
-						.selectFrom('retry_test')
-						.where('id', '=', 1)
-						.select(['counter'])
-						.executeTakeFirst();
-
-					// Increment counter
 					attempts++;
 
-					// Simulate failure for the first few attempts
-					if (attempts < 2) {
-						throw new Error(`Simulated failure on attempt ${attempts}`);
+					// Simulate failure for first attempt
+					if (attempts === 1) {
+						throw new Error('Simulated first attempt failure');
 					}
 
-					// Success on later attempts
-					await db
-						.updateTable('retry_test')
-						.set({ counter: record.counter + 1 })
-						.where('id', '=', 1)
+					// Update succeeds on subsequent attempts
+					await UserModel.updateTable()
+						.set({ status: 'updated' })
+						.where('email', '=', userData.email)
 						.execute();
 
 					return { success: true, attempts };
 				} catch (error) {
-					lastError = error;
-
-					// In a real implementation, we would wait here
-					// await new Promise(resolve => setTimeout(resolve, delay));
+					if (error instanceof Error) {
+						lastError = error;
+					}
 				}
 			}
 
 			throw lastError || new Error('Max retries exceeded');
 		};
 
-		// Test retry logic
 		const result = await updateWithRetry();
 		expect(result.success).toBe(true);
-		expect(result.attempts).toBe(2); // Succeeded on the second attempt
+		expect(result.attempts).toBe(2); // Should succeed on second attempt
 
-		// Verify the counter was updated
-		const record = await db
-			.selectFrom('retry_test')
-			.where('id', '=', 1)
-			.select(['counter'])
-			.executeTakeFirst();
+		// Verify the update was successful
+		const updatedUser = await UserModel.findOne('email', userData.email);
 
-		expect(record.counter).toBe(1);
+		expect(updatedUser?.status).toBe('updated');
 	});
 });

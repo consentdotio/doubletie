@@ -2,7 +2,7 @@
 
 import { Kysely, Selectable } from 'kysely';
 import { expectTypeOf, test } from 'vitest';
-import createModel from '~/model';
+import { createModel } from '../../model.js';
 
 test.skip('model error handling types', () => {
 	const db = {} as Kysely<any>;

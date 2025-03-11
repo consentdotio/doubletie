@@ -1,6 +1,28 @@
-import type { OnConflictDatabase, OnConflictTables, SelectType } from 'kysely';
-import type { UpdateObjectExpression } from 'kysely/dist/esm/parser/update-set-parser';
-import type { ModelFunctions } from '../model';
+import type { OperandValueExpressionOrList, SelectType, SqlBool } from 'kysely';
+
+import type { ModelFunctions, UpdateObjectExpression } from '../model.js';
+
+/**
+ * Type for the enhanced model with updateById method
+ */
+type ModelWithUpdateById<
+	TDatabase,
+	TTableName extends keyof TDatabase & string,
+	TIdColumnName extends keyof TDatabase[TTableName] & string,
+> = ModelFunctions<TDatabase, TTableName, TIdColumnName> & {
+	updateById: <TColumnName extends keyof TDatabase[TTableName] & string>(
+		id: Readonly<SelectType<TDatabase[TTableName][TIdColumnName]>>,
+		column: TColumnName,
+		value: TDatabase[TTableName][TColumnName]
+	) => Promise<any>;
+};
+
+/**
+ * Converts a Date object to an ISO string for SQLite compatibility
+ */
+function formatDateForSqlite(date: Date): string {
+	return date.toISOString();
+}
 
 /**
  * Enhances a model with automatic updated_at timestamp functionality
@@ -20,7 +42,7 @@ export default function withUpdatedAt<
 >(
 	model: ModelFunctions<TDatabase, TTableName, TIdColumnName>,
 	field: keyof TDatabase[TTableName] & string
-): ModelFunctions<TDatabase, TTableName, TIdColumnName> {
+): ModelWithUpdateById<TDatabase, TTableName, TIdColumnName> {
 	// Save the original processDataBeforeUpdate function
 	const originalProcessDataBeforeUpdate =
 		model.processDataBeforeUpdate ||
@@ -30,43 +52,83 @@ export default function withUpdatedAt<
 	const updateById = async <
 		TColumnName extends keyof TDatabase[TTableName] & string,
 	>(
-		id: Readonly<SelectType<TDatabase[TTableName][TIdColumnName]>>,
+		id: OperandValueExpressionOrList<TDatabase, TTableName, TIdColumnName>,
 		column: TColumnName,
 		value: TDatabase[TTableName][TColumnName]
 	) => {
-		return (
-			model
-				.updateTable()
-				// @ts-expect-error - Will fix when Kysely 0.27.0 upgrade is complete
-				.where(`${model.table}.${model.id}`, '=', id)
-				// @ts-expect-error - Will fix when Kysely 0.27.0 upgrade is complete
-				.set({
-					[column]: value,
-					[field]: new Date(),
-				})
-				// @ts-expect-error - Will fix when Kysely 0.27.0 upgrade is complete
-				.returning(['*'])
-				.executeTakeFirstOrThrow()
-		);
+		// Use current timestamp formatted for SQLite
+		const now = new Date();
+		const sqliteDate = formatDateForSqlite(now);
+
+		// Create a query builder and use a callback for the where clause
+		const query = model
+			.updateTable()
+			.where((eb) => {
+				return eb(model.id, '=', id);
+			})
+			.set({
+				[column]: value,
+				[field]: sqliteDate,
+			} as any);
+
+		// Execute the query and return the result
+		return query.returningAll().executeTakeFirstOrThrow();
 	};
 
 	// Create enhanced model
-	return {
+	const enhancedModel = {
 		...model,
 		// Override processDataBeforeUpdate to add the timestamp
 		processDataBeforeUpdate: (data) => {
 			// Process with original function first
 			const processedData = originalProcessDataBeforeUpdate(data as any);
 
-			// Add the updated_at timestamp
+			// Add the updated_at timestamp formatted for SQLite
+			const now = new Date();
+			const sqliteDate = formatDateForSqlite(now);
+
 			return {
 				...processedData,
-				[field]: new Date(),
+				[field]: sqliteDate,
 			} as any;
 		},
 
+		// Override updateTable to ensure the timestamp is set
+		updateTable: () => {
+			const originalUpdateTable = model.updateTable();
+			const originalSet = originalUpdateTable.set;
+
+			// Create a proxy to intercept the set method
+			const proxy = new Proxy(originalUpdateTable, {
+				get(target, prop) {
+					if (prop === 'set') {
+						// Return a custom set function
+						return function (data: any) {
+							// Add the updated_at timestamp
+							const now = new Date();
+							const sqliteDate = formatDateForSqlite(now);
+
+							const updatedData = {
+								...data,
+								[field]: sqliteDate,
+							};
+
+							// Call the original set method with our modified data
+							return originalSet.call(target, updatedData, field);
+						};
+					}
+
+					// For all other properties, return the original
+					return Reflect.get(target, prop);
+				},
+			});
+
+			return proxy;
+		},
+
 		// Add the new direct update method
-		// @ts-expect-error - Will fix when Kysely 0.27.0 upgrade is complete
 		updateById,
-	};
+	} as ModelWithUpdateById<TDatabase, TTableName, TIdColumnName>;
+
+	return enhancedModel;
 }

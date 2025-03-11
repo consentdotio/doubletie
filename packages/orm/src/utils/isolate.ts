@@ -3,7 +3,7 @@
  *
  * @module isolate
  */
-import type { ModelFunctions } from '../model';
+import type { ModelFunctions } from '../model.js';
 
 /**
  * Type for a model that can be isolated

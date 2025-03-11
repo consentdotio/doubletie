@@ -27,12 +27,26 @@ import {
 } from 'kysely';
 
 import { sql } from 'kysely';
-import type { InsertObject, UpdateObject } from 'kysely';
-import type { Database, TransactionCallback } from './database';
+import type {
+	ExpressionBuilder,
+	InsertObject,
+	InsertResult,
+	UpdateObject,
+} from 'kysely';
+import type { Database, TransactionCallback } from './database.js';
 import type {
 	FieldDefinition,
 	RelationDefinition,
-} from './utils/model-builder';
+} from './utils/model-builder.js';
+
+/*
+this type is not exported from kysely, so we need to define it here
+*/
+export type UpdateObjectFactory<
+	DB,
+	TB extends keyof DB,
+	UT extends keyof DB,
+> = (eb: ExpressionBuilder<DB, TB>) => UpdateObject<DB, TB, UT>;
 
 /**
  * Expression value literal that can be used in SQL queries
@@ -77,11 +91,7 @@ export type ModelFunctions<
 		TableName,
 		UpdateResult
 	>;
-	insertInto: () => InsertQueryBuilder<
-		DatabaseSchema,
-		TableName,
-		DatabaseSchema[TableName]
-	>;
+	insertInto: () => InsertQueryBuilder<DatabaseSchema, TableName, InsertResult>;
 	deleteFrom: () => DeleteQueryBuilder<DatabaseSchema, TableName, DeleteResult>;
 	transaction: <ResultType>(
 		callback: TransactionCallback<DatabaseSchema, ResultType>
@@ -326,12 +336,12 @@ export type PrimaryKeySpecification<T> = {
 };
 
 // Type alias for insert objects or arrays of insert objects
-type InsertObjectOrList<TDatabase, TTableName extends keyof TDatabase> =
+export type InsertObjectOrList<TDatabase, TTableName extends keyof TDatabase> =
 	| InsertObject<TDatabase, TTableName>
 	| Array<InsertObject<TDatabase, TTableName>>;
 
 // Type alias for update object expressions
-type UpdateObjectExpression<
+export type UpdateObjectExpression<
 	TDatabase,
 	TTableName extends keyof TDatabase,
 > = UpdateObject<TDatabase, TTableName>;
@@ -351,7 +361,7 @@ type UpdateObjectExpression<
  * @param noResultError - Error to throw when no result is found
  * @returns Model with database operations
  */
-export default function createModel<
+export function createModel<
 	TDatabase,
 	TTableName extends keyof TDatabase & string,
 	TIdColumnName extends keyof TDatabase[TTableName] & string,
@@ -666,11 +676,7 @@ export default function createModel<
 			TTableName,
 			UpdateResult
 		>,
-		insertInto: insertInto as unknown as () => InsertQueryBuilder<
-			TDatabase,
-			TTableName,
-			TDatabase[TTableName]
-		>,
+		insertInto: insertInto,
 		deleteFrom: deleteFrom as unknown as () => DeleteQueryBuilder<
 			TDatabase,
 			TTableName,

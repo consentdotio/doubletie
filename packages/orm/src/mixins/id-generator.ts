@@ -9,8 +9,8 @@
  */
 
 import type { InsertObject, Selectable } from 'kysely';
-import { generateId } from '../id-generator';
-import type { ModelFunctions } from '../model';
+import { generateId } from '../id-generator.js';
+import type { ModelFunctions } from '../model.js';
 
 // Type alias for insert objects or arrays of insert objects
 type InsertObjectOrList<TDatabase, TTableName extends keyof TDatabase> =

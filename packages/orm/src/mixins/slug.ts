@@ -13,7 +13,7 @@ import type {
  * @module slug
  */
 import slugify from 'url-slug';
-import type { ModelFunctions } from '../model';
+import type { ModelFunctions } from '../model.js';
 
 // Type alias for insert objects or arrays of insert objects
 type InsertObjectOrList<TDatabase, TTableName extends keyof TDatabase> =
@@ -160,14 +160,39 @@ function generateSlugValue<TDatabase, TTableName extends keyof TDatabase>(
 }
 
 /**
+ * Type for the enhanced model with slug functionality
+ */
+export type SlugModelType<
+	TDatabase,
+	TTableName extends keyof TDatabase & string,
+	TIdColumnName extends keyof TDatabase[TTableName] & string,
+> = ModelFunctions<TDatabase, TTableName, TIdColumnName> & {
+	findBySlug(
+		value: string,
+		column?: keyof TDatabase[TTableName] & string
+	): Promise<Selectable<TDatabase[TTableName]> | undefined>;
+	insertWithSlug(
+		values: TableValues<TDatabase, TTableName>
+	): Promise<Selectable<TDatabase[TTableName]>>;
+	insertIfNotExistsWithSlug(
+		values: TableValues<TDatabase, TTableName>,
+		uniqueColumn: keyof TDatabase[TTableName] & string
+	): Promise<Selectable<TDatabase[TTableName]> | undefined>;
+	upsertWithSlug(
+		criteria: { column: keyof TDatabase[TTableName] & string; value: unknown },
+		insertValues: TableValues<TDatabase, TTableName>,
+		updateValues?: TableValues<TDatabase, TTableName>
+	): Promise<Selectable<TDatabase[TTableName]> | undefined>;
+	insertMany(
+		values: Array<TableValues<TDatabase, TTableName>>
+	): Promise<Array<Selectable<TDatabase[TTableName]>>>;
+	generateUniqueSlug(
+		values: TableValues<TDatabase, TTableName>
+	): Promise<string | undefined>;
+};
+
+/**
  * Adds slug generation functionality to a model
- *
- * @typeParam TDatabase - Database schema type
- * @typeParam TTableName - Table name in the database
- * @typeParam TIdColumnName - Name of the ID column
- * @param model - Model to enhance with slug generation
- * @param options - Slug configuration options
- * @returns Enhanced model with slug methods
  */
 function withSlug<
 	TDatabase,
@@ -177,7 +202,11 @@ function withSlug<
 	model: ModelFunctions<TDatabase, TTableName, TIdColumnName>,
 	slugField?: keyof TDatabase[TTableName] & string,
 	sourceField?: keyof TDatabase[TTableName] & string
-) {
+):
+	| SlugModelType<TDatabase, TTableName, TIdColumnName>
+	| ((
+			options: Options<TDatabase, TTableName>
+	  ) => SlugModelType<TDatabase, TTableName, TIdColumnName>) {
 	// Direct usage with all parameters provided
 	if (slugField && sourceField) {
 		const options: Options<TDatabase, TTableName> = {
@@ -203,7 +232,7 @@ function implementSlug<
 >(
 	model: ModelFunctions<TDatabase, TTableName, TIdColumnName>,
 	options: Options<TDatabase, TTableName>
-) {
+): SlugModelType<TDatabase, TTableName, TIdColumnName> {
 	type Table = TDatabase[TTableName];
 	type TableRecord = Selectable<Table>;
 	type TableInsertValues = TableValues<TDatabase, TTableName>;
@@ -227,23 +256,53 @@ function implementSlug<
 
 	/**
 	 * Adds a slug to the values if needed
-	 *
-	 * @param values - Values to add slug to
-	 * @returns Values with slug added
 	 */
-	const addSlugToValues = <T extends TableInsertValues>(values: T): T => {
+	const addSlugToValues = async <T extends TableInsertValues>(
+		values: T
+	): Promise<T> => {
 		if (hasValidSlugField(values)) {
 			return values;
 		}
 
-		const slug = generateSlugValue(values, options);
-		if (!slug) {
+		const baseSlug = generateSlugValue(values, options);
+		if (!baseSlug) {
 			return values;
 		}
 
+		// Check for existing slugs with the same base
+		const existingSlugs = await model
+			.selectFrom()
+			.selectAll()
+			.where(
+				options.field as keyof Table & string,
+				'like' as any,
+				(baseSlug + '%') as any
+			)
+			.execute();
+
+		// If no existing slugs, use the base slug
+		if (existingSlugs.length === 0) {
+			return {
+				...values,
+				[options.field]: baseSlug,
+			};
+		}
+
+		// Find the next available number suffix
+		const slugPattern = new RegExp(`^${baseSlug}(?:-(\\d+))?$`);
+		const numbers = existingSlugs
+			.map((record) => {
+				const match = String(record[options.field]).match(slugPattern);
+				return match ? parseInt(match[1] || '1', 10) : 0;
+			})
+			.filter((n) => !isNaN(n));
+
+		const maxNumber = Math.max(0, ...numbers);
+		const newSlug = `${baseSlug}-${maxNumber + 1}`;
+
 		return {
 			...values,
-			[options.field]: slug,
+			[options.field]: newSlug,
 		};
 	};
 
@@ -274,118 +333,191 @@ function implementSlug<
 		return values as unknown as InsertObject<TDatabase, TTableName>;
 	};
 
-	/**
-	 * Creates a proper select expression for returning all columns
-	 *
-	 * @returns Select expression for all columns
-	 */
-	const allColumnsExpression = (): SelectExpression<
-		TDatabase,
-		TTableName
-	>[] => {
-		return ['*'] as unknown as SelectExpression<TDatabase, TTableName>[];
-	};
-
 	return {
 		...model,
 
 		/**
 		 * Finds a record by its slug
-		 *
-		 * @param value - Slug value to search for
-		 * @param column - Column to search in (defaults to slug field)
-		 * @returns Found record or undefined
 		 */
 		async findBySlug(
 			value: string,
 			column: keyof Table & string = options.field
-		): Promise<TableRecord | undefined> {
+		): Promise<Selectable<TDatabase[TTableName]> | undefined> {
 			return model.findOne(column, convertToColumnValue(value, column));
 		},
 
 		/**
-		 * Inserts a record with automatic slug generation
-		 *
-		 * @param values - Values to insert
-		 * @returns Inserted record
-		 * @throws {Error} If insert fails
+		 * Processes data before insert to add slugs
 		 */
-		async insertWithSlug(values: TableInsertValues): Promise<TableRecord> {
-			const processedValues = addSlugToValues(values);
+		processDataBeforeInsert(
+			data: InsertObjectOrList<TDatabase, TTableName>
+		): InsertObjectOrList<TDatabase, TTableName> {
+			// For arrays, process each item synchronously
+			if (Array.isArray(data)) {
+				return data.map((item) => {
+					const baseSlug = generateSlugValue(
+						item as TableInsertValues,
+						options
+					);
+					if (!baseSlug || hasValidSlugField(item as TableInsertValues)) {
+						return item;
+					}
+					return {
+						...item,
+						[options.field]: baseSlug,
+					};
+				}) as InsertObjectOrList<TDatabase, TTableName>;
+			}
+
+			// For single items, process synchronously
+			const baseSlug = generateSlugValue(data as TableInsertValues, options);
+			if (!baseSlug || hasValidSlugField(data as TableInsertValues)) {
+				return data;
+			}
+			return {
+				...data,
+				[options.field]: baseSlug,
+			} as InsertObjectOrList<TDatabase, TTableName>;
+		},
+
+		// Move the async slug generation to a separate method
+		async generateUniqueSlug(
+			values: TableValues<TDatabase, TTableName>
+		): Promise<string | undefined> {
+			if (hasValidSlugField(values)) {
+				return values[options.field] as string;
+			}
+
+			const baseSlug = generateSlugValue(values, options);
+			if (!baseSlug) {
+				return undefined;
+			}
+
+			// Check for existing slugs with the same base
+			const existingSlugs = await model
+				.selectFrom()
+				.selectAll()
+				.where(
+					options.field as keyof Table & string,
+					'like' as any,
+					(baseSlug + '%') as any
+				)
+				.execute();
+
+			// If no existing slugs, use the base slug
+			if (existingSlugs.length === 0) {
+				return baseSlug;
+			}
+
+			// Find the next available number suffix
+			const slugPattern = new RegExp(`^${baseSlug}(?:-(\\d+))?$`);
+			const numbers = existingSlugs
+				.map((record) => {
+					const match = String(record[options.field]).match(slugPattern);
+					return match ? parseInt(match[1] || '1', 10) : 0;
+				})
+				.filter((n) => !isNaN(n));
+
+			const maxNumber = Math.max(0, ...numbers);
+			return `${baseSlug}-${maxNumber + 1}`;
+		},
+
+		/**
+		 * Inserts a record with automatic slug generation
+		 */
+		async insertWithSlug(
+			values: TableValues<TDatabase, TTableName>
+		): Promise<Selectable<TDatabase[TTableName]>> {
+			const slug = await this.generateUniqueSlug(values);
+			const processedValues = slug
+				? { ...values, [options.field]: slug }
+				: values;
 
 			const result = await model
 				.insertInto()
 				.values(prepareForInsert(processedValues))
-				.returning(allColumnsExpression())
+				.returningAll()
 				.executeTakeFirst();
 
 			if (!result) {
 				throw new Error(`Failed to insert record into ${model.table}`);
 			}
 
-			return result as TableRecord;
+			return result as Selectable<TDatabase[TTableName]>;
 		},
 
 		/**
+		 * Inserts multiple records with slug generation
+		 */
+		async insertMany(
+			values: Array<TableValues<TDatabase, TTableName>>
+		): Promise<Array<Selectable<TDatabase[TTableName]>>> {
+			const slugs = await Promise.all(
+				values.map((value) => this.generateUniqueSlug(value))
+			);
+
+			const processedValues = values.map((value, index) =>
+				slugs[index] ? { ...value, [options.field]: slugs[index] } : value
+			);
+
+			const results = await model
+				.insertInto()
+				.values(processedValues.map((value) => prepareForInsert(value)))
+				.returningAll()
+				.execute();
+
+			return results as Array<Selectable<TDatabase[TTableName]>>;
+		},
+		/**
 		 * Tries to insert a record, falling back to find if it already exists
-		 *
-		 * @param values - Values to insert
-		 * @param uniqueColumn - Column to check for uniqueness
-		 * @returns Inserted or found record
 		 */
 		async insertIfNotExistsWithSlug(
-			values: TableInsertValues,
+			values: TableValues<TDatabase, TTableName>,
 			uniqueColumn: keyof Table & string
-		): Promise<TableRecord | undefined> {
-			const processedValues = addSlugToValues(values);
-			const uniqueValue = processedValues[uniqueColumn];
-
+		): Promise<Selectable<TDatabase[TTableName]> | undefined> {
+			// First try to find by unique column
+			const uniqueValue = values[uniqueColumn];
 			if (uniqueValue === undefined) {
 				throw new Error(
 					`Missing required unique column value for '${String(uniqueColumn)}'`
 				);
 			}
 
-			try {
-				const result = await this.insertWithSlug(processedValues);
-				return result;
-			} catch (error) {
-				// Check if it's a uniqueness violation error
-				const err = error as Error;
-				if (
-					err.message?.includes('conflict') ||
-					err.message?.includes('unique constraint')
-				) {
-					// If insert failed due to conflict, find the existing record
-					return model.findOne(
-						uniqueColumn,
-						uniqueValue as unknown as Readonly<
-							SelectType<Table[keyof Table & string]>
-						>
-					);
-				}
-				throw error;
+			const existing = await model.findOne(
+				uniqueColumn,
+				uniqueValue as unknown as Readonly<
+					SelectType<
+						TDatabase[TTableName][keyof TDatabase[TTableName] & string]
+					>
+				>
+			);
+
+			if (existing) {
+				return existing;
 			}
+
+			// If not found, insert with slug
+			return this.insertWithSlug(values);
 		},
 
 		/**
 		 * Updates a record if it exists, or inserts a new one with slug
-		 *
-		 * @param criteria - Search criteria for finding existing record
-		 * @param insertValues - Values to insert if record doesn't exist
-		 * @param updateValues - Values to update if record exists
-		 * @returns Updated or inserted record
 		 */
 		async upsertWithSlug(
-			criteria: { column: keyof Table & string; value: unknown },
-			insertValues: TableInsertValues,
-			updateValues: TableInsertValues
-		): Promise<TableRecord | undefined> {
+			criteria: {
+				column: keyof TDatabase[TTableName] & string;
+				value: unknown;
+			},
+			insertValues: TableValues<TDatabase, TTableName>,
+			updateValues?: TableValues<TDatabase, TTableName>
+		): Promise<Selectable<TDatabase[TTableName]> | undefined> {
 			// First try to find the record
 			const existing = await model.findOne(
 				criteria.column,
 				criteria.value as unknown as Readonly<
-					SelectType<Table[keyof Table & string]>
+					SelectType<
+						TDatabase[TTableName][keyof TDatabase[TTableName] & string]
+					>
 				>
 			);
 
@@ -394,7 +526,7 @@ function implementSlug<
 				const result = await model
 					.updateTable()
 					.set(
-						updateValues as unknown as UpdateObject<
+						(updateValues || insertValues) as unknown as UpdateObject<
 							TDatabase,
 							TTableName,
 							TTableName
@@ -406,37 +538,20 @@ function implementSlug<
 						criteria.value as unknown as OperandValueExpressionOrList<
 							TDatabase,
 							TTableName,
-							keyof Table & string
+							keyof TDatabase[TTableName] & string
 						>
 					)
-					.returning(allColumnsExpression())
+					.returningAll()
 					.executeTakeFirst();
 
-				return result as TableRecord;
+				return result as Selectable<TDatabase[TTableName]>;
 			}
+
 			// Insert a new record with slug
 			return this.insertWithSlug({
 				...insertValues,
 				[criteria.column]: criteria.value,
 			});
-		},
-
-		/**
-		 * Processes data before insert to add slugs
-		 *
-		 * @param data - Data to process
-		 * @returns Processed data with slugs
-		 */
-		processDataBeforeInsert(data: InsertObjectOrList<TDatabase, TTableName>) {
-			// Handle both single object and array of objects
-			if (Array.isArray(data)) {
-				return data.map((item) =>
-					addSlugToValues(item as unknown as TableInsertValues)
-				) as typeof data;
-			}
-			return addSlugToValues(
-				data as unknown as TableInsertValues
-			) as typeof data;
 		},
 	};
 }

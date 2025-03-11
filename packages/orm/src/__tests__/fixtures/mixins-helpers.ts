@@ -6,12 +6,12 @@
  */
 
 import { vi } from 'vitest';
-import { Database } from '~/database';
-import { withGlobalId } from '~/mixins/global-id';
-import withIdGenerator from '~/mixins/id-generator';
-import withSlug from '~/mixins/slug';
-import createModel from '~/model';
-import { createMockDatabaseWithTransaction } from './mock-db';
+import { Database } from '../../database.js';
+import { withGlobalId } from '../../mixins/global-id.js';
+import withIdGenerator from '../../mixins/id-generator.js';
+import withSlug from '../../mixins/slug.js';
+import { createModel } from '../../model.js';
+import { createMockDatabaseWithTransaction } from './mock-db.js';
 
 /**
  * Options for creating a mock model with the slug mixin

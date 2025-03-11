@@ -4,7 +4,7 @@
  * @module globalId
  */
 import type { NoResultError, SelectType } from 'kysely';
-import type { ModelFunctions } from '../model';
+import type { ModelFunctions } from '../model.js';
 
 /**
  * Type for ID parsing callback

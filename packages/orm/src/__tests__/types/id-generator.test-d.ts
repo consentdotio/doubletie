@@ -1,6 +1,6 @@
 import { assertType, expectTypeOf, test } from 'vitest';
-import withIdGenerator from '~/mixins/id-generator';
-import createModel from '~/model';
+import withIdGenerator from '../../mixins/id-generator';
+import { createModel } from '../../model.js';
 
 // Define test types
 interface TestDB {

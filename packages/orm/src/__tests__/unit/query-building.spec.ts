@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Database } from '~/database';
-import createModel from '~/model';
 import {
 	type MockChain,
 	type MockExpressionBuilder,
 	type TestMockDatabase,
 	createMockDatabase,
 	createMockExpressionBuilder,
-} from '../fixtures/mock-db';
+} from '../fixtures/mock-db.js';
 
 describe('unit: query building functionality', () => {
 	// Define test database types

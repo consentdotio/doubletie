@@ -1,7 +1,7 @@
 import type { Selectable } from 'kysely';
 import { assertType, expectTypeOf, test } from 'vitest';
-import { withGlobalId } from '~/mixins/global-id';
-import createModel from '~/model';
+import { withGlobalId } from '../../mixins/global-id.js';
+import { createModel } from '../../model.js';
 
 // Define test database schema
 interface TestDB {

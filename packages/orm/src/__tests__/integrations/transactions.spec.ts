@@ -1,10 +1,13 @@
 import { fail } from 'assert';
-import type { Kysely } from 'kysely';
-import { sql } from 'kysely';
+
+import { type Kysely, sql } from 'kysely';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import createModel from '~/model';
-import { setupTestDatabase, teardownTestDatabase } from '../fixtures/test-db';
+import createModel, { ModelFunctions } from '../../model.js';
+import {
+	setupTestDatabase,
+	teardownTestDatabase,
+} from '../fixtures/test-db.js';
 
 // Test database schema
 interface TestDB {
@@ -24,12 +27,12 @@ interface TestDB {
 
 describe('integration: database transactions', () => {
 	let db: Kysely<TestDB>;
-	let UserModel: any;
-	let AccountModel: any;
+	let UserModel: ModelFunctions<TestDB, 'users', 'id'>;
+	let AccountModel: ModelFunctions<TestDB, 'accounts', 'id'>;
 
 	beforeEach(async () => {
 		// Set up test database
-		db = (await setupTestDatabase()) as Kysely<TestDB>;
+		db = await setupTestDatabase();
 
 		// Create test tables
 		await db.schema

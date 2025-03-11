@@ -1,6 +1,6 @@
 import type { Kysely, Transaction } from 'kysely';
 import { assertType, expectTypeOf, test } from 'vitest';
-import createModel from '~/model';
+import { createModel } from '../../model.js';
 
 // Define test types
 interface TestDB {

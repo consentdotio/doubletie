@@ -13,17 +13,17 @@
  * @module mixins
  */
 
-export { default as withUpdatedAt } from './updated-at';
-export { default as withCreatedAt } from './created-at';
-export { withSlug } from './slug';
-export { withGlobalId } from './globalId';
+export { default as withUpdatedAt } from './updated-at.js';
+export { default as withCreatedAt } from './created-at.js';
+export { withSlug } from './slug.js';
+export { withGlobalId } from './global-id.js';
 export {
 	default as withIdGenerator,
 	type IdGeneratorOptions,
-} from './id-generator';
-export { default as withCursorable } from './cursorable';
-export { default as withAssignProperties } from './assign';
+} from './id-generator.js';
+export { default as withCursorable } from './cursorable.js';
+export { default as withAssignProperties } from './assign.js';
 
-export { Operation } from './slug';
+export { Operation } from './slug.js';
 
 // No need for separate export, now included with the default export

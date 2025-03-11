@@ -1,15 +1,16 @@
 {
-	"extends": "@doubletie/typescript-config/base.json",
 	"compilerOptions": {
-		"baseUrl": ".",
+		"baseUrl": "./src",
+		"target": "esnext",
+		"moduleResolution": "bundler",
+		"lib": ["ES2022", "DOM"],
+		"strict": true,
+		"noEmit": true,
+		"isolatedModules": true,
 		"esModuleInterop": true,
-		"lib": ["dom", "dom.iterable", "esnext"],
-		"paths": { "~/*": ["./src/*"] },
-		"target": "ES2022",
 		"skipLibCheck": true,
-		"noImplicitAny": false,
-		"moduleResolution": "node"
+		"forceConsistentCasingInFileNames": true
 	},
 	"include": ["src"],
-	"exclude": ["node_modules"]
+	"exclude": ["node_modules", "dist", "**/*.test-d.ts", "vitest.config.ts"]
 }

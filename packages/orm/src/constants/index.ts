@@ -1,1 +1,1 @@
-export { RelationType, type RelationTypeMap } from './relation-type';
+export { RelationType, type RelationTypeMap } from './relation-type.js';

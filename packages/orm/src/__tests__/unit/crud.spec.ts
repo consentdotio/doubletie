@@ -1,7 +1,7 @@
 import type { DeleteResult, UpdateResult } from 'kysely';
 import { describe, expect, it, vi } from 'vitest';
-import type { Database } from '~/database';
-import createModel from '~/model';
+import type { Database } from '../../database.js';
+import { createModel } from '../../model.js';
 import {
 	type TestMockDatabase,
 	createMockDatabase,
@@ -12,7 +12,7 @@ import {
 	createMockUpdateChain,
 	createTestData,
 	toSqliteDate,
-} from '../fixtures/mock-db';
+} from '../fixtures/mock-db.js';
 
 // Define test database type
 interface TestDB {

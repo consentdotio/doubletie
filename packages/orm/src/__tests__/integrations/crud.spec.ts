@@ -1,485 +1,502 @@
-import { sql } from 'kysely';
-import type { Kysely } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Database, ModelRegistry } from '~/database';
-import createModel from '~/model';
-import { setupTestDatabase, teardownTestDatabase } from '../fixtures/test-db';
 
-// Test database schema
-interface TestDB {
-	users: {
-		id: number;
-		email: string;
-		name: string;
-		username: string;
-		password: string;
-		followersCount: number;
-		createdAt: string;
-		updatedAt: string;
-	};
-	comments: {
-		id: number;
-		userId: number;
-		message: string;
-		createdAt: string;
-		updatedAt: string;
-	};
-}
+import { createModel } from '../../model.js';
+import {
+	DB,
+	cleanupDatabase,
+	db,
+	initializeDatabase,
+} from '../fixtures/migration.js';
 
-// Helper function to convert date to SQLite format
-const toSqliteDate = (date: Date): string => date.toISOString();
+// Helper function to generate IDs
+const generateId = (): string => {
+	return String(Math.random().toString(36).substring(2, 15));
+};
 
-describe('Basic CRUD Operations - Integration Tests', () => {
-	let db: Kysely<TestDB>;
-	let UserModel: any;
-	let CommentModel: any;
-
+describe('Integration: CRUD Operations', () => {
 	beforeEach(async () => {
-		db = (await setupTestDatabase()) as Kysely<TestDB>;
-		UserModel = createModel<TestDB, 'users', 'id'>(
-			db as unknown as Database<TestDB, ModelRegistry<TestDB>>,
-			'users',
-			'id'
-		);
-		CommentModel = createModel<TestDB, 'comments', 'id'>(
-			db as unknown as Database<TestDB, ModelRegistry<TestDB>>,
-			'comments',
-			'id'
-		);
-
-		// Create users table for testing
-		await db.schema
-			.createTable('users')
-			.ifNotExists()
-			.addColumn('id', 'integer', (col) => col.primaryKey().autoIncrement())
-			.addColumn('email', 'text', (col) => col.unique().notNull())
-			.addColumn('name', 'text', (col) => col.notNull())
-			.addColumn('username', 'text', (col) => col.notNull())
-			.addColumn('password', 'text', (col) => col.notNull())
-			.addColumn('followersCount', 'integer', (col) => col.defaultTo(0))
-			.addColumn('createdAt', 'text')
-			.addColumn('updatedAt', 'text')
-			.execute();
-
-		// Create comments table for relationship tests
-		await db.schema
-			.createTable('comments')
-			.ifNotExists()
-			.addColumn('id', 'integer', (col) => col.primaryKey().autoIncrement())
-			.addColumn('userId', 'integer', (col) =>
-				col.notNull().references('users.id')
-			)
-			.addColumn('message', 'text', (col) => col.notNull())
-			.addColumn('createdAt', 'text')
-			.addColumn('updatedAt', 'text')
-			.execute();
+		await initializeDatabase();
 	});
 
 	afterEach(async () => {
-		await teardownTestDatabase(db);
+		await cleanupDatabase();
 	});
 
-	it.skip('should create and find a user', async () => {
-		// Insert a test user
-		const now = new Date();
-		const insertResult = await db
-			.insertInto('users')
-			.values({
-				email: 'create-test@example.com',
-				name: 'Create Test',
-				username: 'create-test',
-				password: 'password',
-				followersCount: 0,
-				createdAt: toSqliteDate(now),
-				updatedAt: toSqliteDate(now),
-			})
-			.returning('id')
-			.executeTakeFirst();
+	it('should create a new user', async () => {
+		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const userData = {
+			email: 'test@example.com',
+			name: 'Test User',
+			username: 'testuser',
+			password: 'password123',
+			followersCount: 0,
+			status: 'active',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
 
-		expect(insertResult).toBeDefined();
-		expect(insertResult.id).toBeDefined();
-
-		// Find the user by email
-		const user = await db
-			.selectFrom('users')
-			.where('email', '=', 'create-test@example.com')
-			.selectAll()
-			.executeTakeFirst();
+		const insertResult = await UserModel.insertInto()
+			.values(userData)
+			.executeTakeFirstOrThrow();
+		const user = await UserModel.findById(String(insertResult.insertId));
 
 		expect(user).toBeDefined();
-		expect(user.email).toBe('create-test@example.com');
-		expect(user.name).toBe('Create Test');
+		expect(user?.email).toBe(userData.email);
+		expect(user?.name).toBe(userData.name);
+		expect(user?.username).toBe(userData.username);
 	});
 
-	it.skip('should update a user', async () => {
-		// Insert a test user
-		const now = new Date();
-		const insertResult = await db
-			.insertInto('users')
-			.values({
-				email: 'update-test@example.com',
-				name: 'Update Test',
-				username: 'update-test',
-				password: 'password',
-				followersCount: 0,
-				createdAt: toSqliteDate(now),
-				updatedAt: toSqliteDate(now),
-			})
-			.returning('id')
-			.executeTakeFirst();
+	it('should retrieve user profile by id', async () => {
+		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const userData = {
+			email: 'profile@example.com',
+			name: 'Profile User',
+			username: 'profileuser',
+			password: 'password123',
+			followersCount: 0,
+			status: 'active',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
 
-		const userId = insertResult.id;
+		const insertResult = await UserModel.insertInto()
+			.values(userData)
+			.executeTakeFirstOrThrow();
+		const createdUser = await UserModel.findById(String(insertResult.insertId));
+		if (!createdUser) throw new Error('User creation failed');
 
-		// Update the user
-		await db
-			.updateTable('users')
-			.set({
-				name: 'Updated Name',
-				followersCount: 10,
-				updatedAt: toSqliteDate(new Date()),
-			})
-			.where('id', '=', userId)
-			.execute();
+		const profile = await UserModel.findById(createdUser.id);
 
-		// Verify the update
-		const updatedUser = await db
-			.selectFrom('users')
-			.where('id', '=', userId)
-			.selectAll()
-			.executeTakeFirst();
+		expect(profile).toBeDefined();
+		expect(profile?.id).toBe(createdUser.id);
+		expect(profile?.email).toBe(userData.email);
+		expect(profile?.name).toBe(userData.name);
+	});
 
+	it('should update user profile', async () => {
+		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const userData = {
+			email: 'update@example.com',
+			name: 'Update User',
+			username: 'updateuser',
+			password: 'password123',
+			followersCount: 0,
+			status: 'active',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
+
+		const insertResult = await UserModel.insertInto()
+			.values(userData)
+			.executeTakeFirstOrThrow();
+		const createdUser = await UserModel.findById(String(insertResult.insertId));
+		if (!createdUser) throw new Error('User creation failed');
+
+		const updates = {
+			name: 'Updated Name',
+			email: 'updated@example.com',
+			updatedAt: new Date().toISOString(),
+		};
+		await UserModel.updateTable()
+			.set(updates)
+			.where('id', '=', createdUser.id)
+			.executeTakeFirstOrThrow();
+
+		const updatedUser = await UserModel.findById(createdUser.id);
 		expect(updatedUser).toBeDefined();
-		expect(updatedUser.name).toBe('Updated Name');
-		expect(updatedUser.followersCount).toBe(10);
+		expect(updatedUser?.name).toBe(updates.name);
+		expect(updatedUser?.email).toBe(updates.email);
 	});
 
-	it.skip('should delete a user', async () => {
-		// Insert a test user
-		const now = new Date();
-		const insertResult = await db
-			.insertInto('users')
-			.values({
-				email: 'delete-test@example.com',
-				name: 'Delete Test',
-				username: 'delete-test',
-				password: 'password',
-				followersCount: 0,
-				createdAt: toSqliteDate(now),
-				updatedAt: toSqliteDate(now),
-			})
-			.returning('id')
-			.executeTakeFirst();
+	it('should create a new post', async () => {
+		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const userData = {
+			email: 'post_author@example.com',
+			name: 'Post Author',
+			username: 'postauthor',
+			password: 'password123',
+			followersCount: 0,
+			status: 'active',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
 
-		const userId = insertResult.id;
+		const insertResult = await UserModel.insertInto()
+			.values(userData)
+			.executeTakeFirstOrThrow();
+		const author = await UserModel.findById(String(insertResult.insertId));
+		if (!author) throw new Error('Author creation failed');
 
-		// Verify the user exists
-		const userBeforeDelete = await db
-			.selectFrom('users')
-			.where('id', '=', userId)
-			.selectAll()
-			.executeTakeFirst();
+		const postData = {
+			id: generateId(),
+			title: 'Test Post',
+			slug: 'test-post',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
 
-		expect(userBeforeDelete).toBeDefined();
+		const post = await db
+			.insertInto('articles')
+			.values(postData)
+			.returningAll()
+			.executeTakeFirstOrThrow();
 
-		// Delete the user
-		await db.deleteFrom('users').where('id', '=', userId).execute();
-
-		// Verify the user was deleted
-		const userAfterDelete = await db
-			.selectFrom('users')
-			.where('id', '=', userId)
-			.selectAll()
-			.executeTakeFirst();
-
-		expect(userAfterDelete).toBeUndefined();
+		expect(post).toBeDefined();
+		expect(post.id).toBeDefined();
+		expect(post.title).toBe(postData.title);
+		expect(post.slug).toBe(postData.slug);
 	});
 
-	it.skip('should update a single column using direct set method', async () => {
-		// Insert a test user
-		const now = new Date();
-		const insertResult = await db
-			.insertInto('users')
-			.values({
-				email: 'column-test@example.com',
-				name: 'Column Test',
-				username: 'column-test',
-				password: 'password',
-				followersCount: 0,
-				createdAt: toSqliteDate(now),
-				updatedAt: toSqliteDate(now),
-			})
-			.returning('id')
+	it('should retrieve post details by id', async () => {
+		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const userData = {
+			email: 'post_details_author@example.com',
+			name: 'Post Details Author',
+			username: 'postdetailsauthor',
+			password: 'password123',
+			followersCount: 0,
+			status: 'active',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
+
+		const insertResult = await UserModel.insertInto()
+			.values(userData)
+			.executeTakeFirstOrThrow();
+		const author = await UserModel.findById(String(insertResult.insertId));
+		if (!author) throw new Error('Author creation failed');
+
+		const postData = {
+			id: generateId(),
+			title: 'Detailed Post',
+			slug: 'detailed-post',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
+
+		await db.insertInto('articles').values(postData).executeTakeFirstOrThrow();
+
+		const postDetails = await db
+			.selectFrom('articles')
+			.selectAll()
+			.where('id', '=', postData.id)
 			.executeTakeFirst();
 
-		const userId = insertResult.id;
+		expect(postDetails).toBeDefined();
+		expect(postDetails?.id).toBe(postData.id);
+		expect(postDetails?.title).toBe(postData.title);
+		expect(postDetails?.slug).toBe(postData.slug);
+	});
 
-		// Update single column using direct set method
+	it('should update an existing post', async () => {
+		const postData = {
+			id: generateId(),
+			title: 'Initial Post Title',
+			slug: 'initial-post-title',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
+
+		await db.insertInto('articles').values(postData).executeTakeFirstOrThrow();
+
+		const updates = {
+			title: 'Updated Post Title',
+			slug: 'updated-post-title',
+			updatedAt: new Date().toISOString(),
+		};
+
 		await db
-			.updateTable('users')
-			.set('email', 'updated-column@example.com')
-			.where('id', '=', userId)
-			.execute();
+			.updateTable('articles')
+			.set(updates)
+			.where('id', '=', postData.id)
+			.executeTakeFirstOrThrow();
 
-		// Verify the update
-		const updatedUser = await db
-			.selectFrom('users')
-			.where('id', '=', userId)
+		const updatedPost = await db
+			.selectFrom('articles')
 			.selectAll()
+			.where('id', '=', postData.id)
 			.executeTakeFirst();
 
-		expect(updatedUser).toBeDefined();
-		expect(updatedUser.email).toBe('updated-column@example.com');
+		expect(updatedPost).toBeDefined();
+		expect(updatedPost?.id).toBe(postData.id);
+		expect(updatedPost?.title).toBe(updates.title);
+		expect(updatedPost?.slug).toBe(updates.slug);
 	});
 
-	it.skip('should update a column with updateColumn method', async () => {
-		// Insert a test user
-		const now = new Date();
-		const insertResult = await db
-			.insertInto('users')
-			.values({
-				email: 'update-column@example.com',
-				name: 'Update Column Test',
-				username: 'update-column',
-				password: 'password',
-				followersCount: 0,
-				createdAt: toSqliteDate(now),
-				updatedAt: toSqliteDate(now),
-			})
-			.returning('id')
-			.executeTakeFirst();
+	it('should delete a post', async () => {
+		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const userData = {
+			email: 'post_delete_author@example.com',
+			name: 'Post Delete Author',
+			username: 'postdeleteauthor',
+			password: 'password123',
+			followersCount: 0,
+			status: 'active',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
 
-		const userId = insertResult.id;
+		const insertResult = await UserModel.insertInto()
+			.values(userData)
+			.executeTakeFirstOrThrow();
+		const author = await UserModel.findById(String(insertResult.insertId));
+		if (!author) throw new Error('Author creation failed');
 
-		// Use the updateColumn method
+		const postData = {
+			id: generateId(),
+			title: 'Post to Delete',
+			slug: 'post-to-delete',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
+
+		await db.insertInto('articles').values(postData).executeTakeFirstOrThrow();
+
 		await db
-			.updateColumn('users', 'name', 'Updated Column Name')
-			.where('id', '=', userId)
-			.execute();
-
-		// Verify the update
-		const updatedUser = await db
-			.selectFrom('users')
-			.where('id', '=', userId)
-			.selectAll()
+			.deleteFrom('articles')
+			.where('id', '=', postData.id)
 			.executeTakeFirst();
 
-		expect(updatedUser).toBeDefined();
-		expect(updatedUser.name).toBe('Updated Column Name');
+		const postDetails = await db
+			.selectFrom('articles')
+			.selectAll()
+			.where('id', '=', postData.id)
+			.executeTakeFirst();
+
+		expect(postDetails).toBeUndefined();
 	});
 
-	it.skip('should support cursor-based pagination', async () => {
-		// Insert test users with different creation dates
-		const dates = [
-			new Date('2023-01-01'),
-			new Date('2023-01-02'),
-			new Date('2023-01-03'),
-		] as const;
+	it('should add a comment to a post', async () => {
+		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const userData = {
+			email: 'comment_author@example.com',
+			name: 'Comment Author',
+			username: 'commentauthor',
+			password: 'password123',
+			followersCount: 0,
+			status: 'active',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
 
-		await Promise.all([
-			db
-				.insertInto('users')
+		const insertResult = await UserModel.insertInto()
+			.values(userData)
+			.executeTakeFirstOrThrow();
+		const author = await UserModel.findById(String(insertResult.insertId));
+		if (!author) throw new Error('Author creation failed');
+
+		const postData = {
+			id: generateId(),
+			title: 'Post for Comments',
+			slug: 'post-for-comments',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
+
+		await db.insertInto('articles').values(postData).executeTakeFirstOrThrow();
+
+		const commentData = {
+			userId: author.id,
+			message: 'This is a test comment.',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
+
+		const comment = await db
+			.insertInto('comments')
+			.values(commentData)
+			.returningAll()
+			.executeTakeFirstOrThrow();
+
+		expect(comment).toBeDefined();
+		expect(comment.id).toBeDefined();
+		expect(comment.userId).toBe(commentData.userId);
+		expect(comment.message).toBe(commentData.message);
+	});
+
+	it('should retrieve a feed of posts with pagination and comment counts', async () => {
+		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const userData = {
+			email: 'feed_author@example.com',
+			name: 'Feed Author',
+			username: 'feedauthor',
+			password: 'password123',
+			followersCount: 0,
+			status: 'active',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
+
+		const insertResult = await UserModel.insertInto()
+			.values(userData)
+			.executeTakeFirstOrThrow();
+		const author = await UserModel.findById(String(insertResult.insertId));
+		if (!author) throw new Error('Author creation failed');
+
+		const posts = [
+			{ id: generateId(), title: 'Post 1', slug: 'post-1' },
+			{ id: generateId(), title: 'Post 2', slug: 'post-2' },
+			{ id: generateId(), title: 'Post 3', slug: 'post-3' },
+		];
+
+		for (const post of posts) {
+			await db
+				.insertInto('articles')
 				.values({
-					email: 'cursor1@example.com',
-					name: 'Cursor Test 1',
-					username: 'cursor1',
-					password: 'password',
-					followersCount: 0,
-					createdAt: toSqliteDate(dates[0]),
-					updatedAt: toSqliteDate(new Date()),
+					...post,
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
 				})
-				.execute(),
+				.executeTakeFirstOrThrow();
+		}
 
-			db
-				.insertInto('users')
-				.values({
-					email: 'cursor2@example.com',
-					name: 'Cursor Test 2',
-					username: 'cursor2',
-					password: 'password',
-					followersCount: 0,
-					createdAt: toSqliteDate(dates[1]),
-					updatedAt: toSqliteDate(new Date()),
-				})
-				.execute(),
-
-			db
-				.insertInto('users')
-				.values({
-					email: 'cursor3@example.com',
-					name: 'Cursor Test 3',
-					username: 'cursor3',
-					password: 'password',
-					followersCount: 0,
-					createdAt: toSqliteDate(dates[2]),
-					updatedAt: toSqliteDate(new Date()),
-				})
-				.execute(),
-		]);
-
-		// Get first page of results (2 items)
-		const firstPage = await db
-			.selectFrom('users')
-			.where('email', 'like', 'cursor%')
+		const feedResult = await db
+			.selectFrom('articles')
+			.selectAll()
 			.orderBy('createdAt', 'desc')
-			.orderBy('name', 'asc')
-			.limit(2)
-			.selectAll()
+			.limit(10)
 			.execute();
+		expect(feedResult.length).toBeGreaterThanOrEqual(1);
 
-		expect(firstPage).toHaveLength(2);
-		expect(firstPage[0].email).toBe('cursor3@example.com');
-		expect(firstPage[1].email).toBe('cursor2@example.com');
-
-		// Use cursor to get next page
-		const cursor = firstPage[firstPage.length - 1].createdAt;
-
-		const secondPage = await db
-			.selectFrom('users')
-			.where('email', 'like', 'cursor%')
-			.where('createdAt', '<', cursor)
+		const feedLimitedResult = await db
+			.selectFrom('articles')
+			.selectAll()
 			.orderBy('createdAt', 'desc')
-			.orderBy('name', 'asc')
 			.limit(2)
-			.selectAll()
 			.execute();
+		expect(feedLimitedResult.length).toBe(2);
 
-		expect(secondPage).toHaveLength(1);
-		expect(secondPage[0].email).toBe('cursor1@example.com');
+		const feedPage2Result = await db
+			.selectFrom('articles')
+			.selectAll()
+			.orderBy('createdAt', 'desc')
+			.limit(2)
+			.offset(2)
+			.execute();
+		expect(feedPage2Result.length).toBe(1);
 	});
 
-	it.skip('should support one-to-many relationships', async () => {
-		// Insert a test user
-		const now = new Date();
-		const userResult = await db
-			.insertInto('users')
-			.values({
-				email: 'relation@example.com',
-				name: 'Relation Test',
-				username: 'relation',
-				password: 'password',
-				followersCount: 0,
-				createdAt: toSqliteDate(now),
-				updatedAt: toSqliteDate(now),
-			})
-			.returning('id')
-			.executeTakeFirst();
+	describe('transaction operations', () => {
+		it('should maintain consistency during fund transfers', async () => {
+			const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
 
-		const userId = userResult.id;
-
-		// Insert comments for this user
-		await Promise.all([
-			db
-				.insertInto('comments')
-				.values({
-					userId,
-					message: 'Test comment 1',
-					createdAt: toSqliteDate(now),
-					updatedAt: toSqliteDate(now),
-				})
-				.execute(),
-
-			db
-				.insertInto('comments')
-				.values({
-					userId,
-					message: 'Test comment 2',
-					createdAt: toSqliteDate(now),
-					updatedAt: toSqliteDate(now),
-				})
-				.execute(),
-		]);
-
-		// Get comments for this user
-		const comments = await db
-			.selectFrom('comments')
-			.where('userId', '=', userId)
-			.selectAll()
-			.execute();
-
-		expect(comments).toHaveLength(2);
-		expect(comments[0].message).toBe('Test comment 1');
-		expect(comments[1].message).toBe('Test comment 2');
-
-		// Get user with comments using a join
-		const userWithComments = await db
-			.selectFrom('users')
-			.where('users.id', '=', userId)
-			.leftJoin('comments', 'users.id', 'comments.userId')
-			.select([
-				'users.id as userId',
-				'users.email',
-				'comments.id as commentId',
-				'comments.message',
-			])
-			.execute();
-
-		expect(userWithComments).toHaveLength(2); // One row per comment
-		expect(userWithComments[0].userId).toBe(userId);
-		expect(userWithComments[0].email).toBe('relation@example.com');
-		expect(userWithComments[0].commentId).toBeDefined();
-		expect(userWithComments[0].message).toBe('Test comment 1');
-		expect(userWithComments[1].message).toBe('Test comment 2');
-	});
-
-	it.skip('should perform full CRUD cycle in a single test', async () => {
-		// CREATE
-		const now = new Date();
-		const insertResult = await db
-			.insertInto('users')
-			.values({
-				email: 'crud-test@example.com',
-				name: 'CRUD Test',
-				username: 'crud-test',
+			// Create two users with initial balances
+			const user1Data = {
+				email: 'user1@example.com',
+				name: 'User One',
+				username: 'userone',
 				password: 'password123',
-				followersCount: 0,
-				createdAt: toSqliteDate(now),
-				updatedAt: toSqliteDate(now),
-			})
-			.returning('id')
-			.executeTakeFirst();
+				followersCount: 100, // Using followersCount as balance
+				status: 'active',
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+			};
 
-		expect(insertResult).toBeDefined();
-		const userId = insertResult.id;
+			const user2Data = {
+				email: 'user2@example.com',
+				name: 'User Two',
+				username: 'usertwo',
+				password: 'password123',
+				followersCount: 50, // Using followersCount as balance
+				status: 'active',
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+			};
 
-		// READ
-		const user = await db
-			.selectFrom('users')
-			.where('id', '=', userId)
-			.selectAll()
-			.executeTakeFirst();
+			const user1Insert = await UserModel.insertInto()
+				.values(user1Data)
+				.executeTakeFirstOrThrow();
+			const user2Insert = await UserModel.insertInto()
+				.values(user2Data)
+				.executeTakeFirstOrThrow();
 
-		expect(user).toBeDefined();
-		expect(user.email).toBe('crud-test@example.com');
-		expect(user.name).toBe('CRUD Test');
+			const user1Id = String(user1Insert.insertId);
+			const user2Id = String(user2Insert.insertId);
 
-		// UPDATE
-		await db
-			.updateTable('users')
-			.set({
-				name: 'Updated CRUD Test',
-				updatedAt: toSqliteDate(new Date()),
-			})
-			.where('id', '=', userId)
-			.execute();
+			// Perform transfer in transaction
+			const transferAmount = 30;
+			await UserModel.transaction(async (db) => {
+				// Get current balances
+				const user1 = await db.transaction
+					.selectFrom('users')
+					.where('id', '=', user1Id)
+					.selectAll()
+					.executeTakeFirstOrThrow();
 
-		const updatedUser = await db
-			.selectFrom('users')
-			.where('id', '=', userId)
-			.selectAll()
-			.executeTakeFirst();
+				const user2 = await db.transaction
+					.selectFrom('users')
+					.where('id', '=', user2Id)
+					.selectAll()
+					.executeTakeFirstOrThrow();
 
-		expect(updatedUser).toBeDefined();
-		expect(updatedUser.name).toBe('Updated CRUD Test');
+				// Update balances
+				await db.transaction
+					.updateTable('users')
+					.set({ followersCount: user1.followersCount - transferAmount })
+					.where('id', '=', user1Id)
+					.execute();
 
-		// DELETE
-		await db.deleteFrom('users').where('id', '=', userId).execute();
+				await db.transaction
+					.updateTable('users')
+					.set({ followersCount: user2.followersCount + transferAmount })
+					.where('id', '=', user2Id)
+					.execute();
+			});
 
-		const deletedUser = await db
-			.selectFrom('users')
-			.where('id', '=', userId)
-			.selectAll()
-			.executeTakeFirst();
+			// Verify final balances
+			const finalUser1 = await UserModel.findById(user1Id);
+			const finalUser2 = await UserModel.findById(user2Id);
 
-		expect(deletedUser).toBeUndefined();
+			expect(finalUser1?.followersCount).toBe(70); // 100 - 30
+			expect(finalUser2?.followersCount).toBe(80); // 50 + 30
+		});
+
+		it('should roll back changes on error', async () => {
+			const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+
+			// Create initial user
+			const userData = {
+				email: 'rollback@example.com',
+				name: 'Rollback User',
+				username: 'rollbackuser',
+				password: 'password123',
+				followersCount: 100,
+				status: 'active',
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+			};
+
+			const insertResult = await UserModel.insertInto()
+				.values(userData)
+				.executeTakeFirstOrThrow();
+			const userId = String(insertResult.insertId);
+
+			// Attempt an operation that will fail
+			try {
+				await UserModel.transaction(async (db) => {
+					// First update should succeed
+					await db.transaction
+						.updateTable('users')
+						.set({ followersCount: 150 })
+						.where('id', '=', userId)
+						.execute();
+
+					// This update should fail (invalid status)
+					await db.transaction
+						.updateTable('users')
+						.set({ status: null as any }) // This will violate not-null constraint
+						.where('id', '=', userId)
+						.execute();
+				});
+				expect.fail('Transaction should have failed');
+			} catch (error) {
+				// Expected to fail
+			}
+
+			// Verify the user's data was not changed
+			const user = await UserModel.findById(userId);
+			expect(user?.followersCount).toBe(100); // Should be unchanged
+			expect(user?.status).toBe('active'); // Should be unchanged
+		});
 	});
 });

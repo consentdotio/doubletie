@@ -1,15 +1,15 @@
 import { sql } from 'kysely';
 import type { UpdateResult } from 'kysely';
 import { describe, expect, it, vi } from 'vitest';
-import type { Database } from '~/database';
-import createModel from '~/model';
+import type { Database } from '../../database.js';
+import { createModel } from '../../model.js';
 import {
 	type MockExpressionBuilder,
 	type TestMockDatabase,
 	createMockDatabase,
 	createMockExpressionBuilder,
 	createMockReturnThis,
-} from '../fixtures/mock-db';
+} from '../fixtures/mock-db.js';
 
 // Define test database types
 interface TestDB {

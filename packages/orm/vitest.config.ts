@@ -38,11 +38,5 @@ export default defineConfig({
 			reporter: ['text', 'json', 'html'],
 			exclude: ['src/__tests__/fixtures/**', 'src/__tests__/types/**'],
 		},
-
-		// Configure path aliases
-		alias: {
-			'~': resolve(__dirname, './src'),
-			'~/tests': resolve(__dirname, './src/__tests__'),
-		},
 	},
 });

@@ -6,13 +6,11 @@ export {
 	type Updateable,
 	type SelectQueryBuilder,
 	type NotNull,
-	// Export enhanced JSON functions from 0.27.0
 	type JSONOperatorWith$,
 	// reexport dialects
 	PostgresDialect,
 	MysqlDialect,
 	SqliteDialect,
-	// New in Kysely 0.27.1
 } from 'kysely';
 
 // Export the main classes, types and utilities
@@ -21,22 +19,18 @@ export {
 	type DatabaseConfig,
 	type MigratorOptions,
 	type ModelRegistry,
-} from './database';
+} from './database.js';
 
-// Export RelationType from constants
-export { RelationType } from './constants';
+export * from './model.js';
 
-export * from './model';
-export * from './mixins';
-export * from './utils';
-export { generateId } from './id-generator';
+export { generateId } from './id-generator.js';
 
 // Export SQL Fragments utilities (new in 0.27.2)
 export {
 	insertAndReturnUserIds,
 	updateUserAndGetAuditClause,
 	deleteInactiveUsersAndCount,
-} from './utils/sql-fragments';
+} from './utils/sql-fragments.js';
 
 // Export Type-Safe Model Building API
 export {
@@ -48,7 +42,7 @@ export {
 	type RelationDefinition,
 	type FieldDefinition,
 	type ModelType,
-} from './utils/model-builder';
+} from './utils/model-builder.js';
 
 // Helper function to provide type inference utilities
 const createTypeInferenceHelpers = () => {
@@ -80,4 +74,4 @@ export type {
 	WithRequired,
 	ValidationErrors,
 	FieldMapping,
-} from './utils/type-inference';
+} from './utils/type-inference.js';

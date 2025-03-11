@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { beforeEach, vi } from 'vitest';
-import type { Database } from '~/database';
-import type { ModelFunctions } from '~/model';
-import createModel from '~/model';
-import { withGlobalId, withIdGenerator, withSlug } from '../../mixins';
+import type { Database } from '../../database.js';
+import type { ModelFunctions } from '../../model.js';
+import { createModel } from '../../model.js';
 
 describe('unit: mixin composition', () => {
 	// Define test database types

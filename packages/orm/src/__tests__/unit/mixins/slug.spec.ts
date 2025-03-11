@@ -1,3 +1,4 @@
+import { DB } from '__tests__/fixtures/migration.js';
 import type { SelectQueryBuilder } from 'kysely';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -5,31 +6,14 @@ import {
 	type Options,
 	generateSlugValue,
 	default as withSlug,
-} from '../../../mixins/slug';
-import type { ModelFunctions } from '../~/model';
-
-// Define test database type for testing
-interface TestDB {
-	users: {
-		id: number;
-		name: string;
-		email: string;
-		slug: string;
-		title: string;
-	};
-	posts: {
-		id: number;
-		title: string;
-		slug: string;
-		content: string;
-	};
-}
+} from '../../../mixins/slug.js';
+import type { ModelFunctions } from '../../../model.js';
 
 describe('unit: slug mixin', () => {
 	describe('generateSlugValue', () => {
 		it('should generate a valid slug from a string', () => {
 			const data = { title: 'This is a Test Title' };
-			const options: Options<TestDB, 'posts'> = {
+			const options: Options<DB, 'articles'> = {
 				field: 'slug',
 				sources: ['title'],
 			};
@@ -44,7 +28,7 @@ describe('unit: slug mixin', () => {
 				name: 'John',
 				title: 'Developer',
 			};
-			const options: Options<TestDB, 'users'> = {
+			const options = {
 				field: 'slug',
 				sources: ['name', 'title'],
 			};
@@ -59,7 +43,7 @@ describe('unit: slug mixin', () => {
 				title: 'New Title',
 				slug: 'existing-slug',
 			};
-			const options: Options<TestDB, 'posts'> = {
+			const options: Options<DB, 'articles'> = {
 				field: 'slug',
 				sources: ['title'],
 			};
@@ -71,7 +55,7 @@ describe('unit: slug mixin', () => {
 
 		it('should return undefined if source fields are empty', () => {
 			const data = { title: '' };
-			const options: Options<TestDB, 'posts'> = {
+			const options: Options<DB, 'articles'> = {
 				field: 'slug',
 				sources: ['title'],
 			};
@@ -83,7 +67,7 @@ describe('unit: slug mixin', () => {
 
 		it('should handle special characters in source fields', () => {
 			const data = { title: 'Title with & special @ characters!' };
-			const options: Options<TestDB, 'posts'> = {
+			const options: Options<DB, 'articles'> = {
 				field: 'slug',
 				sources: ['title'],
 			};
@@ -95,7 +79,7 @@ describe('unit: slug mixin', () => {
 
 		it('should apply the LOWERCASE operation', () => {
 			const data = { title: 'UPPERCASE TITLE' };
-			const options: Options<TestDB, 'posts'> = {
+			const options: Options<DB, 'articles'> = {
 				field: 'slug',
 				sources: ['title'],
 				operation: Operation.LOWERCASE,
@@ -108,7 +92,7 @@ describe('unit: slug mixin', () => {
 
 		it('should apply the UPPERCASE operation', () => {
 			const data = { title: 'lowercase title' };
-			const options: Options<TestDB, 'posts'> = {
+			const options: Options<DB, 'articles'> = {
 				field: 'slug',
 				sources: ['title'],
 				operation: Operation.UPPERCASE,
@@ -121,7 +105,7 @@ describe('unit: slug mixin', () => {
 
 		it('should apply the CAPITALIZE operation', () => {
 			const data = { title: 'this is a title' };
-			const options: Options<TestDB, 'posts'> = {
+			const options: Options<DB, 'articles'> = {
 				field: 'slug',
 				sources: ['title'],
 				operation: Operation.CAPITALIZE,
@@ -134,7 +118,7 @@ describe('unit: slug mixin', () => {
 
 		it('should respect the separator option', () => {
 			const data = { title: 'This is a title' };
-			const options: Options<TestDB, 'posts'> = {
+			const options: Options<DB, 'articles'> = {
 				field: 'slug',
 				sources: ['title'],
 				slugOptions: {
@@ -151,7 +135,7 @@ describe('unit: slug mixin', () => {
 			const data = {
 				title: 'This is a very long title that should be truncated',
 			};
-			const options: Options<TestDB, 'posts'> = {
+			const options: Options<DB, 'articles'> = {
 				field: 'slug',
 				sources: ['title'],
 				slugOptions: {
@@ -167,7 +151,7 @@ describe('unit: slug mixin', () => {
 
 		it('should apply dictionary replacements', () => {
 			const data = { title: 'C++ and JavaScript' };
-			const options: Options<TestDB, 'posts'> = {
+			const options: Options<DB, 'articles'> = {
 				field: 'slug',
 				sources: ['title'],
 				slugOptions: {
@@ -185,36 +169,44 @@ describe('unit: slug mixin', () => {
 	});
 
 	describe('withSlug', () => {
-		let mockModel: ModelFunctions<TestDB, 'posts', 'id'>;
+		let mockModel: ModelFunctions<DB, 'articles', 'id'>;
 		let modelWithSlug: any;
 
 		beforeEach(() => {
-			// Mock model
+			// Mock model with proper query builder chain
+			const mockExecuteTakeFirst = vi
+				.fn()
+				.mockResolvedValue({ id: 1, title: 'Test', slug: 'test' });
+			const mockExecute = vi.fn().mockResolvedValue([]);
+			const mockReturningAll = vi.fn().mockReturnValue({
+				executeTakeFirst: mockExecuteTakeFirst,
+				execute: mockExecute,
+			});
+			const mockValues = vi
+				.fn()
+				.mockReturnValue({ returningAll: mockReturningAll });
+			const mockWhere = vi.fn().mockReturnValue({ execute: mockExecute });
+			const mockSelect = vi.fn().mockReturnValue({ where: mockWhere });
+			const mockSelectFrom = vi.fn().mockReturnValue({
+				selectAll: () => ({ where: mockWhere }),
+				select: mockSelect,
+			});
+
 			mockModel = {
 				db: {} as any,
-				table: 'posts',
+				table: 'articles',
 				id: 'id',
 				noResultError: Error as any,
 				isolated: false,
 
-				// Mock methods
-				selectFrom: vi.fn(() => ({
-					where: vi.fn(() => ({
-						executeTakeFirst: vi.fn(),
-					})),
-				})),
+				// Mock methods with proper chain
+				selectFrom: mockSelectFrom,
 				findOne: vi.fn(),
-				insertInto: vi.fn(() => ({
-					values: vi.fn(() => ({
-						returning: vi.fn(() => ({
-							executeTakeFirst: vi.fn(),
-						})),
-					})),
-				})),
+				insertInto: vi.fn().mockReturnValue({ values: mockValues }),
 				updateTable: vi.fn(() => ({
 					set: vi.fn(() => ({
 						where: vi.fn(() => ({
-							returning: vi.fn(() => ({
+							returningAll: vi.fn(() => ({
 								executeTakeFirst: vi.fn(),
 							})),
 						})),
@@ -222,13 +214,12 @@ describe('unit: slug mixin', () => {
 				})),
 			} as any;
 
-			// Apply mixin - use implementSlug directly
-			const options: Options<TestDB, 'posts'> = {
+			// Apply mixin
+			const options: Options<DB, 'articles'> = {
 				field: 'slug',
 				sources: ['title'],
 			};
 
-			// Fix incorrect mixin application
 			modelWithSlug = withSlug(mockModel, 'slug' as any, 'title' as any);
 		});
 
@@ -241,17 +232,23 @@ describe('unit: slug mixin', () => {
 		});
 
 		it('should generate a slug during insertWithSlug', async () => {
-			// Mock the executeTakeFirst to return a successful result
 			const mockResult = { id: 1, title: 'Test Post', slug: 'test-post' };
-			const executeTakeFirstMock = vi.fn().mockResolvedValue(mockResult);
+			const mockExecuteTakeFirst = vi.fn().mockResolvedValue(mockResult);
+			const mockReturningAll = vi
+				.fn()
+				.mockReturnValue({ executeTakeFirst: mockExecuteTakeFirst });
+			const mockValues = vi
+				.fn()
+				.mockReturnValue({ returningAll: mockReturningAll });
 
-			mockModel.insertInto = vi.fn(() => ({
-				values: vi.fn(() => ({
-					returning: vi.fn(() => ({
-						executeTakeFirst: executeTakeFirstMock,
-					})),
-				})),
-			})) as any;
+			mockModel.insertInto = vi.fn().mockReturnValue({ values: mockValues });
+			mockModel.selectFrom = vi.fn().mockReturnValue({
+				selectAll: () => ({
+					where: vi.fn().mockReturnValue({
+						execute: vi.fn().mockResolvedValue([]),
+					}),
+				}),
+			});
 
 			const result = await modelWithSlug.insertWithSlug({ title: 'Test Post' });
 
@@ -263,7 +260,7 @@ describe('unit: slug mixin', () => {
 			const mockResult = { id: 1, title: 'Test Post', slug: 'custom-slug' };
 			const executeTakeFirstMock = vi.fn().mockResolvedValue(mockResult);
 			const valuesMock = vi.fn(() => ({
-				returning: vi.fn(() => ({
+				returningAll: vi.fn(() => ({
 					executeTakeFirst: executeTakeFirstMock,
 				})),
 			}));
@@ -277,7 +274,6 @@ describe('unit: slug mixin', () => {
 				slug: 'custom-slug',
 			});
 
-			// Check that the values passed to insert had the custom slug
 			expect(valuesMock).toHaveBeenCalledWith(
 				expect.objectContaining({ slug: 'custom-slug' })
 			);
@@ -300,15 +296,15 @@ describe('unit: slug mixin', () => {
 			});
 		});
 
-		it('should handle array of objects in processDataBeforeInsert', () => {
+		it('should handle array of objects in processDataBeforeInsert', async () => {
 			const data = [
 				{ title: 'Post 1' },
 				{ title: 'Post 2' },
 				{ title: 'Post 3', slug: 'custom-slug' },
 			];
 
-			const processed = modelWithSlug.processDataBeforeInsert(data);
-
+			const processed = await modelWithSlug.processDataBeforeInsert(data);
+			console.log(processed);
 			expect(processed).toHaveLength(3);
 			expect(processed[0]).toHaveProperty('slug', 'post-1');
 			expect(processed[1]).toHaveProperty('slug', 'post-2');
@@ -321,7 +317,7 @@ describe('unit: slug mixin', () => {
 			const mockModel = {
 				// Mock basic model properties needed by withSlug
 				db: {} as any,
-				table: 'posts',
+				table: 'articles',
 				id: 'id',
 				noResultError: Error as any,
 				isolated: false,
@@ -329,13 +325,13 @@ describe('unit: slug mixin', () => {
 				insertInto: vi.fn(),
 				updateTable: vi.fn(),
 				selectFrom: vi.fn(),
-			} as any as ModelFunctions<TestDB, 'posts', 'id'>;
+			} as any as ModelFunctions<DB, 'articles', 'id'>;
 
 			// Fix curried usage by providing the correct type assertion
-			const slugMixin = withSlug<TestDB, 'posts', 'id'>(mockModel) as any;
+			const slugMixin = withSlug<DB, 'articles', 'id'>(mockModel) as any;
 			const modelWithSlug = slugMixin({
-				field: 'slug' as keyof TestDB['posts'] & string,
-				sources: ['title' as keyof TestDB['posts'] & string],
+				field: 'slug' as keyof DB['articles'] & string,
+				sources: ['title' as keyof DB['articles'] & string],
 			});
 
 			expect(modelWithSlug).toHaveProperty('findBySlug');
@@ -354,13 +350,13 @@ describe('unit: slug mixin', () => {
 				insertInto: vi.fn(),
 				updateTable: vi.fn(),
 				selectFrom: vi.fn(),
-			} as any as ModelFunctions<TestDB, 'users', 'id'>;
+			} as any as ModelFunctions<DB, 'users', 'id'>;
 
 			// Fix direct usage with proper typing
 			const modelWithSlug = withSlug(
 				mockModel,
-				'slug' as keyof TestDB['users'] & string,
-				'name' as keyof TestDB['users'] & string
+				'slug' as keyof DB['users'] & string,
+				'name' as keyof DB['users'] & string
 			);
 
 			expect(modelWithSlug).toHaveProperty('findBySlug');

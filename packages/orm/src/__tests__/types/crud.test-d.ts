@@ -6,7 +6,7 @@ import {
 	UpdateResult,
 } from 'kysely';
 import { expectTypeOf, test } from 'vitest';
-import createModel from '~/model';
+import { createModel } from '../../model.js';
 
 // Define a test database schema
 interface TestDB {

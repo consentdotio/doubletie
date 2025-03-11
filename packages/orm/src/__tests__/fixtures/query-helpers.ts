@@ -6,7 +6,7 @@
  */
 
 import { vi } from 'vitest';
-import type { MockFn } from './mock-db';
+import type { MockFn } from './mock-db.js';
 
 /**
  * Standard mock return values for common database operations
@@ -252,7 +252,11 @@ export function createTransactionMock(returnValue: any = null) {
 		});
 
 	// Add bind method to support transaction.bind(db) pattern
-	mockTransactionFn.bind = vi.fn((thisArg) => (cb) => mockTransactionFn(cb));
+	mockTransactionFn.bind = vi.fn(
+		(thisArg: any) => (cb: (trx: any) => Promise<any>) => {
+			return mockTransactionFn(cb);
+		}
+	);
 
 	return {
 		transaction: mockTransactionFn,

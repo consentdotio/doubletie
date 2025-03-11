@@ -18,6 +18,7 @@ vi.mock('better-sqlite3', async () => {
 });
 
 // Set up any global variables needed for tests
+//@ts-expect-error
 globalThis.__TEST_ENV__ = process.env.TEST_TYPE || 'unit';
 
 // Clean up any global resources after tests

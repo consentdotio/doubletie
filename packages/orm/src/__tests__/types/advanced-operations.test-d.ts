@@ -7,7 +7,7 @@ import {
 	sql,
 } from 'kysely';
 import { expectTypeOf, test } from 'vitest';
-import createModel from '~/model';
+import { createModel } from '../../model.js';
 
 test.skip('batch update types are correct', () => {
 	// Define the structure for test DB

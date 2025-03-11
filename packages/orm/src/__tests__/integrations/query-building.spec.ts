@@ -1,9 +1,12 @@
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Database, ModelRegistry } from '~/database';
-import createModel from '~/model';
-import { setupTestDatabase, teardownTestDatabase } from '../fixtures/test-db';
+import type { Database, ModelRegistry } from '../../database.js';
+import { createModel } from '../../model.js';
+import {
+	setupTestDatabase,
+	teardownTestDatabase,
+} from '../fixtures/test-db.js';
 
 // Test database schema
 interface TestDB {
