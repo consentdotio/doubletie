@@ -1,0 +1,307 @@
+---
+title: Introduction to Query Builder
+description: A TypeScript toolkit for building self-hostable backend SDKs. Double Tie provides a complete set of tools to help developers create type-safe, self-hostable backend services that can be distributed as npm packages.
+---
+## Core Types
+
+### DatabaseConfig
+
+Configuration options for creating a database instance.
+
+```typescript
+type DatabaseConfig<TDatabaseSchema> = {
+  /** The database dialect to use */
+  dialect: Dialect;
+  /** Whether the database is isolated */
+  isolated?: boolean;
+  /** Function to log database events */
+  log?: (event: LogEvent) => void;
+  /** Whether to enable debug mode */
+  debug?: boolean;
+};
+```
+
+**Example:**
+
+```typescript
+import { createDatabase } from '@doubletie/query-builder';
+import { PostgresDialect } from 'kysely';
+
+const db = createDatabase<Database>({
+  dialect: new PostgresDialect({
+    host: 'localhost',
+    database: 'mydb',
+    user: 'postgres',
+    password: 'password'
+  }),
+  debug: true,
+  log: (event) => console.log(event)
+});
+```
+
+### MigratorOptions
+
+Options for configuring database migrations.
+
+```typescript
+type MigratorOptions = {
+  /** Migration provider that supplies the migrations */
+  provider: MigrationProvider;
+  /** Whether to allow migrations to be run in a different order than they were created */
+  allowUnorderedMigrations?: boolean;
+};
+```
+
+**Example:**
+
+```typescript
+import { FileMigrationProvider } from 'kysely';
+
+// Create a migrator using the database instance
+const migrator = db.createMigrator({
+  provider: new FileMigrationProvider({
+    migrationFolder: './migrations'
+  }),
+  allowUnorderedMigrations: false
+});
+
+// Run migrations
+await migrator.migrateToLatest();
+```
+
+## Transaction Types
+
+### TransactionCallback
+
+Function type for executing operations within a transaction.
+
+```typescript
+type TransactionCallback<TDatabaseSchema, ResultType> = (
+  trx: TransactionResponse<TDatabaseSchema>
+) => Promise<ResultType>;
+```
+
+### TransactionResponse
+
+Object passed to transaction callbacks with the transaction instance and afterCommit hook.
+
+```typescript
+type TransactionResponse<TDatabaseSchema> = {
+  /** Transaction instance */
+  transaction: Kysely<TDatabaseSchema>;
+  /** Register a callback to execute after the transaction commits */
+  afterCommit: (callback: AfterCommitCallback) => void;
+};
+```
+
+### AfterCommitCallback
+
+Function to be executed after a transaction is successfully committed.
+
+```typescript
+type AfterCommitCallback = () => Promise<unknown>;
+```
+
+**Example:**
+
+```typescript
+// Execute operations in a transaction with afterCommit hooks
+await db.transaction(async ({ transaction, afterCommit }) => {
+  // Perform database operations
+  const user = await transaction
+    .insertInto('users')
+    .values({ name: 'John', email: 'john@example.com' })
+    .returningAll()
+    .executeTakeFirst();
+  
+  // Register a callback to run after successful commit
+  afterCommit(async () => {
+    await sendWelcomeEmail(user.email);
+  });
+  
+  return user;
+});
+```
+
+## Model Registration
+
+### ModelRegistry
+
+Registry for defining and storing model definitions.
+
+```typescript
+type ModelRegistry<TDatabaseSchema> = {
+  [TTableName in keyof TDatabaseSchema & string]?: {
+    /** The model schema definition */
+    schema: DeepPartial<ModelSchema<TDatabaseSchema[TTableName]>>;
+    /** The primary key specification */
+    primaryKey: PrimaryKeySpecification<TDatabaseSchema[TTableName]>;
+  };
+};
+```
+
+**Example:**
+
+```typescript
+// Define model schemas
+const userSchema: ModelSchema<Database['users']> = {
+  fields: {
+    id: { type: 'number' },
+    name: { type: 'string' },
+    email: { type: 'string' },
+    created_at: { type: 'date' }
+  },
+  extensions: {
+    async findByEmail(email: string) {
+      return this.findOne('email', email);
+    }
+  }
+};
+
+// Register models with the database
+const models = {
+  users: {
+    schema: userSchema,
+    primaryKey: { field: 'id' }
+  }
+};
+
+db.registerModels(models);
+
+// Get a registered model
+const userModel = db.getModel('users');
+```
+
+## Database Interface
+
+The core `Database` interface provides all database operations and utilities. It includes:
+
+- Dialect-specific methods (`isSqlite`, `isMysql`, `isPostgres`)
+- Model creation and registration methods
+- Transaction support
+- Query builders for SELECT, INSERT, UPDATE, DELETE operations
+- Utility methods for common database tasks
+
+### Key Methods
+
+```typescript
+interface Database<TDatabaseSchema, RegistryType> {
+  // Dialect helpers
+  isSqlite: () => boolean;
+  isMysql: () => boolean;
+  isPostgres: () => boolean;
+  
+  // Model management
+  model: <TTableName, TIdColumnName>(...) => Model;
+  registerModels: (registry: RegistryType) => Database;
+  getModel: <TTableName>(...) => Model;
+  
+  // Transaction handling
+  transaction: <TResultType>(...) => Promise<TResultType>;
+  isTransaction: () => boolean;
+  
+  // Query builders
+  selectFrom: <TTableName>(...) => SelectQueryBuilder;
+  insertInto: <TTableName>(...) => InsertQueryBuilder;
+  updateTable: <TTableName>(...) => UpdateQueryBuilder;
+  deleteFrom: <TTableName>(...) => DeleteQueryBuilder;
+  
+  // Advanced queries
+  with: <TName, TExpression>(...) => any;
+  selectNoFrom: () => any;
+  
+  // Utility methods
+  tuple: <ItemTypes>(...) => Function;
+  cast: <ResultType>(...) => any;
+  streamFrom: <TTableName, ColumnName>(...) => SelectQueryBuilder;
+  findNotNull: <TTableName, ColumnName>(...) => SelectQueryBuilder;
+  
+  // Connection management
+  destroy: () => Promise<void>;
+}
+```
+
+**Examples:**
+
+```typescript
+// Create a simple query
+const users = await db.selectFrom('users')
+  .where('status', '=', 'active')
+  .selectAll()
+  .execute();
+
+// Use tuple comparison
+const result = await db.selectFrom('orders')
+  .where((eb) => {
+    const tupleBuilder = db.tuple(['product_id', 'status']);
+    return eb(
+      tupleBuilder(eb), 
+      '=', 
+      db.tuple([10, 'shipped'])(eb)
+    );
+  })
+  .selectAll()
+  .execute();
+
+// Cast values
+const numericValue = db.cast<number>('123', 'INTEGER');
+const query = db.selectFrom('products')
+  .where('price', '<', numericValue)
+  .selectAll();
+
+// Find rows with non-null values
+const activeUsers = await db.findNotNull('users', 'last_login')
+  .where('status', '=', 'active')
+  .execute();
+
+// Stream results (SQLite only)
+const stream = await db.streamFrom('logs', ['id', 'message', 'created_at'])
+  .where('level', '=', 'error')
+  .stream();
+```
+
+## Type Utilities
+
+The Database types use several advanced TypeScript utilities to provide enhanced type-safety:
+
+- `DrainOuterGeneric<T>` - Helps with generic type handling
+- `DeepPartial<T>` - Creates a deeply optional version of a type
+- Type constraints like `TTableName extends keyof TDatabaseSchema & string`
+
+These utilities ensure you get proper type checking and autocompletion when using the query builder.
+
+## Extending Type Definitions
+
+When using the query builder with your database schema, you'll define your own schema types:
+
+```typescript
+// Define your database schema
+interface Database {
+  users: {
+    id: number;
+    name: string;
+    email: string;
+    created_at: Date;
+  };
+  posts: {
+    id: number;
+    title: string;
+    content: string;
+    user_id: number;
+    created_at: Date;
+  };
+}
+
+// Create a type-safe database instance
+const db = createDatabase<Database>({
+  dialect: new PostgresDialect(/* connection config */),
+});
+
+// The types system will now provide full autocompletion and type checking
+const users = await db.selectFrom('users') // Only 'users' or 'posts' allowed
+  .where('id', '>', 10)    // Type-safe column references
+  .select(['id', 'name'])  // Only existing columns allowed
+  .execute();
+```
+
+For more information on using the query builder, refer to the main README documentation and example code.

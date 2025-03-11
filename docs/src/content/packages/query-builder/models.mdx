@@ -1,0 +1,99 @@
+---
+title: Model Registration and Usage
+description: Using the type-safe model layer for database operations
+---
+## ModelRegistry
+
+Registry for defining and storing model definitions.
+
+```typescript
+type ModelRegistry<TDatabaseSchema> = {
+  [TTableName in keyof TDatabaseSchema & string]?: {
+    /** The model schema definition */
+    schema: DeepPartial<ModelSchema<TDatabaseSchema[TTableName]>>;
+    /** The primary key specification */
+    primaryKey: PrimaryKeySpecification<TDatabaseSchema[TTableName]>;
+  };
+};
+```
+
+## ModelSchema
+
+```typescript
+type ModelSchema<TEntityType = unknown> = {
+  fields: { [K in keyof TEntityType]: FieldDefinition };
+  relations?: Record<string, RelationDefinition<TEntityType, unknown>>;
+  indexes?: Array<{
+    name?: string;
+    columns: Array<keyof TEntityType & string>;
+    unique?: boolean;
+  }>;
+  extensions?: ModelExtensions<TEntityType>;
+};
+```
+
+## Defining and Registering Models
+
+```typescript
+// Define model schemas
+const userSchema: ModelSchema<Database['users']> = {
+  fields: {
+    id: { type: 'number' },
+    name: { type: 'string' },
+    email: { type: 'string' },
+    created_at: { type: 'date' }
+  },
+  extensions: {
+    async findByEmail(email: string) {
+      return this.findOne('email', email);
+    }
+  }
+};
+
+// Register models with the database
+const models = {
+  users: {
+    schema: userSchema,
+    primaryKey: { field: 'id' }
+  }
+};
+
+db.registerModels(models);
+
+// Get a registered model
+const userModel = db.getModel('users');
+```
+
+## Using Model Methods
+
+```typescript
+// Basic CRUD operations
+const user = await userModel.findById(1);
+const users = await userModel.find('status', 'active');
+const newUser = await userModel.insertRequired({ name: 'Alice', email: 'alice@example.com' });
+const updated = await userModel.updatePartial(1, { name: 'Updated Name' });
+await userModel.deleteFrom().where('id', '=', 1).execute();
+
+// Using custom extensions
+const userByEmail = await userModel.findByEmail('john@example.com');
+
+// Advanced queries
+const results = await userModel.findByTuple(
+  ['name', 'status'],
+  ['John', 'active']
+);
+```
+
+## Transaction Support
+
+```typescript
+await db.transaction(async ({ transaction }) => {
+  // The model automatically uses the transaction context
+  const user = await userModel.findById(1);
+  
+  // Update within the transaction
+  await userModel.updatePartial(user.id, { status: 'updated' });
+  
+  // Both operations are part of the same transaction
+});
+```

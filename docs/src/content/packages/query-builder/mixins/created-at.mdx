@@ -1,0 +1,126 @@
+---
+title: Created At
+description: Automatically adds creation timestamps to database records
+---
+The `withCreatedAt` mixin automatically adds timestamps when records are created in the database. This eliminates the need to manually set created_at fields on every insert operation.
+
+## Usage
+
+```typescript
+import { withCreatedAt } from '@doubletie/query-builder/mixins';
+import { createDatabase, createModel } from '@doubletie/query-builder';
+
+// Create a database and model
+const db = createDatabase<Database>(/* config */);
+const UserModel = createModel(db, 'users', 'id');
+
+// Apply the created_at mixin
+const UserWithTimestamp = withCreatedAt(UserModel, 'createdAt');
+
+// Insert a record without specifying createdAt
+const user = await UserWithTimestamp.insertInto()
+  .values({
+    name: 'John Doe',
+    email: 'john@example.com',
+    // createdAt is automatically added
+  })
+  .returningAll()
+  .executeTakeFirstOrThrow();
+
+console.log(user.createdAt); // Current timestamp
+```
+
+## API Reference
+
+### withCreatedAt()
+
+```typescript
+function withCreatedAt<
+  TDatabase,
+  TTableName extends keyof TDatabase & string,
+  TIdColumnName extends keyof TDatabase[TTableName] & string
+>(
+  model: ModelFunctions<TDatabase, TTableName, TIdColumnName>,
+  field: keyof TDatabase[TTableName] & string
+): ModelFunctions<TDatabase, TTableName, TIdColumnName> & {
+  processDataBeforeInsert<T>(data: T): T & { [K in typeof field]: Date };
+}
+```
+
+Enhances a model with automatic createdAt timestamp functionality.
+
+#### Parameters
+
+- `model` - The base model to enhance
+- `field` - The name of the field to use for creation timestamps (e.g., 'createdAt')
+
+#### Returns
+
+Enhanced model that automatically sets the creation timestamp field during insert operations.
+
+## Features
+
+- **Automatic Timestamps**: Sets the specified field to the current date/time on insert
+- **Batch Support**: Works with both single and batch insert operations
+- **Respect Existing Values**: Preserves existing timestamp values if already provided
+- **Composition**: Works well with other mixins in combination
+
+## Example: Batch Inserts
+
+```typescript
+// Batch insert with automatic timestamps
+const users = await UserWithTimestamp.insertInto()
+  .values([
+    { name: 'Alice', email: 'alice@example.com' },
+    { name: 'Bob', email: 'bob@example.com' }
+  ])
+  .returningAll()
+  .execute();
+
+// Both records have createdAt timestamps
+users.forEach(user => {
+  console.log(`${user.name}: ${user.createdAt}`);
+});
+```
+
+## Example: With Existing Timestamp
+
+```typescript
+// Using a specific date instead of the current time
+const specificDate = new Date('2023-01-01T00:00:00Z');
+
+const user = await UserWithTimestamp.insertInto()
+  .values({
+    name: 'Jane',
+    email: 'jane@example.com',
+    createdAt: specificDate
+  })
+  .returningAll()
+  .executeTakeFirstOrThrow();
+
+console.log(user.createdAt); // 2023-01-01T00:00:00Z (preserved)
+```
+
+## Combining with Other Mixins
+
+```typescript
+import { withCreatedAt, withUpdatedAt } from '@doubletie/query-builder/mixins';
+
+// Apply both timestamp mixins
+const UserWithTimestamps = withUpdatedAt(
+  withCreatedAt(UserModel, 'createdAt'),
+  'updatedAt'
+);
+
+// Now both timestamps will be managed automatically
+const user = await UserWithTimestamps.insertInto()
+  .values({
+    name: 'Tim',
+    email: 'tim@example.com'
+  })
+  .returningAll()
+  .executeTakeFirstOrThrow();
+
+console.log(user.createdAt); // Set on creation
+console.log(user.updatedAt); // Also set on creation
+```

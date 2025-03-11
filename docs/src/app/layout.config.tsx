@@ -37,5 +37,9 @@ export const homePageOptions: BaseLayoutProps = {
 			text: 'Get Started',
 			url: '/docs',
 		},
+		{
+			text: 'Query Builder',
+			url: '/packages/query-builder',
+		},
 	],
 };

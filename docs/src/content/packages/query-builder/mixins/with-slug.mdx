@@ -1,0 +1,239 @@
+---
+title: Slug
+description: Creates and manages URL-friendly slugs for database records
+---
+The `withSlug` mixin adds slug generation and management capabilities to your models. Slugs are URL-friendly string identifiers, commonly used in content management systems and blogs to create readable, SEO-friendly URLs.
+
+## Usage
+
+```typescript
+import { withSlug } from '@doubletie/query-builder/mixins';
+import { createDatabase, createModel } from '@doubletie/query-builder';
+
+// Create a database and model
+const db = createDatabase<Database>(/* config */);
+const ArticleModel = createModel(db, 'articles', 'id');
+
+// Simple usage with default options
+const ArticleWithSlug = withSlug(ArticleModel, 'slug', 'title');
+
+// Create an article with automatic slug generation
+const article = await ArticleWithSlug.insertWithSlug({
+  title: 'My First Article',
+  content: 'This is the content of my first article.'
+});
+
+console.log(article.slug); // "my-first-article"
+
+// Find an article by its slug
+const foundArticle = await ArticleWithSlug.findBySlug('my-first-article');
+```
+
+## API Reference
+
+### withSlug()
+
+```typescript
+function withSlug<
+  TDatabase,
+  TTableName extends keyof TDatabase & string,
+  TIdColumnName extends keyof TDatabase[TTableName] & string
+>(
+  model: ModelFunctions<TDatabase, TTableName, TIdColumnName>,
+  slugField?: keyof TDatabase[TTableName] & string,
+  sourceField?: keyof TDatabase[TTableName] & string
+): SlugModelType<TDatabase, TTableName, TIdColumnName> | 
+   ((options: Options<TDatabase, TTableName>) => 
+    SlugModelType<TDatabase, TTableName, TIdColumnName>)
+```
+
+Enhances a model with slug generation and management capabilities.
+
+#### Basic Parameters (Simple Form)
+
+- `model` - The base model to enhance
+- `slugField` - Field to store the slug (e.g., 'slug')
+- `sourceField` - Source field to generate slug from (e.g., 'title')
+
+#### Advanced Options (Configuration Form)
+
+```typescript
+type Options<TDatabase, TTableName extends keyof TDatabase> = {
+  /** Field to store the slug */
+  field: keyof TDatabase[TTableName] & string;
+  /** Source fields to generate slug from */
+  sources: Array<keyof TDatabase[TTableName] & string>;
+  /** Operation to apply to the slug */
+  operation?: Operation;
+  /** Additional slug options */
+  slugOptions?: SlugOptions;
+};
+
+type SlugOptions = {
+  /** Separator to use between words (default: '-') */
+  separator?: string;
+  /** Maximum length to truncate slugs */
+  truncate?: number;
+  /** Dictionary of words to replace */
+  dictionary?: Record<string, string>;
+};
+```
+
+## Added Methods
+
+### findBySlug()
+
+```typescript
+findBySlug(
+  value: string,
+  column?: keyof TDatabase[TTableName] & string
+): Promise<Selectable<TDatabase[TTableName]> | undefined>
+```
+
+Finds a record by its slug.
+
+### insertWithSlug()
+
+```typescript
+insertWithSlug(
+  values: TableValues<TDatabase, TTableName>
+): Promise<Selectable<TDatabase[TTableName]>>
+```
+
+Inserts a record with an automatically generated slug.
+
+### insertIfNotExistsWithSlug()
+
+```typescript
+insertIfNotExistsWithSlug(
+  values: TableValues<TDatabase, TTableName>,
+  uniqueColumn: keyof TDatabase[TTableName] & string
+): Promise<Selectable<TDatabase[TTableName]> | undefined>
+```
+
+Inserts a record with a slug if it doesn't already exist based on a unique column.
+
+### upsertWithSlug()
+
+```typescript
+upsertWithSlug(
+  criteria: {
+    column: keyof TDatabase[TTableName] & string;
+    value: unknown;
+  },
+  insertValues: TableValues<TDatabase, TTableName>,
+  updateValues?: TableValues<TDatabase, TTableName>
+): Promise<Selectable<TDatabase[TTableName]> | undefined>
+```
+
+Updates an existing record or inserts a new one, generating a slug if needed.
+
+### insertMany()
+
+```typescript
+insertMany(
+  values: Array<TableValues<TDatabase, TTableName>>
+): Promise<Array<Selectable<TDatabase[TTableName]>>>
+```
+
+Inserts multiple records with automatically generated slugs.
+
+### generateUniqueSlug()
+
+```typescript
+generateUniqueSlug(
+  values: TableValues<TDatabase, TTableName>
+): Promise<string | undefined>
+```
+
+Generates a unique slug for the given values without inserting a record.
+
+## Features
+
+- **Automatic Slug Generation**: Create URL-friendly slugs from title/name fields
+- **Customizable Formatting**: Control separator, length, and word replacement
+- **Uniqueness Handling**: Automatically adds numerical suffixes to ensure uniqueness
+- **Multiple Source Fields**: Generate slugs from multiple fields (e.g., combining name and category)
+- **Batch Operations**: Support for inserting multiple records with unique slugs
+
+## Examples
+
+### Basic Slug Generation
+
+```typescript
+// Create a post with a slug
+const post = await PostWithSlug.insertWithSlug({
+  title: 'Hello World!',
+  content: 'This is my first post.'
+});
+
+console.log(post.slug); // "hello-world"
+```
+
+### Advanced Configuration
+
+```typescript
+// Advanced configuration with custom options
+const PostWithCustomSlug = withSlug(PostModel)({
+  field: 'slug',
+  sources: ['title', 'category'],
+  slugOptions: {
+    separator: '_',
+    truncate: 50,
+    dictionary: {
+      'javascript': 'js',
+      'typescript': 'ts'
+    }
+  }
+});
+
+// Create a post with custom slug generation
+const post = await PostWithCustomSlug.insertWithSlug({
+  title: 'Getting Started with JavaScript',
+  category: 'Programming Tutorials'
+});
+
+console.log(post.slug); // "getting_started_with_js_programming_tutorials"
+```
+
+### Handling Duplicate Slugs
+
+```typescript
+// First post with a title
+const post1 = await PostWithSlug.insertWithSlug({
+  title: 'My Post Title'
+});
+
+// Second post with the same title
+const post2 = await PostWithSlug.insertWithSlug({
+  title: 'My Post Title'
+});
+
+console.log(post1.slug); // "my-post-title"
+console.log(post2.slug); // "my-post-title-2"
+```
+
+### Using with Other Mixins
+
+```typescript
+import { withSlug, withCreatedAt, withUpdatedAt } from '@doubletie/query-builder/mixins';
+
+// Apply multiple mixins
+const PostWithFeatures = withUpdatedAt(
+  withCreatedAt(
+    withSlug(PostModel, 'slug', 'title'),
+    'createdAt'
+  ),
+  'updatedAt'
+);
+
+// Create a post with all features
+const post = await PostWithFeatures.insertWithSlug({
+  title: 'Featured Post',
+  content: 'Content with all the features.'
+});
+
+console.log(post.slug);      // "featured-post"
+console.log(post.createdAt); // Current timestamp
+console.log(post.updatedAt); // Current timestamp
+```

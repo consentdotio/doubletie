@@ -1,0 +1,112 @@
+---
+title: Cursorable
+description: Adds cursor-based pagination for efficient list traversal
+---
+The `withCursorable` mixin adds cursor-based pagination to your models, following the Relay Connection specification pattern. This pagination approach is ideal for efficiently traversing large datasets and provides stable pagination even when items are added or removed.
+
+## Usage
+
+```typescript
+import { withCursorable } from '@doubletie/query-builder/mixins';
+import { createDatabase, createModel } from '@doubletie/query-builder';
+
+// Create a database and model
+const db = createDatabase<Database>(/* config */);
+const UserModel = createModel(db, 'users', 'id');
+
+// Apply the cursorable mixin with sorting configuration
+const UserWithPagination = withCursorable(UserModel, {
+  sortKeys: {
+    newest: [
+      ['createdAt', { direction: 'desc', reversible: true }],
+      ['id', { direction: 'asc' }]
+    ],
+    alphabetical: [
+      ['name', { direction: 'asc' }],
+      ['id', { direction: 'asc' }]
+    ]
+  },
+  limit: 10,
+  max: 50
+});
+
+// Get first page of users sorted by newest first
+const firstPage = await UserWithPagination.getCursorableConnection({
+  first: 10,
+  sortKey: 'newest'
+});
+
+// Get next page using the endCursor
+const nextPage = await UserWithPagination.getCursorableConnection({
+  first: 10,
+  after: firstPage.pageInfo.endCursor,
+  sortKey: 'newest'
+});
+
+// Get previous page (backward pagination)
+const prevPage = await UserWithPagination.getCursorableConnection({
+  last: 10,
+  before: firstPage.pageInfo.startCursor,
+  sortKey: 'newest'
+});
+```
+
+## API Reference
+
+### withCursorable()
+
+```typescript
+function withCursorable<
+  TDatabase,
+  TTableName extends keyof TDatabase & string,
+  TIdColumnName extends keyof TDatabase[TTableName] & string
+>(
+  model: ModelFunctions<TDatabase, TTableName, TIdColumnName>,
+  config: {
+    sortKeys: Record<string, ColumnSort<TDatabase[TTableName]>[]>;
+    max?: number;
+    limit?: number;
+    sortKey?: string;
+  }
+): ModelFunctions<TDatabase, TTableName, TIdColumnName> & CursorableMethods
+```
+
+Enhances a model with cursor-based pagination methods.
+
+#### Configuration Options
+
+- `sortKeys`: Record mapping sort key names to column sort configurations
+- `max`: Maximum number of records that can be requested in a single page (default: 100)
+- `limit`: Default number of records to return per page (default: 10)
+- `sortKey`: Default sort key to use when none is specified
+
+#### Column Sort Configuration
+
+```typescript
+type ColumnSort<TTable> = [keyof TTable & string, ColumnSortOptions];
+
+type ColumnSortOptions = {
+  /** Sort direction, either 'asc' (ascending) or 'desc' (descending) */
+  direction?: 'asc' | 'desc';
+  /** Whether the sort direction can be reversed for backward pagination */
+  reversible?: boolean;
+  /** Whether this column contains timestamp values that may need special handling */
+  timestamp?: boolean;
+  /** Optional SQL modifier to apply to the column in ORDER BY clauses */
+  modifier?: string;
+};
+```
+
+## Added Methods
+
+### getCursorableQuery()
+
+```typescript
+getCursorableQuery(
+  options: CursorableOptions
+): ReturnType<typeof model.selectFrom>
+```
+
+Creates a query builder configured for cursor-based pagination.
+
+###

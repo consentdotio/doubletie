@@ -1,0 +1,104 @@
+---
+title: Transaction Types and Usage
+description: Working with database transactions in Query Builder
+---
+## TransactionCallback
+
+Function type for executing operations within a transaction.
+
+```typescript
+type TransactionCallback<TDatabaseSchema, ResultType> = (
+  trx: TransactionResponse<TDatabaseSchema>
+) => Promise<ResultType>;
+```
+
+## TransactionResponse
+
+Object passed to transaction callbacks with the transaction instance and afterCommit hook.
+
+```typescript
+type TransactionResponse<TDatabaseSchema> = {
+  /** Transaction instance */
+  transaction: Kysely<TDatabaseSchema>;
+  /** Register a callback to execute after the transaction commits */
+  afterCommit: (callback: AfterCommitCallback) => void;
+};
+```
+
+## AfterCommitCallback
+
+Function to be executed after a transaction is successfully committed.
+
+```typescript
+type AfterCommitCallback = () => Promise<unknown>;
+```
+
+## Basic Transaction Example
+
+```typescript
+// Execute operations in a transaction with afterCommit hooks
+await db.transaction(async ({ transaction, afterCommit }) => {
+  // Perform database operations
+  const user = await transaction
+    .insertInto('users')
+    .values({ name: 'John', email: 'john@example.com' })
+    .returningAll()
+    .executeTakeFirst();
+  
+  // Register a callback to run after successful commit
+  afterCommit(async () => {
+    await sendWelcomeEmail(user.email);
+  });
+  
+  return user;
+});
+```
+
+## Nested Transactions
+
+```typescript
+// Parent transaction
+await db.transaction(async ({ transaction: tx1, afterCommit }) => {
+  // Nested transaction - reuses the same transaction
+  await db.transaction(async ({ transaction: tx2 }) => {
+    // tx1 and tx2 refer to the same transaction
+    console.log(tx1 === tx2); // true
+    
+    // Perform operations in the nested scope
+    await tx2.insertInto('logs')
+      .values({ message: 'Nested transaction' })
+      .execute();
+  });
+  
+  // Callbacks run only after the outermost transaction commits
+  afterCommit(async () => {
+    console.log('Transaction committed');
+  });
+});
+```
+
+## Error Handling
+
+```typescript
+try {
+  await db.transaction(async ({ transaction }) => {
+    // If any operation fails, the entire transaction is rolled back
+    await transaction.insertInto('users')
+      .values({ name: 'Jane', email: 'jane@example.com' })
+      .execute();
+      
+    // This will throw an error if a constraint is violated
+    await transaction.insertInto('users')
+      .values({ name: 'Jane', email: 'jane@example.com' }) // Duplicate email
+      .execute();
+      
+    // This code won't execute if the above throws
+    await transaction.insertInto('logs')
+      .values({ message: 'User created' })
+      .execute();
+  });
+} catch (error) {
+  console.error('Transaction failed:', error);
+  // All changes have been rolled back
+}
+```

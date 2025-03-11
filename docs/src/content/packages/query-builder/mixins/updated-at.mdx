@@ -1,0 +1,141 @@
+---
+title: Update At
+description: Automatically manages updated_at timestamps when records are modified
+---
+The `withUpdatedAt` mixin automatically updates timestamps when records are modified in the database. This ensures you always know when a record was last changed without manually setting the timestamp on every update.
+
+## Usage
+
+```typescript
+import { withUpdatedAt } from '@doubletie/query-builder/mixins';
+import { createDatabase, createModel } from '@doubletie/query-builder';
+
+// Create a database and model
+const db = createDatabase<Database>(/* config */);
+const UserModel = createModel(db, 'users', 'id');
+
+// Apply the updated_at mixin
+const UserWithTimestamp = withUpdatedAt(UserModel, 'updatedAt');
+
+// Update a record
+const updatedUser = await UserWithTimestamp.updateTable()
+  .where('id', '=', 1)
+  .set({
+    name: 'Updated Name'
+    // updatedAt is automatically added
+  })
+  .returningAll()
+  .executeTakeFirstOrThrow();
+
+console.log(updatedUser.updatedAt); // Current timestamp
+```
+
+## API Reference
+
+### withUpdatedAt()
+
+```typescript
+function withUpdatedAt<
+  TDatabase,
+  TTableName extends keyof TDatabase & string,
+  TIdColumnName extends keyof TDatabase[TTableName] & string
+>(
+  model: ModelFunctions<TDatabase, TTableName, TIdColumnName>,
+  field: keyof TDatabase[TTableName] & string
+): ModelWithUpdateById<TDatabase, TTableName, TIdColumnName>
+```
+
+Enhances a model with automatic updatedAt timestamp functionality and adds a convenient `updateById` method.
+
+#### Parameters
+
+- `model` - The base model to enhance
+- `field` - The name of the field to use for update timestamps (e.g., 'updatedAt')
+
+#### Returns
+
+Enhanced model that automatically sets the update timestamp field during update operations and provides an updateById convenience method.
+
+## Features
+
+- **Automatic Timestamps**: Sets the timestamp field to current date/time on every update
+- **Intercepts Set Method**: Adds the timestamp to all update operations
+- **Direct Update Method**: Provides a convenient `updateById` method
+- **SQLite Compatibility**: Formats dates appropriately for SQLite compatibility
+
+## Additional Methods
+
+### updateById()
+
+```typescript
+updateById<TColumnName extends keyof TDatabase[TTableName] & string>(
+  id: Readonly<SelectType<TDatabase[TTableName][TIdColumnName]>>,
+  column: TColumnName,
+  value: TDatabase[TTableName][TColumnName]
+): Promise<Selectable<TDatabase[TTableName]>>
+```
+
+A convenience method that updates a single column value by ID and automatically updates the timestamp.
+
+#### Parameters
+
+- `id` - The ID of the record to update
+- `column` - The column to update
+- `value` - The new value for the column
+
+#### Returns
+
+The updated record with the new value and updated timestamp.
+
+## Example: Using updateById
+
+```typescript
+// Simple update using updateById
+const user = await UserWithTimestamp.updateById(
+  1,           // ID of the user to update
+  'status',    // Column to update
+  'inactive'   // New value
+);
+
+console.log(user.status);    // 'inactive'
+console.log(user.updatedAt); // Current timestamp
+```
+
+## Example: Using With Transactions
+
+```typescript
+await db.transaction(async ({ transaction }) => {
+  // Updates within a transaction still automatically set updatedAt
+  const user = await UserWithTimestamp.updateTable()
+    .where('id', '=', 1)
+    .set({ 
+      name: 'Transaction Update',
+      score: 42
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+    
+  console.log(user.updatedAt); // Current timestamp
+});
+```
+
+## Combining with Other Mixins
+
+```typescript
+import { withUpdatedAt, withGlobalId } from '@doubletie/query-builder/mixins';
+
+// Apply multiple mixins
+const UserWithFeatures = withUpdatedAt(
+  withGlobalId(UserModel, 'id', 'User'),
+  'updatedAt'
+);
+
+// Use global ID to find and update a record
+const globalId = 'User_123';
+const localId = UserWithFeatures.getLocalId(globalId);
+const user = await UserWithFeatures.updateById(
+  localId,
+  'name',
+  'Updated via Global ID'
+);
+```

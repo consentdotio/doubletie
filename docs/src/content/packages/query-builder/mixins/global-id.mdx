@@ -1,0 +1,196 @@
+---
+title: Global ID
+description: Adds global ID functionality for GraphQL-friendly identifiers
+---
+The `withGlobalId` mixin provides global ID functionality for models, enabling easy integration with GraphQL APIs and systems that require globally unique identifiers. This mixin follows the pattern of prefixing local IDs with a type name (e.g., `User_123`).
+
+## Usage
+
+```typescript
+import { withGlobalId } from '@doubletie/query-builder/mixins';
+import { createDatabase, createModel } from '@doubletie/query-builder';
+
+// Create a database and model
+const db = createDatabase<Database>(/* config */);
+const UserModel = createModel(db, 'users', 'id');
+
+// Apply the global ID mixin with a type prefix
+const UserWithGlobalId = withGlobalId(UserModel, 'id', 'User');
+
+// Get a record
+const user = await UserWithGlobalId.findById(123);
+
+// Generate a global ID
+const globalId = UserWithGlobalId.getGlobalId(user.id);
+console.log(globalId); // "User_123"
+
+// Find a record using a global ID
+const foundUser = await UserWithGlobalId.findByGlobalId('User_123');
+```
+
+## API Reference
+
+### withGlobalId()
+
+```typescript
+function withGlobalId<
+  TDatabase,
+  TTableName extends keyof TDatabase & string,
+  TIdColumnName extends keyof TDatabase[TTableName] & string,
+  TIdType extends SelectType<TDatabase[TTableName][TIdColumnName]>
+>(
+  model: ModelFunctions<TDatabase, TTableName, TIdColumnName>,
+  idColumnName: TIdColumnName,
+  type?: string
+): ModelFunctions<TDatabase, TTableName, TIdColumnName> & GlobalIdMethods<TIdType>
+```
+
+Enhances a model with global ID functionality.
+
+#### Parameters
+
+- `model` - The base model to enhance
+- `idColumnName` - Name of the ID column
+- `type` - Type prefix for global IDs (defaults to table name in uppercase)
+
+#### Returns
+
+Enhanced model with global ID methods.
+
+## Added Methods
+
+### getGlobalId()
+
+```typescript
+getGlobalId(id: TIdType | string | number): string
+```
+
+Generates a global ID from a local ID by adding the type prefix.
+
+### getLocalId()
+
+```typescript
+getLocalId(globalId: string): TIdType
+```
+
+Extracts the local ID from a global ID by removing the type prefix.
+
+### parseGlobalId()
+
+```typescript
+parseGlobalId(globalId: string | null | undefined): TIdType | string | null
+```
+
+Parses a global ID, returning just the ID portion or null if invalid.
+
+### findByGlobalId()
+
+```typescript
+findByGlobalId(
+  globalId: string,
+  options?: { throwIfNotFound?: boolean; error?: typeof NoResultError }
+): Promise<Selectable<TDatabase[TTableName]> | undefined>
+```
+
+Finds a record by its global ID.
+
+### getByGlobalId()
+
+```typescript
+getByGlobalId(
+  globalId: string, 
+  error?: typeof NoResultError
+): Promise<Selectable<TDatabase[TTableName]>>
+```
+
+Gets a record by its global ID, throwing an error if not found.
+
+### findByGlobalIds()
+
+```typescript
+findByGlobalIds(
+  globalIds: string[]
+): Promise<Array<Selectable<TDatabase[TTableName]>>>
+```
+
+Finds multiple records by their global IDs.
+
+## Utility Functions
+
+The mixin also exports these standalone utility functions:
+
+### decodeFromGlobalId()
+
+```typescript
+function decodeFromGlobalId<TIdType>(
+  globalId: string,
+  parse: (id: string) => TIdType
+): { type: string; id: TIdType }
+```
+
+Decodes a global ID into its type and ID components.
+
+### decodeTypeFromGlobalId()
+
+```typescript
+function decodeTypeFromGlobalId(globalId: string): string | null
+```
+
+Extracts just the type portion from a global ID.
+
+## Examples
+
+### GraphQL Integration
+
+```typescript
+import { GraphQLID } from 'graphql';
+
+const UserType = new GraphQLObjectType({
+  name: 'User',
+  fields: {
+    id: {
+      type: GraphQLID,
+      resolve: (user) => UserWithGlobalId.getGlobalId(user.id)
+    },
+    // other fields...
+  }
+});
+
+// In a resolver
+const resolvers = {
+  Query: {
+    user: async (_, { id }) => {
+      return UserWithGlobalId.findByGlobalId(id);
+    }
+  }
+};
+```
+
+### Batch Loading
+
+```typescript
+// Load multiple users by global IDs
+const users = await UserWithGlobalId.findByGlobalIds([
+  'User_1', 
+  'User_2', 
+  'User_3'
+]);
+
+// Map results by ID for quick lookup
+const userMap = users.reduce((map, user) => {
+  const globalId = UserWithGlobalId.getGlobalId(user.id);
+  map[globalId] = user;
+  return map;
+}, {});
+```
+
+### Error Handling
+
+```typescript
+// Get by global ID with custom error
+try {
+  const user = await UserWithGlobalId.getByGlobalId('User_999', CustomError);
+} catch (error) {
+  // Handle custom error
+}
+```

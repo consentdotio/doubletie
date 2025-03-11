@@ -1,6 +1,10 @@
-# 🪢 Double Tie
-
-A TypeScript toolkit for building self-hostable backend SDKs. Double Tie provides a complete set of tools to help developers create type-safe, self-hostable backend services that can be distributed as npm packages.
+<div align="center">
+    <img src="https://doubletie.com/emoji-icon.png" alt="emoji Logo" width="64" height="64" />
+    <h1>Double Tie</h1>
+    <p>
+        A TypeScript toolkit for building self-hostable backend SDKs. Double Tie provides a complete set of tools to help developers create type-safe, self-hostable backend services that can be distributed as npm packages.
+    </p>
+</div>
 
 ## Vision
 

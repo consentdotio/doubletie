@@ -1,0 +1,120 @@
+---
+title: Assign Properties
+description: Enhances models with data assignment capabilities for building modifiable model instances
+---
+The `withAssignProperties` mixin (also exported as `withAssign`) adds data assignment capabilities to your models. This allows you to create model instances with attached data and update them in a immutable way.
+
+## Usage
+
+```typescript
+import { withAssignProperties } from '@doubletie/query-builder/mixins';
+import { createDatabase, createModel } from '@doubletie/query-builder';
+
+// Create a database and model
+const db = createDatabase<Database>(/* config */);
+const UserModel = createModel(db, 'users', 'id');
+
+// Apply the assign mixin
+const UserWithAssign = withAssignProperties(UserModel);
+
+// Create a user
+const user = await UserWithAssign.findById(1);
+
+// Create a model instance with the user data
+const userInstance = {
+  ...UserWithAssign,
+  ...user
+};
+
+// Use assign to create a new instance with updated data
+const updatedUser = userInstance.assign({
+  name: 'Updated Name',
+  status: 'inactive'
+});
+
+// The original instance is unchanged
+console.log(userInstance.name); // Original name
+console.log(updatedUser.name);  // "Updated Name"
+
+// Update in database
+await UserModel.updateTable()
+  .where('id', '=', updatedUser.id)
+  .set({
+    name: updatedUser.name,
+    status: updatedUser.status
+  })
+  .execute();
+```
+
+## API Reference
+
+### withAssignProperties()
+
+```typescript
+function withAssignProperties<
+  TDatabase,
+  TTableName extends keyof TDatabase & string,
+  TIdColumnName extends keyof TDatabase[TTableName] & string
+>(model: ModelFunctions<TDatabase, TTableName, TIdColumnName>): ModelWithAssign<TDatabase, TTableName, TIdColumnName>
+```
+
+Enhances a model with the `assign` method.
+
+### ModelWithAssign
+
+```typescript
+interface ModelWithAssign<TDatabase, TTableName, TIdColumnName> extends ModelFunctions<TDatabase, TTableName, TIdColumnName> {
+  /**
+   * Assigns data values to the model instance
+   *
+   * @param data - Data to assign (can be partial)
+   * @returns Model instance with assigned data and all model properties
+   */
+  assign(data?: Partial<Selectable<TDatabase[TTableName]>>): any;
+}
+```
+
+### assign()
+
+```typescript
+assign(data?: Partial<Selectable<TDatabase[TTableName]>>): any
+```
+
+Creates a new model instance with the assigned data. This method:
+
+- Creates a copy of the current instance
+- Merges the new data into the copy
+- Returns the new instance without modifying the original
+
+## Combining with Other Mixins
+
+The assign mixin works well with other mixins to create rich model instances:
+
+```typescript
+import { 
+  withAssignProperties,
+  withGlobalId
+} from '@doubletie/query-builder/mixins';
+
+// Apply multiple mixins
+const UserWithFeatures = withAssignProperties(
+  withGlobalId(UserModel, 'id', 'User')
+);
+
+// Create an instance
+const userInstance = {
+  ...UserWithFeatures, 
+  ...user
+};
+
+// Use methods from both mixins
+const globalId = userInstance.getGlobalId(userInstance.id);
+const updatedUser = userInstance.assign({ name: 'New Name' });
+```
+
+## Best Practices
+
+- Always create a new instance with `assign` rather than modifying the original
+- When updating the database, extract only the fields you want to update
+- Combine with other mixins like `withGlobalId` or `withSlug` for richer models
+- Consider using TypeScript to ensure type safety for model instances

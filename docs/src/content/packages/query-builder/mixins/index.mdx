@@ -1,0 +1,79 @@
+---
+title: Model Mixins
+description: Powerful model enhancement system that extends functionality with reusable, composable patterns
+---
+Model mixins extend your database models with powerful behaviors and utilities. Built on a functional composition pattern, mixins allow you to easily combine multiple enhancements together to create more specialized models.
+
+## Available Mixins
+
+Double Tie Query Builder provides the following built-in mixins:
+
+| Mixin | Description |
+| ----- | ----------- |
+| [`withAssignProperties`](/packages/query-builder/mixins/assign) | Creates model instances with data assignment capabilities |
+| [`withCreatedAt`](/packages/query-builder/mixins/created-at) | Automatically adds timestamps when records are created |
+| [`withUpdatedAt`](/packages/query-builder/mixins/updated-at) | Automatically updates timestamps when records are modified |
+| [`withGlobalId`](/packages/query-builder/mixins/global-id) | Adds global ID functionality for GraphQL-friendly identifiers |
+| [`withIdGenerator`](/packages/query-builder/mixins/id-generator) | Generates unique IDs with custom prefixes |
+| [`withSlug`](/packages/query-builder/mixins/slug) | Creates and manages URL-friendly slugs |
+| [`withCursorable`](/packages/query-builder/mixins/cursorable) | Adds cursor-based pagination for efficient list traversal |
+
+## Composing Mixins
+
+Mixins can be combined using functional composition to create models with multiple enhanced behaviors:
+
+```typescript
+import { createDatabase, createModel } from '@doubletie/query-builder';
+import {
+  withUpdatedAt,
+  withSlug,
+  withIdGenerator
+} from '@doubletie/query-builder/mixins';
+
+// Create a base model
+const db = createDatabase<Database>(/* config */);
+const baseModel = createModel(db, 'posts', 'id');
+
+// Apply multiple mixins with composition
+const PostModel = withUpdatedAt(
+  withSlug(
+    withIdGenerator(baseModel, { prefix: 'post' }),
+    'slug',
+    'title'
+  ),
+  'updatedAt'
+);
+
+// Now PostModel has all three behaviors
+const post = await PostModel.insertWithGeneratedId({
+  title: 'Hello World',
+  content: 'This is my first post'
+}); // Has ID, slug, and timestamps
+```
+
+## Creating Custom Mixins
+
+You can create your own custom mixins by following the functional enhancement pattern:
+
+```typescript
+function withCustomBehavior<
+  TDatabase,
+  TTableName extends keyof TDatabase & string,
+  TIdColumnName extends keyof TDatabase[TTableName] & string
+>(model: ModelFunctions<TDatabase, TTableName, TIdColumnName>) {
+  return {
+    ...model,
+    
+    // Add new methods
+    customMethod() {
+      // Implementation
+    },
+    
+    // Override existing methods
+    findById: async (id, ...args) => {
+      console.log(`Finding record with ID: ${id}`);
+      return model.findById(id, ...args);
+    }
+  };
+}
+```

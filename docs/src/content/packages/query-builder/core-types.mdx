@@ -1,0 +1,68 @@
+---
+title: Core Types
+description: Essential type definitions for the Query Builder
+---
+## DatabaseConfig
+
+Configuration options for creating a database instance.
+
+```typescript
+type DatabaseConfig<TDatabaseSchema> = {
+  /** The database dialect to use */
+  dialect: Dialect;
+  /** Whether the database is isolated */
+  isolated?: boolean;
+  /** Function to log database events */
+  log?: (event: LogEvent) => void;
+  /** Whether to enable debug mode */
+  debug?: boolean;
+};
+```
+
+**Example:**
+
+```typescript
+import { createDatabase } from '@doubletie/query-builder';
+import { PostgresDialect } from 'kysely';
+
+const db = createDatabase<Database>({
+  dialect: new PostgresDialect({
+    host: 'localhost',
+    database: 'mydb',
+    user: 'postgres',
+    password: 'password'
+  }),
+  debug: true,
+  log: (event) => console.log(event)
+});
+```
+
+## MigratorOptions
+
+Options for configuring database migrations.
+
+```typescript
+type MigratorOptions = {
+  /** Migration provider that supplies the migrations */
+  provider: MigrationProvider;
+  /** Whether to allow migrations to be run in a different order than they were created */
+  allowUnorderedMigrations?: boolean;
+};
+```
+
+**Example:**
+
+```typescript
+import { FileMigrationProvider } from 'kysely';
+
+// Create a migrator using the database instance
+const migrator = db.createMigrator({
+  provider: new FileMigrationProvider({
+    migrationFolder: './migrations'
+  }),
+  allowUnorderedMigrations: false
+});
+
+// Run migrations
+await migrator.migrateToLatest();
+```

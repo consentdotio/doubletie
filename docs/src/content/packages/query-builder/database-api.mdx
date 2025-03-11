@@ -1,0 +1,190 @@
+---
+title: Database API
+description: Complete reference for the Database interface
+---
+The core `Database` interface provides all database operations and utilities. It includes:
+
+- Dialect-specific methods (`isSqlite`, `isMysql`, `isPostgres`)
+- Model creation and registration methods
+- Transaction support
+- Query builders for SELECT, INSERT, UPDATE, DELETE operations
+- Utility methods for common database tasks
+
+## Key Methods
+
+```typescript
+interface Database<TDatabaseSchema, RegistryType> {
+  // Dialect helpers
+  isSqlite: () => boolean;
+  isMysql: () => boolean;
+  isPostgres: () => boolean;
+  
+  // Model management
+  model: <TTableName, TIdColumnName>(...) => Model;
+  registerModels: (registry: RegistryType) => Database;
+  getModel: <TTableName>(...) => Model;
+  
+  // Transaction handling
+  transaction: <TResultType>(...) => Promise<TResultType>;
+  isTransaction: () => boolean;
+  
+  // Query builders
+  selectFrom: <TTableName>(...) => SelectQueryBuilder;
+  insertInto: <TTableName>(...) => InsertQueryBuilder;
+  updateTable: <TTableName>(...) => UpdateQueryBuilder;
+  deleteFrom: <TTableName>(...) => DeleteQueryBuilder;
+  
+  // Advanced queries
+  with: <TName, TExpression>(...) => any;
+  selectNoFrom: () => any;
+  
+  // Utility methods
+  tuple: <ItemTypes>(...) => Function;
+  cast: <ResultType>(...) => any;
+  streamFrom: <TTableName, ColumnName>(...) => SelectQueryBuilder;
+  findNotNull: <TTableName, ColumnName>(...) => SelectQueryBuilder;
+  
+  // Connection management
+  destroy: () => Promise<void>;
+}
+```
+
+## Query Builder Examples
+
+### Basic Select Query
+
+```typescript
+const users = await db.selectFrom('users')
+  .where('status', '=', 'active')
+  .selectAll()
+  .execute();
+```
+
+### Select with Joins
+
+```typescript
+const usersWithPosts = await db.selectFrom('users')
+  .leftJoin('posts', 'users.id', 'posts.user_id')
+  .select([
+    'users.id as userId',
+    'users.name',
+    'posts.id as postId',
+    'posts.title'
+  ])
+  .where('users.status', '=', 'active')
+  .execute();
+```
+
+### Tuple Comparison
+
+```typescript
+const result = await db.selectFrom('orders')
+  .where((eb) => {
+    const tupleBuilder = db.tuple(['product_id', 'status']);
+    return eb(
+      tupleBuilder(eb), 
+      '=', 
+      db.tuple([10, 'shipped'])(eb)
+    );
+  })
+  .selectAll()
+  .execute();
+```
+
+### Casting Values
+
+```typescript
+const numericValue = db.cast<number>('123', 'INTEGER');
+const query = db.selectFrom('products')
+  .where('price', '<', numericValue)
+  .selectAll();
+```
+
+### Finding Non-Null Values
+
+```typescript
+const activeUsers = await db.findNotNull('users', 'last_login')
+  .where('status', '=', 'active')
+  .execute();
+```
+
+### Streaming Results (SQLite Only)
+
+```typescript
+const stream = await db.streamFrom('logs', ['id', 'message', 'created_at'])
+  .where('level', '=', 'error')
+  .stream();
+```
+
+### Insert Queries
+
+```typescript
+// Simple insert
+await db.insertInto('users')
+  .values({
+    name: 'John',
+    email: 'john@example.com'
+  })
+  .execute();
+
+// Insert with returning
+const user = await db.insertInto('users')
+  .values({
+    name: 'Jane',
+    email: 'jane@example.com'
+  })
+  .returningAll()
+  .executeTakeFirst();
+
+// Bulk insert
+await db.insertInto('logs')
+  .values([
+    { message: 'Log 1', level: 'info' },
+    { message: 'Log 2', level: 'error' }
+  ])
+  .execute();
+
+// Insert with default values
+await db.insertDefault('timestamps')
+  .execute();
+```
+
+### Update Queries
+
+```typescript
+// Update with conditions
+await db.updateTable('users')
+  .set({ status: 'inactive' })
+  .where('last_login', '<', oneMonthAgo)
+  .execute();
+
+// Update a single column
+await db.updateColumn('products', 'price', 9.99)
+  .where('id', '=', 123)
+  .execute();
+```
+
+### Delete Queries
+
+```typescript
+// Simple delete
+await db.deleteFrom('sessions')
+  .where('expires_at', '<', new Date())
+  .execute();
+```
+
+### WITH Clauses (Common Table Expressions)
+
+```typescript
+const result = await db
+  .with('active_users', (qb) => 
+    qb.selectFrom('users')
+      .where('status', '=', 'active')
+      .select(['id', 'name'])
+  )
+  .selectFrom('active_users')
+  .leftJoin('orders', 'active_users.id', 'orders.user_id')
+  .select(['active_users.name', 'count(orders.id) as order_count'])
+  .groupBy('active_users.id')
+  .execute();
+```

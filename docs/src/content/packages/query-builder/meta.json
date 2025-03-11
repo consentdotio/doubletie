@@ -1,0 +1,21 @@
+{
+	"title": "Query Builder",
+	"root": true,
+	"pages": [
+		"---Getting Started---",
+		"index",
+		"models",
+		"transactions",
+		"database-api",
+		"advanced-usage",
+		"--- Mixins ---",
+		"mixins/index",
+		"mixins/assign",
+		"mixins/created-at",
+		"mixins/updated-at",
+		"mixins/cursorable",
+		"mixins/global-id",
+		"mixins/id-generator",
+		"mixins/with-slug"
+	]
+}

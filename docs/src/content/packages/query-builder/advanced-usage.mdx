@@ -1,0 +1,158 @@
+---
+title: Advanced Usage
+description: Type utilities and advanced patterns for the Query Builder
+---
+
+## Type Utilities
+
+The Database types use several advanced TypeScript utilities to provide enhanced type-safety:
+
+- `DrainOuterGeneric<T>` - Helps with generic type handling
+- `DeepPartial<T>` - Creates a deeply optional version of a type
+- Type constraints like `TTableName extends keyof TDatabaseSchema & string`
+
+These utilities ensure you get proper type checking and autocompletion when using the query builder.
+
+## Custom Expression Builders
+
+```typescript
+// Create a custom WHERE clause for date ranges
+function dateRange<DB, TB extends keyof DB & string>(
+  eb: ExpressionBuilder<DB, TB>,
+  column: keyof DB[TB] & string,
+  start: Date,
+  end: Date
+) {
+  return eb.and([
+    eb(column, '>=', start),
+    eb(column, '<=', end)
+  ]);
+}
+
+// Usage
+const posts = await db.selectFrom('posts')
+  .where(eb => dateRange(eb, 'created_at', startDate, endDate))
+  .select(['id', 'title'])
+  .execute();
+```
+
+## Custom Model Extensions
+
+```typescript
+// Define type-safe model extensions
+interface UserModelExtensions {
+  findByEmail(email: string): Promise<User | undefined>;
+  findActiveUsers(): Promise<User[]>;
+  deactivateUser(id: number): Promise<void>;
+}
+
+const userSchema: ModelSchema<Database['users']> = {
+  fields: {
+    id: { type: 'number' },
+    name: { type: 'string' },
+    email: { type: 'string' },
+    status: { type: 'string' }
+  },
+  extensions: {
+    async findByEmail(email: string) {
+      return this.findOne('email', email);
+    },
+    
+    async findActiveUsers() {
+      return this.find('status', 'active');
+    },
+    
+    async deactivateUser(id: number) {
+      await this.updatePartial(id, { status: 'inactive' });
+    }
+  }
+};
+
+// The model will have type-safe extensions
+const userModel = db.getModel('users');
+const user = await userModel.findByEmail('test@example.com');
+await userModel.deactivateUser(user.id);
+```
+
+## Extending Type Definitions
+
+When using the query builder with your database schema, you'll define your own schema types:
+
+```typescript
+// Define your database schema
+interface Database {
+  users: {
+    id: number;
+    name: string;
+    email: string;
+    created_at: Date;
+  };
+  posts: {
+    id: number;
+    title: string;
+    content: string;
+    user_id: number;
+    created_at: Date;
+  };
+}
+
+// Create a type-safe database instance
+const db = createDatabase<Database>({
+  dialect: new PostgresDialect(/* connection config */),
+});
+
+// The types system will now provide full autocompletion and type checking
+const users = await db.selectFrom('users') // Only 'users' or 'posts' allowed
+  .where('id', '>', 10)    // Type-safe column references
+  .select(['id', 'name'])  // Only existing columns allowed
+  .execute();
+```
+
+## Dynamic Queries
+
+```typescript
+// Build queries dynamically based on runtime conditions
+function createUserQuery(filters: Record<string, any>) {
+  let query = db.selectFrom('users');
+  
+  if (filters.name) {
+    query = query.where('name', 'like', `%${filters.name}%`);
+  }
+  
+  if (filters.status) {
+    query = query.where('status', '=', filters.status);
+  }
+  
+  if (filters.sortBy && filters.sortDirection) {
+    query = query.orderBy(
+      filters.sortBy as keyof Database['users'] & string,
+      filters.sortDirection as 'asc' | 'desc'
+    );
+  }
+  
+  return query.selectAll();
+}
+
+// Usage
+const activeUsers = await createUserQuery({
+  status: 'active',
+  sortBy: 'created_at',
+  sortDirection: 'desc'
+}).execute();
+```
+
+## Working with Raw SQL
+
+```typescript
+import { sql } from 'kysely';
+
+// Use raw SQL when needed
+const result = await db.selectFrom('users')
+  .select([
+    'id',
+    'name',
+    sql<string>`CONCAT(first_name, ' ', last_name)`.as('full_name'),
+    sql<number>`EXTRACT(YEAR FROM created_at)`.as('join_year')
+  ])
+  .execute();
+```
