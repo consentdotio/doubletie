@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
 import { createModel } from '../../model.js';
 import {
 	DB,

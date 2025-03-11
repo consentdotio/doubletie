@@ -134,7 +134,10 @@ describe('Pagination - Integration Tests', () => {
 
 				// Apply pagination
 				const startIndex = (page - 1) * pageSize;
-				const paginatedData = allProducts.slice(startIndex, startIndex + pageSize);
+				const paginatedData = allProducts.slice(
+					startIndex,
+					startIndex + pageSize
+				);
 
 				return {
 					data: paginatedData,
@@ -184,7 +187,10 @@ describe('Pagination - Integration Tests', () => {
 
 				// Apply pagination
 				const startIndex = (page - 1) * pageSize;
-				const paginatedData = allProducts.slice(startIndex, startIndex + pageSize);
+				const paginatedData = allProducts.slice(
+					startIndex,
+					startIndex + pageSize
+				);
 
 				return {
 					data: paginatedData,
@@ -245,7 +251,10 @@ describe('Pagination - Integration Tests', () => {
 
 				// Apply pagination
 				const startIndex = (page - 1) * pageSize;
-				const paginatedData = allProducts.slice(startIndex, startIndex + pageSize);
+				const paginatedData = allProducts.slice(
+					startIndex,
+					startIndex + pageSize
+				);
 
 				return {
 					data: paginatedData,
@@ -516,7 +525,10 @@ describe('Pagination - Integration Tests', () => {
 
 					// Apply pagination
 					const startIndex = (page - 1) * pageSize;
-					const paginatedData = filtered.slice(startIndex, startIndex + pageSize);
+					const paginatedData = filtered.slice(
+						startIndex,
+						startIndex + pageSize
+					);
 
 					return {
 						data: paginatedData,
@@ -543,9 +555,9 @@ describe('Pagination - Integration Tests', () => {
 
 				// Check filtered results (products 20-30)
 				expect(result.data.length).toBeLessThanOrEqual(10);
-				expect(result.data.every((p: Product) => p.price >= 200 && p.price <= 300)).toBe(
-					true
-				);
+				expect(
+					result.data.every((p: Product) => p.price >= 200 && p.price <= 300)
+				).toBe(true);
 				expect(result.meta.total).toBeLessThan(50); // Fewer results after filtering
 			});
 		});
@@ -577,7 +589,10 @@ describe('Pagination - Integration Tests', () => {
 
 					// Apply pagination
 					const startIndex = (page - 1) * pageSize;
-					const paginatedData = filtered.slice(startIndex, startIndex + pageSize);
+					const paginatedData = filtered.slice(
+						startIndex,
+						startIndex + pageSize
+					);
 
 					return {
 						data: paginatedData,
@@ -602,7 +617,9 @@ describe('Pagination - Integration Tests', () => {
 
 				// Check search results
 				expect(result.data.length).toBeGreaterThan(0);
-				expect(result.data.every((p: Product) => p.name.includes('2'))).toBe(true);
+				expect(result.data.every((p: Product) => p.name.includes('2'))).toBe(
+					true
+				);
 				expect(result.meta.searchTerm).toBe('2');
 			});
 		});
@@ -656,7 +673,9 @@ describe('Pagination - Integration Tests', () => {
 
 				// Apply text search
 				if (search) {
-					filtered = filtered.filter((product) => product.name.includes(search));
+					filtered = filtered.filter((product) =>
+						product.name.includes(search)
+					);
 				}
 
 				// Apply sorting
@@ -708,11 +727,15 @@ describe('Pagination - Integration Tests', () => {
 			// Check combined results
 			expect(result.data).toHaveLength(10);
 			expect(result.data.every((p: Product) => p.price >= 100)).toBe(true);
-			expect(result.data.every((p: Product) => p.name.includes('1'))).toBe(true);
+			expect(result.data.every((p: Product) => p.name.includes('1'))).toBe(
+				true
+			);
 
 			// Check sorting (descending by price)
 			for (let i = 0; i < result.data.length - 1; i++) {
-				expect(result.data[i].price).toBeGreaterThanOrEqual(result.data[i + 1].price);
+				expect(result.data[i].price).toBeGreaterThanOrEqual(
+					result.data[i + 1].price
+				);
 			}
 		});
 	});

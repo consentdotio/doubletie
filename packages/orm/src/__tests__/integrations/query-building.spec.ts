@@ -4,12 +4,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Database, ModelRegistry } from '../../database.js';
 import { createModel } from '../../model.js';
 import {
-	DB,
 	Articles,
+	DB,
 	Users,
 	cleanupDatabase,
-	db as testDb,
 	initializeDatabase,
+	db as testDb,
 	toSqliteDate,
 } from '../fixtures/migration.js';
 
@@ -26,7 +26,7 @@ describe('integration: query building functionality', () => {
 
 		// Check the database schema
 		try {
-			const tableInfo = await db.db.raw('PRAGMA table_info(users)').execute();
+			const tableInfo = await db.db.selectFrom('users').selectAll().execute();
 			console.log('Users table schema:', tableInfo);
 		} catch (error) {
 			console.error('Error getting table schema:', error);
@@ -48,7 +48,7 @@ describe('integration: query building functionality', () => {
 			updatedAt: string;
 			createdAt?: string;
 		};
-		
+
 		type ArticleInsert = {
 			id: string;
 			title: string;
@@ -56,7 +56,7 @@ describe('integration: query building functionality', () => {
 			updatedAt: string;
 			createdAt?: string;
 		};
-		
+
 		type CommentInsert = {
 			message: string;
 			userId: string;
@@ -73,7 +73,7 @@ describe('integration: query building functionality', () => {
 				status: 'active',
 				followersCount: 100,
 				updatedAt: toSqliteDate(new Date()),
-				createdAt: toSqliteDate(new Date())
+				createdAt: toSqliteDate(new Date()),
 			},
 			{
 				email: 'jane@example.com',
@@ -83,7 +83,7 @@ describe('integration: query building functionality', () => {
 				status: 'active',
 				followersCount: 200,
 				updatedAt: toSqliteDate(new Date()),
-				createdAt: toSqliteDate(new Date())
+				createdAt: toSqliteDate(new Date()),
 			},
 			{
 				email: 'bob@example.com',
@@ -93,7 +93,7 @@ describe('integration: query building functionality', () => {
 				status: 'inactive',
 				followersCount: 50,
 				updatedAt: toSqliteDate(new Date()),
-				createdAt: toSqliteDate(new Date())
+				createdAt: toSqliteDate(new Date()),
 			},
 			{
 				email: 'alice@example.com',
@@ -103,7 +103,7 @@ describe('integration: query building functionality', () => {
 				status: 'active',
 				followersCount: 150,
 				updatedAt: toSqliteDate(new Date()),
-				createdAt: toSqliteDate(new Date())
+				createdAt: toSqliteDate(new Date()),
 			},
 			{
 				email: 'charlie@example.com',
@@ -113,7 +113,7 @@ describe('integration: query building functionality', () => {
 				status: 'inactive',
 				followersCount: 75,
 				updatedAt: toSqliteDate(new Date()),
-				createdAt: toSqliteDate(new Date())
+				createdAt: toSqliteDate(new Date()),
 			},
 		];
 
@@ -121,7 +121,7 @@ describe('integration: query building functionality', () => {
 			// Use db directly for inserts to avoid model validation issues
 			console.log('Inserting users with data:', usersToInsert);
 			await db.insertInto('users').values(usersToInsert).execute();
-			
+
 			// Verify the data was inserted correctly
 			const insertedUsers = await db.selectFrom('users').selectAll().execute();
 			console.log('Inserted users:', insertedUsers);
@@ -131,53 +131,82 @@ describe('integration: query building functionality', () => {
 			throw error;
 		}
 
-		await db.insertInto('articles').values([
-			{
-				id: '1',
-				title: 'First Post',
-				slug: 'first-post',
-				updatedAt: toSqliteDate(new Date()),
-				createdAt: toSqliteDate(new Date())
-			},
-			{
-				id: '2',
-				title: 'Second Post',
-				slug: 'second-post',
-				updatedAt: toSqliteDate(new Date()),
-				createdAt: toSqliteDate(new Date())
-			},
-			{
-				id: '3',
-				title: 'Jane Post',
-				slug: 'jane-post',
-				updatedAt: toSqliteDate(new Date()),
-				createdAt: toSqliteDate(new Date())
-			},
-			{
-				id: '4',
-				title: 'Bob Post',
-				slug: 'bob-post',
-				updatedAt: toSqliteDate(new Date()),
-				createdAt: toSqliteDate(new Date())
-			},
-			{
-				id: '5',
-				title: 'Alice Post',
-				slug: 'alice-post',
-				updatedAt: toSqliteDate(new Date()),
-				createdAt: toSqliteDate(new Date())
-			},
-		] as ArticleInsert[])
-		.execute();
+		await db
+			.insertInto('articles')
+			.values([
+				{
+					id: '1',
+					title: 'First Post',
+					slug: 'first-post',
+					updatedAt: toSqliteDate(new Date()),
+					createdAt: toSqliteDate(new Date()),
+				},
+				{
+					id: '2',
+					title: 'Second Post',
+					slug: 'second-post',
+					updatedAt: toSqliteDate(new Date()),
+					createdAt: toSqliteDate(new Date()),
+				},
+				{
+					id: '3',
+					title: 'Jane Post',
+					slug: 'jane-post',
+					updatedAt: toSqliteDate(new Date()),
+					createdAt: toSqliteDate(new Date()),
+				},
+				{
+					id: '4',
+					title: 'Bob Post',
+					slug: 'bob-post',
+					updatedAt: toSqliteDate(new Date()),
+					createdAt: toSqliteDate(new Date()),
+				},
+				{
+					id: '5',
+					title: 'Alice Post',
+					slug: 'alice-post',
+					updatedAt: toSqliteDate(new Date()),
+					createdAt: toSqliteDate(new Date()),
+				},
+			] as ArticleInsert[])
+			.execute();
 
-		await db.insertInto('comments').values([
-			{ message: 'Great post!', userId: '1', updatedAt: toSqliteDate(new Date()), createdAt: toSqliteDate(new Date()) },
-			{ message: 'I agree!', userId: '2', updatedAt: toSqliteDate(new Date()), createdAt: toSqliteDate(new Date()) },
-			{ message: 'Interesting thoughts', userId: '3', updatedAt: toSqliteDate(new Date()), createdAt: toSqliteDate(new Date()) },
-			{ message: 'Nice work Jane', userId: '4', updatedAt: toSqliteDate(new Date()), createdAt: toSqliteDate(new Date()) },
-			{ message: 'Well said Alice', userId: '5', updatedAt: toSqliteDate(new Date()), createdAt: toSqliteDate(new Date()) },
-		] as CommentInsert[])
-		.execute();
+		await db
+			.insertInto('comments')
+			.values([
+				{
+					message: 'Great post!',
+					userId: '1',
+					updatedAt: toSqliteDate(new Date()),
+					createdAt: toSqliteDate(new Date()),
+				},
+				{
+					message: 'I agree!',
+					userId: '2',
+					updatedAt: toSqliteDate(new Date()),
+					createdAt: toSqliteDate(new Date()),
+				},
+				{
+					message: 'Interesting thoughts',
+					userId: '3',
+					updatedAt: toSqliteDate(new Date()),
+					createdAt: toSqliteDate(new Date()),
+				},
+				{
+					message: 'Nice work Jane',
+					userId: '4',
+					updatedAt: toSqliteDate(new Date()),
+					createdAt: toSqliteDate(new Date()),
+				},
+				{
+					message: 'Well said Alice',
+					userId: '5',
+					updatedAt: toSqliteDate(new Date()),
+					createdAt: toSqliteDate(new Date()),
+				},
+			] as CommentInsert[])
+			.execute();
 	});
 
 	afterEach(async () => {
@@ -232,18 +261,17 @@ describe('integration: query building functionality', () => {
 		it('should filter with OR conditions', async () => {
 			const users = await UserModel.selectFrom()
 				.selectAll()
-				.where(eb => 
-					eb.or([
-						eb('status', '=', 'inactive'),
-						eb('followersCount', '>', 150)
-					])
+				.where((eb) =>
+					eb.or([eb('status', '=', 'inactive'), eb('followersCount', '>', 150)])
 				)
 				.execute();
 
 			expect(users).toHaveLength(3);
 			users.forEach((user: any) => {
 				// Either inactive or has more than 150 followers
-				expect(user.status === 'inactive' || user.followersCount > 150).toBeTruthy();
+				expect(
+					user.status === 'inactive' || user.followersCount > 150
+				).toBeTruthy();
 			});
 		});
 	});
@@ -293,9 +321,7 @@ describe('integration: query building functionality', () => {
 		it.skip('should count users', async () => {
 			// Use expression builder for aggregation
 			const result = await UserModel.selectFrom()
-				.select((eb) => [
-					eb.fn.count('id').as('user_count')
-				])
+				.select((eb) => [eb.fn.count('id').as('user_count')])
 				.executeTakeFirst();
 
 			console.log('Count users result:', result);
@@ -307,9 +333,7 @@ describe('integration: query building functionality', () => {
 			// Use expression builder for aggregation
 			const result = await UserModel.selectFrom()
 				.where('status', '=', 'active')
-				.select((eb) => [
-					eb.fn.count('id').as('active_count')
-				])
+				.select((eb) => [eb.fn.count('id').as('active_count')])
 				.executeTakeFirst();
 
 			console.log('Count active users result:', result);
@@ -320,9 +344,7 @@ describe('integration: query building functionality', () => {
 		it.skip('should calculate average followers', async () => {
 			// Use expression builder for aggregation
 			const result = await UserModel.selectFrom()
-				.select((eb) => [
-					eb.fn.avg('followersCount').as('avg_followers')
-				])
+				.select((eb) => [eb.fn.avg('followersCount').as('avg_followers')])
 				.executeTakeFirst();
 
 			console.log('Average followers result:', result);
@@ -340,9 +362,7 @@ describe('integration: query building functionality', () => {
 			// Use expression builder for aggregation with groupBy
 			const results = await UserModel.selectFrom()
 				.select(['status'])
-				.select((eb) => [
-					eb.fn.count('id').as('user_count')
-				])
+				.select((eb) => [eb.fn.count('id').as('user_count')])
 				.groupBy(['status'])
 				.execute();
 
@@ -360,9 +380,7 @@ describe('integration: query building functionality', () => {
 			// Use expression builder for aggregation with groupBy
 			const results = await UserModel.selectFrom()
 				.select(['status'])
-				.select((eb) => [
-					eb.fn.avg('followersCount').as('avg_followers')
-				])
+				.select((eb) => [eb.fn.avg('followersCount').as('avg_followers')])
 				.groupBy(['status'])
 				.execute();
 
@@ -380,11 +398,10 @@ describe('integration: query building functionality', () => {
 			// Use expression builder for aggregation with groupBy and having
 			const results = await UserModel.selectFrom()
 				.select(['status'])
-				.select((eb) => [
-					eb.fn.count('id').as('user_count')
-				])
+				.select((eb) => [eb.fn.count('id').as('user_count')])
 				.groupBy(['status'])
-				.having((eb) => eb.fn.count('id').gt(2))
+				//@ts-expect-error - Kysely doesn't support e
+				.having((eb) => eb.fn.count('id').ge(2))
 				.execute();
 
 			console.log('HAVING filter results:', results);
@@ -484,7 +501,7 @@ describe('integration: query building functionality', () => {
 			expect(users).toHaveLength(2); // Jane and Alice
 			const janeUser = users.find((u: any) => u.name === 'Jane Smith');
 			const aliceUser = users.find((u: any) => u.name === 'Alice Brown');
-			
+
 			expect(janeUser).toBeDefined();
 			expect(aliceUser).toBeDefined();
 		});

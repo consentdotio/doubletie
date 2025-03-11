@@ -1,4 +1,3 @@
-import { resolve } from 'path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -6,24 +5,12 @@ export default defineConfig({
 		// Test environment and globals
 		environment: 'node',
 		globals: true,
-
-		// Stop on first failure
-		failFast: true,
-
 		// Test organization
 		include: [
 			'src/__tests__/**/*.{test,spec}.{js,ts}',
 			'src/__tests__/**/*.test-d.ts',
 		],
 		exclude: ['**/node_modules/**', '**/dist/**'],
-
-		// Type checking - temporarily disabled
-		typecheck: {
-			enabled: false,
-			tsconfig: './tsconfig.json',
-			ignoreSourceErrors: false,
-		},
-
 		// Configure test suites
 		testNamePattern:
 			process.env.TEST_TYPE === 'e2e'
