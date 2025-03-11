@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { type SlugModelType, withSlug } from '../../../mixins/slug.js';
-import { createModel } from '../../../model.js';
+import { type SlugModelType, withSlug } from '../../../mixins/slug';
+import { createModel } from '../../../model';
 import {
 	DB,
 	cleanupDatabase,
 	db,
 	initializeDatabase,
 	toSqliteDate,
-} from '../../fixtures/migration.js';
+} from '../../fixtures/migration';
 
 describe('integration: slug mixin', () => {
 	let PostModel: SlugModelType<DB, 'articles', 'id'>;
@@ -170,10 +170,10 @@ describe('integration: slug mixin', () => {
 		]);
 
 		expect(posts).toHaveLength(4);
-		expect(posts[0].slug).toBe('post-one');
-		expect(posts[1].slug).toBe('post-two');
-		expect(posts[2].slug).toBe('post-three');
-		expect(posts[3].slug).toBe('custom-slug');
+		expect(posts[0]?.slug).toBe('post-one');
+		expect(posts[1]?.slug).toBe('post-two');
+		expect(posts[2]?.slug).toBe('post-three');
+		expect(posts[3]?.slug).toBe('custom-slug');
 
 		// Verify all posts exist in database
 		const dbPosts = await db
@@ -183,9 +183,9 @@ describe('integration: slug mixin', () => {
 			.execute();
 
 		expect(dbPosts).toHaveLength(4);
-		expect(dbPosts[0].slug).toBe('post-one');
-		expect(dbPosts[1].slug).toBe('post-two');
-		expect(dbPosts[2].slug).toBe('post-three');
-		expect(dbPosts[3].slug).toBe('custom-slug');
+		expect(dbPosts[0]?.slug).toBe('post-one');
+		expect(dbPosts[1]?.slug).toBe('post-two');
+		expect(dbPosts[2]?.slug).toBe('post-three');
+		expect(dbPosts[3]?.slug).toBe('custom-slug');
 	});
 });

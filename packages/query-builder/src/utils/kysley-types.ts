@@ -11,8 +11,8 @@ import {
 	UpdateObject,
 	UpdateQueryBuilder,
 } from 'kysely';
-import { ShallowRecord } from './type-utils.js';
-import { UpdateObjectFactory } from '../model.js';
+import { ShallowRecord } from './type-utils';
+import { UpdateObjectFactory } from '../model';
 
 /**
  * Parses a string like 'id, first_name' into a type 'id' | 'first_name'

@@ -1,8 +1,8 @@
 import type { Transaction } from 'kysely';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Database } from '../../database.js';
-import { createModel } from '../../model.js';
-import type { ModelFunctions } from '../../model.js';
+import type { Database } from '../../database';
+import { createModel } from '../../model';
+import type { ModelFunctions } from '../../model';
 
 // Define custom types for mocks
 interface MockTransaction {

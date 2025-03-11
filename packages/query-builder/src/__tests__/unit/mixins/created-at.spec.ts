@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import withCreatedAt from '../../../mixins/created-at.js';
-import type { ModelFunctions } from '../../../model.js';
-import { DB, toSqliteDate } from '../../fixtures/migration.js';
+import withCreatedAt from '../../../mixins/created-at';
+import type { ModelFunctions } from '../../../model';
+import { DB, toSqliteDate } from '../../fixtures/migration';
 
 // Define test database type
 
@@ -123,8 +123,8 @@ describe('unit: createdAt mixin', () => {
 			];
 			const result = modelWithCreatedAt.processDataBeforeInsert(data);
 
-			expect(result[0].createdAt).toBe(existingDate);
-			expect(result[1].createdAt).toEqual(now);
+			expect(result[0]?.createdAt).toBe(existingDate);
+			expect(result[1]?.createdAt).toEqual(now);
 		});
 
 		it('should chain with original processDataBeforeInsert', () => {

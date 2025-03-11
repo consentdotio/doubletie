@@ -14,7 +14,7 @@ export {
 } from 'kysely';
 
 // Export the main classes, types and utilities
-export { createDatabase } from './database.js';
+export { createDatabase } from './database';
 
 export type {
 	Database,
@@ -23,18 +23,18 @@ export type {
 	ModelRegistry,
 	TransactionCallback,
 	TransactionResponse,
-} from './database.js';
+} from './database';
 
-export * from './model.js';
+export * from './model';
 
-export { generateId } from './id-generator.js';
+export { generateId } from './id-generator';
 
 // Export SQL Fragments utilities (new in 0.27.2)
 export {
 	insertAndReturnUserIds,
 	updateUserAndGetAuditClause,
 	deleteInactiveUsersAndCount,
-} from './utils/sql-fragments.js';
+} from './utils/sql-fragments';
 
 // Export Type-Safe Model Building API
 export {
@@ -46,7 +46,7 @@ export {
 	type RelationDefinition,
 	type FieldDefinition,
 	type ModelType,
-} from './utils/model-builder.js';
+} from './utils/model-builder';
 
 // Helper function to provide type inference utilities
 const createTypeInferenceHelpers = () => {
@@ -78,4 +78,4 @@ export type {
 	WithRequired,
 	ValidationErrors,
 	FieldMapping,
-} from './utils/type-inference.js';
+} from './utils/type-inference';

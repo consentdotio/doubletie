@@ -6,7 +6,7 @@
  */
 
 import { vi } from 'vitest';
-import type { MockFn } from './mock-db.js';
+import type { MockFn } from './mock-db';
 
 /**
  * Standard mock return values for common database operations

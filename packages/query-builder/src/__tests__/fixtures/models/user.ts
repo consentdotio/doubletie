@@ -15,9 +15,9 @@ import {
 } from 'kysely';
 import { vi } from 'vitest';
 
-import { type Database, createDatabase } from '../../../database.js';
-import { createModel } from '../../../model.js';
-import type { TestDatabase } from './base-schema.js';
+import { type Database, createDatabase } from '../../../database';
+import { createModel } from '../../../model';
+import type { TestDatabase } from './base-schema';
 
 /**
  * Creates a simple mock SQLite dialect for testing

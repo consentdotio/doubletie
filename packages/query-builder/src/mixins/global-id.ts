@@ -4,7 +4,7 @@
  * @module globalId
  */
 import type { NoResultError, SelectType } from 'kysely';
-import type { ModelFunctions } from '../model.js';
+import type { ModelFunctions } from '../model';
 
 /**
  * Type for ID parsing callback
@@ -53,7 +53,7 @@ export function decodeTypeFromGlobalId(globalId: string): string | null {
 	}
 
 	const parts = globalId.split('_');
-	return parts.length > 0 ? parts[0] : null;
+	return parts[0] ?? null;
 }
 
 /**
@@ -80,7 +80,15 @@ export function withGlobalId<
 	model: ModelFunctions<TDatabase, TTableName, TIdColumnName>,
 	idColumnName: TIdColumnName,
 	type?: string
-) {
+): ModelFunctions<TDatabase, TTableName, TIdColumnName> & {
+	globalIdType: string;
+	getGlobalId(id: TIdType | string | number): string;
+	getLocalId(globalId: string): TIdType;
+	parseGlobalId(globalId: string | null | undefined): TIdType | string | null;
+	findByGlobalId(globalId: string, options?: { throwIfNotFound?: boolean; error?: typeof NoResultError }): Promise<any>;
+	getByGlobalId(globalId: string, error?: typeof NoResultError): Promise<any>;
+	findByGlobalIds(globalIds: string[]): Promise<any[]>;
+} {
 	// Handle string IDs directly, or use custom parser
 	const parseId: ParseCallback<TIdType> =
 		typeof idColumnName === 'function'
@@ -120,7 +128,7 @@ export function withGlobalId<
 				if (parts.length !== 2 || parts[0] !== globalIdType) {
 					throw new Error(`Invalid global ID format: ${globalId}`);
 				}
-				return parseId(parts[1]);
+				return parseId(parts[1] as string);
 			} catch (error) {
 				throw new Error(`Invalid global ID format: ${globalId}`);
 			}
@@ -142,7 +150,7 @@ export function withGlobalId<
 				const parts = globalId.split('_');
 				if (parts.length === 2) {
 					// Extract the ID part (after the underscore)
-					return parseId(parts[1]);
+					return parseId(parts[1] as string);
 				}
 
 				// If it doesn't match our format, return the original string
@@ -181,7 +189,7 @@ export function withGlobalId<
 					);
 				}
 
-				return model.findById(parseId(rawId), undefined, options);
+				return model.findById(parseId(rawId as string), undefined, options);
 			} catch (error) {
 				if (options?.throwIfNotFound) {
 					throw error;
@@ -221,7 +229,7 @@ export function withGlobalId<
 						const [type, rawId] = parts;
 						if (type !== globalIdType) return null;
 
-						return parseId(rawId);
+						return parseId(rawId as string);
 					} catch (error) {
 						return null;
 					}

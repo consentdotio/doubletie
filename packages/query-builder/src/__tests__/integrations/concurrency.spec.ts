@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createModel } from '../../model.js';
+import { createModel } from '../../model';
 import {
 	DB,
 	cleanupDatabase,
 	db,
 	initializeDatabase,
 	toSqliteDate,
-} from '../fixtures/migration.js';
+} from '../fixtures/migration';
 
 describe('Integration: Concurrency Control', () => {
 	beforeEach(async () => {

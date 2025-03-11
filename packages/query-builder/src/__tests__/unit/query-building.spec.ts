@@ -5,7 +5,7 @@ import {
 	type TestMockDatabase,
 	createMockDatabase,
 	createMockExpressionBuilder,
-} from '../fixtures/mock-db.js';
+} from '../fixtures/mock-db';
 
 describe('unit: query building functionality', () => {
 	// Define test database types

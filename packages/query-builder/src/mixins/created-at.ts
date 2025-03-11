@@ -1,7 +1,7 @@
 import type {
 	ModelFunctions,
 	InsertObjectOrList as ModelInsertObjectOrList,
-} from '../model.js';
+} from '../model';
 /**
  * Provides automatic created_at timestamp functionality for models
  *

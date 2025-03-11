@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import withCreatedAt from '../../../mixins/created-at.js';
+import withCreatedAt from '../../../mixins/created-at';
 import {
 	InsertObjectOrList,
 	ModelFunctions,
 	createModel,
-} from '../../../model.js';
+} from '../../../model';
 import {
 	DB,
 	cleanupDatabase,
 	db,
 	initializeDatabase,
 	toSqliteDate,
-} from '../../fixtures/migration.js';
+} from '../../fixtures/migration';
 
 describe('integration: createdAt mixin', () => {
 	beforeEach(async () => {

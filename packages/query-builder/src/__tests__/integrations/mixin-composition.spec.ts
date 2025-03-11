@@ -1,13 +1,13 @@
 // import type { Kysely, SelectQueryBuilder } from 'kysely';
 // import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-// import { createDatabase, type Database, type ModelRegistry } from '../../database.js';
-// import { withGlobalId } from '../../mixins/global-id.js';
-// import withSlug from '../../mixins/slug.js';
-// import { createModel } from '../../model.js';
+// import { createDatabase, type Database, type ModelRegistry } from '../../database';
+// import { withGlobalId } from '../../mixins/global-id';
+// import withSlug from '../../mixins/slug';
+// import { createModel } from '../../model';
 // import {
 // 	setupTestDatabase,
 // 	teardownTestDatabase,
-// } from '../fixtures/test-db.js';
+// } from '../fixtures/test-db';
 
 // describe.skip('integration: mixin composition', () => {
 // 	// Define test database schema

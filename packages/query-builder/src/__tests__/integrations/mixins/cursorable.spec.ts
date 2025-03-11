@@ -1,14 +1,14 @@
 import { SelectQueryBuilder } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import withCursorable from '../../../mixins/cursorable.js';
-import { createModel } from '../../../model.js';
+import withCursorable from '../../../mixins/cursorable';
+import { createModel } from '../../../model';
 import {
 	DB,
 	cleanupDatabase,
 	db,
 	initializeDatabase,
 	toSqliteDate,
-} from '../../fixtures/migration.js';
+} from '../../fixtures/migration';
 
 describe('integration: cursorable mixin', () => {
 	// Create test data
@@ -100,8 +100,8 @@ describe('integration: cursorable mixin', () => {
 
 		// Verify first page
 		expect(firstPage.nodes).toHaveLength(2);
-		expect(firstPage.nodes[0].email).toBe('user5@example.com');
-		expect(firstPage.nodes[1].email).toBe('user4@example.com');
+		expect(firstPage.nodes[0]?.email).toBe('user5@example.com');
+		expect(firstPage.nodes[1]?.email).toBe('user4@example.com');
 		expect(firstPage.pageInfo.hasNextPage).toBe(true);
 		expect(firstPage.pageInfo.hasPreviousPage).toBe(false);
 		expect(firstPage.pageInfo.startCursor).not.toBeNull();
@@ -116,8 +116,8 @@ describe('integration: cursorable mixin', () => {
 
 		// Verify second page
 		expect(secondPage.nodes).toHaveLength(2);
-		expect(secondPage.nodes[0].email).toBe('user3@example.com');
-		expect(secondPage.nodes[1].email).toBe('user2@example.com');
+		expect(secondPage.nodes[0]?.email).toBe('user3@example.com');
+		expect(secondPage.nodes[1]?.email).toBe('user2@example.com');
 		expect(secondPage.pageInfo.hasNextPage).toBe(true);
 		expect(secondPage.pageInfo.hasPreviousPage).toBe(true);
 
@@ -129,7 +129,7 @@ describe('integration: cursorable mixin', () => {
 
 		// Verify third page
 		expect(thirdPage.nodes).toHaveLength(1);
-		expect(thirdPage.nodes[0].email).toBe('user1@example.com');
+		expect(thirdPage.nodes[0]?.email).toBe('user1@example.com');
 		expect(thirdPage.pageInfo.hasNextPage).toBe(false);
 		expect(thirdPage.pageInfo.hasPreviousPage).toBe(true);
 	});
@@ -154,8 +154,8 @@ describe('integration: cursorable mixin', () => {
 
 		// Verify last page
 		expect(lastPage.nodes).toHaveLength(2);
-		expect(lastPage.nodes[0].email).toBe('user2@example.com');
-		expect(lastPage.nodes[1].email).toBe('user1@example.com');
+		expect(lastPage.nodes[0]?.email).toBe('user2@example.com');
+		expect(lastPage.nodes[1]?.email).toBe('user1@example.com');
 		expect(lastPage.pageInfo.hasNextPage).toBe(false);
 		expect(lastPage.pageInfo.hasPreviousPage).toBe(true);
 
@@ -167,8 +167,8 @@ describe('integration: cursorable mixin', () => {
 
 		// Verify previous page
 		expect(previousPage.nodes).toHaveLength(2);
-		expect(previousPage.nodes[0].email).toBe('user4@example.com');
-		expect(previousPage.nodes[1].email).toBe('user3@example.com');
+		expect(previousPage.nodes[0]?.email).toBe('user4@example.com');
+		expect(previousPage.nodes[1]?.email).toBe('user3@example.com');
 		expect(previousPage.pageInfo.hasNextPage).toBe(true);
 		expect(previousPage.pageInfo.hasPreviousPage).toBe(true);
 	});
@@ -216,11 +216,11 @@ describe('integration: cursorable mixin', () => {
 
 		// Verify sorting by followers count
 		expect(byFollowers.nodes).toHaveLength(5);
-		expect(byFollowers.nodes[0].email).toBe('user5@example.com');
-		expect(byFollowers.nodes[1].email).toBe('user4@example.com');
-		expect(byFollowers.nodes[2].email).toBe('user3@example.com');
-		expect(byFollowers.nodes[3].email).toBe('user2@example.com');
-		expect(byFollowers.nodes[4].email).toBe('user1@example.com');
+		expect(byFollowers.nodes[0]?.email).toBe('user5@example.com');
+		expect(byFollowers.nodes[1]?.email).toBe('user4@example.com');
+		expect(byFollowers.nodes[2]?.email).toBe('user3@example.com');
+		expect(byFollowers.nodes[3]?.email).toBe('user2@example.com');
+		expect(byFollowers.nodes[4]?.email).toBe('user1@example.com');
 
 		// Get users sorted by name
 		const byName = await customCursorable.getCursorableConnection({
@@ -229,11 +229,11 @@ describe('integration: cursorable mixin', () => {
 
 		// Verify sorting by name
 		expect(byName.nodes).toHaveLength(5);
-		expect(byName.nodes[0].email).toBe('user5@example.com');
-		expect(byName.nodes[1].email).toBe('user4@example.com');
-		expect(byName.nodes[2].email).toBe('user1@example.com');
-		expect(byName.nodes[3].email).toBe('user3@example.com');
-		expect(byName.nodes[4].email).toBe('user2@example.com');
+		expect(byName.nodes[0]?.email).toBe('user5@example.com');
+		expect(byName.nodes[1]?.email).toBe('user4@example.com');
+		expect(byName.nodes[2]?.email).toBe('user1@example.com');
+		expect(byName.nodes[3]?.email).toBe('user3@example.com');
+		expect(byName.nodes[4]?.email).toBe('user2@example.com');
 	});
 
 	it.skip('should apply custom filter function', async () => {

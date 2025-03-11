@@ -13,7 +13,7 @@ import type {
  * @module slug
  */
 import slugify from 'url-slug';
-import type { ModelFunctions } from '../model.js';
+import type { ModelFunctions } from '../model';
 
 // Type alias for insert objects or arrays of insert objects
 type InsertObjectOrList<TDatabase, TTableName extends keyof TDatabase> =

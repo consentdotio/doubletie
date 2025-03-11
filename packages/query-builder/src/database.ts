@@ -27,8 +27,8 @@ import {
 	type ModelSchema,
 	type PrimaryKeySpecification,
 	createModel,
-} from './model.js';
-import { CommonTableExpression } from './utils/kysley-types.js';
+} from './model';
+import { CommonTableExpression } from './utils/kysley-types';
 
 /**
  * Simple type for QueryCreatorWithCommonTableExpression to avoid complex typing issues

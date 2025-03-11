@@ -72,7 +72,7 @@ export function pipe(...fns: Array<(arg: any) => any>): (arg: any) => any {
  *
  * ```typescript
  * import { pipe } from './compose';
- * import { createModel } from '../model.js';
+ * import { createModel } from '../model';
  * import withUpdatedAt from '../mixins/updatedAt';
  * import withSlug from '../mixins/slug';
  *

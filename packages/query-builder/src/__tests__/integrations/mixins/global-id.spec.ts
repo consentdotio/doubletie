@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { withGlobalId } from '../../../mixins/global-id.js';
-import { createModel } from '../../../model.js';
+import { withGlobalId } from '../../../mixins/global-id';
+import { createModel } from '../../../model';
 import {
 	DB,
 	cleanupDatabase,
 	db,
 	initializeDatabase,
-} from '../../fixtures/migration.js';
+} from '../../fixtures/migration';
 
 describe('integration: Global ID mixin', () => {
 	let UserModel: ReturnType<typeof withGlobalId>;

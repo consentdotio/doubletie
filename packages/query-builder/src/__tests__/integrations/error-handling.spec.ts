@@ -1,13 +1,13 @@
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createModel } from '../../model.js';
-import type { DB, Timestamp, Users } from '../fixtures/migration.js';
+import { createModel } from '../../model';
+import type { DB, Timestamp, Users } from '../fixtures/migration';
 import {
 	cleanupDatabase,
 	db,
 	initializeDatabase,
 	toSqliteDate,
-} from '../fixtures/migration.js';
+} from '../fixtures/migration';
 
 describe('Integration: Error Handling', () => {
 	beforeEach(async () => {

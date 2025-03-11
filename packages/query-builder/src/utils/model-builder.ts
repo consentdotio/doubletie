@@ -1,16 +1,16 @@
-import type { RelationType } from '../constants/relation-type.js';
+import type { RelationType } from '../constants/relation-type';
 /**
  * Utilities to help with defining models in a type-safe manner
  * Provides functions and types for building structured model schemas
  *
  * @module model-builder
  */
-import type { ModelRegistry } from '../database.js';
+import type { ModelRegistry } from '../database';
 import type {
 	ModelExtensions,
 	ModelSchema,
 	PrimaryKeySpecification,
-} from '../model.js';
+} from '../model';
 
 /**
  * Relation definition for model relationships

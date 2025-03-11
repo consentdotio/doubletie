@@ -1,8 +1,8 @@
 import type { Selectable } from 'kysely';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import withAssign, { ModelWithAssign } from '../../../mixins/assign.js';
-import type { ModelFunctions } from '../../../model.js';
-import { DB } from '../../fixtures/migration.js';
+import withAssign, { ModelWithAssign } from '../../../mixins/assign';
+import type { ModelFunctions } from '../../../model';
+import { DB } from '../../fixtures/migration';
 
 // Define a type for a user record
 type UserRecord = Selectable<DB['users']>;

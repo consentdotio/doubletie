@@ -1,8 +1,8 @@
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ModelRegistry } from '../../database.js';
-import { Database } from '../../database.js';
-import { createModel } from '../../model.js';
+import { ModelRegistry } from '../../database';
+import { Database } from '../../database';
+import { createModel } from '../../model';
 
 interface TestDB {
 	products: {

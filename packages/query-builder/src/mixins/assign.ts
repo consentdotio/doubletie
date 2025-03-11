@@ -4,7 +4,7 @@ import type { Selectable } from 'kysely';
  *
  * @module assign
  */
-import type { ModelFunctions } from '../model.js';
+import type { ModelFunctions } from '../model';
 
 /**
  * Type for a model with assign functionality

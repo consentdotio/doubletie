@@ -1,6 +1,6 @@
 import type { OperandValueExpressionOrList, SelectType, SqlBool } from 'kysely';
 
-import type { ModelFunctions, UpdateObjectExpression } from '../model.js';
+import type { ModelFunctions, UpdateObjectExpression } from '../model';
 
 /**
  * Type for the enhanced model with updateById method

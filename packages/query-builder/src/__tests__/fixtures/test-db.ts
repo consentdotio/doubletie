@@ -1,8 +1,8 @@
 //@ts-ignore
 import { SQLite } from 'better-sqlite3';
 import { Kysely, type LogEvent, SqliteDialect } from 'kysely';
-import { type Database, createDatabase } from '../../database.js';
-import { cleanupDatabase, initializeDatabase } from './migration.js';
+import { type Database, createDatabase } from '../../database';
+import { cleanupDatabase, initializeDatabase } from './migration';
 
 // Define TestDB types here
 export type Generated<T> = T extends TestColumnType<infer S, infer I, infer U>

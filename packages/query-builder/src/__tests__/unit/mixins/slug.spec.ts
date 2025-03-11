@@ -1,13 +1,12 @@
-import { DB } from '__tests__/fixtures/migration.js';
-import type { SelectQueryBuilder } from 'kysely';
+import { DB } from '../../fixtures/migration';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	Operation,
 	type Options,
 	generateSlugValue,
 	default as withSlug,
-} from '../../../mixins/slug.js';
-import type { ModelFunctions } from '../../../model.js';
+} from '../../../mixins/slug';
+import type { ModelFunctions } from '../../../model';
 
 describe('unit: slug mixin', () => {
 	describe('generateSlugValue', () => {

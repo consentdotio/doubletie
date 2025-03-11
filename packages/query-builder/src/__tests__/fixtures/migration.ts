@@ -2,7 +2,7 @@
 import SQLiteDatabase from 'better-sqlite3';
 import { ColumnType, type Kysely, sql } from 'kysely';
 import { SqliteDialect } from 'kysely';
-import { Database, createDatabase } from '../../database.js';
+import { Database, createDatabase } from '../../database';
 
 // Helper functions for date handling
 export function toSqliteDate(date: Date | string): string {

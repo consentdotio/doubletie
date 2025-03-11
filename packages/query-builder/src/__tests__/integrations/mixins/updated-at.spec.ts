@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import withUpdatedAt from '../../../mixins/updated-at.js';
+import withUpdatedAt from '../../../mixins/updated-at';
 import {
 	InsertObjectOrList,
 	UpdateObjectExpression,
 	createModel,
-} from '../../../model.js';
+} from '../../../model';
 import {
 	DB,
 	cleanupDatabase,
 	db,
 	initializeDatabase,
 	toSqliteDate,
-} from '../../fixtures/migration.js';
+} from '../../fixtures/migration';
 
 describe('integration: updatedAt mixin', () => {
 	beforeEach(async () => {

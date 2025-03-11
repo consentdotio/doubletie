@@ -8,7 +8,7 @@ import { OrderByDirectionExpression, type Selectable, sql } from 'kysely';
  *
  * @module cursorable
  */
-import type { ModelFunctions } from '../model.js';
+import type { ModelFunctions } from '../model';
 
 /**
  * Configuration options for how a column should be sorted in cursor pagination.
@@ -212,7 +212,12 @@ export default function withCursorable<
 		limit?: number;
 		sortKey?: string;
 	}
-) {
+): ModelFunctions<TDatabase, TTableName, TIdColumnName> & {
+	getCursorableQuery(options: CursorableOptions): ReturnType<typeof model.selectFrom>;
+	getCursorable(options: CursorableOptions): Promise<Selectable<TDatabase[TTableName]>[]>;
+	getLazyCursorableConnection(options: CursorableOptions): Promise<Connection<Selectable<TDatabase[TTableName]>>>;
+	getCursorableConnection(options: CursorableOptions): Promise<Connection<Selectable<TDatabase[TTableName]>>>;
+} {
 	type TTable = TDatabase[TTableName];
 	type TTableRecord = Selectable<TTable>;
 
@@ -229,7 +234,7 @@ export default function withCursorable<
 	 */
 	const getSortKeyConfig = (sortKeyName?: string) => {
 		const key = sortKeyName || Object.keys(config.sortKeys)[0];
-		return config.sortKeys[key] || [];
+		return config.sortKeys[key as keyof typeof config.sortKeys] || [];
 	};
 
 	/**
@@ -376,7 +381,7 @@ export default function withCursorable<
 		 */
 		getCursorableQuery(options: CursorableOptions) {
 			const { sortKey = Object.keys(config.sortKeys)[0] } = options;
-			const cursorParts = parseCursor(sortKey, getCursor(options));
+			const cursorParts = parseCursor(sortKey as string, getCursor(options) as string);
 			const reversed = isQueryReversed(options);
 			const limit = getLimit(options);
 
@@ -426,7 +431,7 @@ export default function withCursorable<
 		 */
 		async getCursorable(options: CursorableOptions) {
 			const query = this.getCursorableQuery(options);
-			return await query.execute();
+			return await query.execute() as Selectable<TDatabase[TTableName]>[];
 		},
 
 		/**
@@ -486,16 +491,13 @@ export default function withCursorable<
 			}
 
 			// Build the connection object
-			const connection: Connection<Record<string, unknown>> = {
-				nodes: nodes,
+			const connection: Connection<TTableRecord> = {
+				nodes: nodes as TTableRecord[],
 				pageInfo: {
 					hasNextPage,
 					hasPreviousPage,
-					startCursor: nodes.length > 0 ? makeCursor(nodes[0], sortKey) : null,
-					endCursor:
-						nodes.length > 0
-							? makeCursor(nodes[nodes.length - 1], sortKey)
-							: null,
+					startCursor: nodes.length > 0 ? makeCursor(nodes[0] as Record<string, unknown>, sortKey as string) : null,
+					endCursor: nodes.length > 0 ? makeCursor(nodes[nodes.length - 1] as Record<string, unknown>, sortKey as string) : null,
 				},
 			};
 

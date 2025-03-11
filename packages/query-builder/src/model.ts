@@ -20,12 +20,12 @@ import {
 } from 'kysely';
 
 import type { ExpressionWrapper, InsertObject, InsertResult, OperandExpression, OperandValueExpressionOrList, QueryNode, UpdateObject, ValueExpression } from 'kysely';
-import type { Database, TransactionCallback } from './database.js';
+import type { Database, TransactionCallback } from './database';
 import type {
 	FieldDefinition,
 	RelationDefinition,
-} from './utils/model-builder.js';
-import { ExtractRawTypeFromReferenceExpression } from 'utils/kysley-types.js';
+} from './utils/model-builder';
+import { ExtractRawTypeFromReferenceExpression } from './utils/kysley-types';
 
 /*
 this type is not exported from kysely, so we need to define it here
@@ -565,7 +565,7 @@ export function createModel<
 			// Simple case - no need for tuples
 			query = query.where((eb) => 
 				// Use column name directly
-				eb(columns[0], '=', values[0] as OperandValueExpressionOrList<TDatabase, TTableName, TColumnName>)
+				eb(columns[0] as TColumnName, '=', values[0] as OperandValueExpressionOrList<TDatabase, TTableName, TColumnName>)
 			);
 			return query.execute() as Promise<Selectable<TTable>[]>;
 		}
@@ -574,8 +574,8 @@ export function createModel<
 			// Use direct conditions for better performance
 			query = query.where((eb) => 
 				eb.and([
-					eb(columns[0], '=', values[0] as OperandValueExpressionOrList<TDatabase, TTableName, TColumnName>),
-					eb(columns[1], '=', values[1] as OperandValueExpressionOrList<TDatabase, TTableName, TColumnName>)
+					eb(columns[0] as TColumnName, '=', values[0] as OperandValueExpressionOrList<TDatabase, TTableName, TColumnName>),
+					eb(columns[1] as TColumnName, '=', values[1] as OperandValueExpressionOrList<TDatabase, TTableName, TColumnName>)
 				])
 			);
 			return query.execute() as Promise<Selectable<TTable>[]>;

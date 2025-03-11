@@ -1,8 +1,8 @@
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Database, ModelRegistry } from '../../database.js';
-import { createModel } from '../../model.js';
+import type { Database, ModelRegistry } from '../../database';
+import { createModel } from '../../model';
 import {
 	Articles,
 	DB,
@@ -11,7 +11,7 @@ import {
 	initializeDatabase,
 	db as testDb,
 	toSqliteDate,
-} from '../fixtures/migration.js';
+} from '../fixtures/migration';
 
 describe('integration: query building functionality', () => {
 	let db: typeof testDb;
@@ -218,7 +218,7 @@ describe('integration: query building functionality', () => {
 			const users = await UserModel.selectFrom().selectAll().execute();
 
 			expect(users).toHaveLength(5);
-			expect(users[0].name).toBe('John Doe');
+			expect(users[0]?.name).toBe('John Doe');
 		});
 
 		it('should filter users by status', async () => {
@@ -284,9 +284,9 @@ describe('integration: query building functionality', () => {
 				.execute();
 
 			expect(users).toHaveLength(5);
-			expect(users[0].followersCount).toBe(200); // Jane
-			expect(users[1].followersCount).toBe(150); // Alice
-			expect(users[2].followersCount).toBe(100); // John
+			expect(users[0]?.followersCount).toBe(200); // Jane
+			expect(users[1]?.followersCount).toBe(150); // Alice
+			expect(users[2]?.followersCount).toBe(100); // John
 		});
 
 		it('should order by multiple columns', async () => {
@@ -297,10 +297,10 @@ describe('integration: query building functionality', () => {
 				.execute();
 
 			// Active users first (ordered by followers desc), then inactive users
-			expect(users[0].status).toBe('active');
-			expect(users[0].followersCount).toBe(200); // Jane
-			expect(users[1].status).toBe('active');
-			expect(users[1].followersCount).toBe(150); // Alice
+			expect(users[0]?.status).toBe('active');
+			expect(users[0]?.followersCount).toBe(200); // Jane
+			expect(users[1]?.status).toBe('active');
+			expect(users[1]?.followersCount).toBe(150); // Alice
 		});
 
 		it('should limit and offset results', async () => {
@@ -407,8 +407,8 @@ describe('integration: query building functionality', () => {
 			console.log('HAVING filter results:', results);
 			expect(results).toBeDefined();
 			expect(results.length).toBe(1);
-			expect(results[0].status).toBe('active');
-			expect(Number(results[0].user_count)).toBe(3);
+			expect(results[0]?.status).toBe('active');
+			expect(Number(results[0]?.user_count)).toBe(3);
 		});
 	});
 
@@ -447,7 +447,7 @@ describe('integration: query building functionality', () => {
 
 			const johnSearch = await searchUsers({ nameLike: 'John' });
 			expect(johnSearch).toHaveLength(1);
-			expect(johnSearch[0].name).toBe('John Doe');
+			expect(johnSearch[0]?.name).toBe('John Doe');
 
 			// Combined search
 			const popularActiveUsers = await searchUsers({
@@ -455,8 +455,8 @@ describe('integration: query building functionality', () => {
 				minFollowers: 150,
 			});
 			expect(popularActiveUsers).toHaveLength(2);
-			expect(popularActiveUsers[0].name).toBe('Jane Smith');
-			expect(popularActiveUsers[1].name).toBe('Alice Brown');
+			expect(popularActiveUsers[0]?.name).toBe('Jane Smith');
+			expect(popularActiveUsers[1]?.name).toBe('Alice Brown');
 		});
 
 		it('should implement a dynamic ordering function', async () => {
@@ -471,9 +471,9 @@ describe('integration: query building functionality', () => {
 
 			const topUsers = await getOrderedUsers();
 			expect(topUsers).toHaveLength(3);
-			expect(topUsers[0].followersCount).toBe(200); // Jane
-			expect(topUsers[1].followersCount).toBe(150); // Alice
-			expect(topUsers[2].followersCount).toBe(100); // John
+			expect(topUsers[0]?.followersCount).toBe(200); // Jane
+			expect(topUsers[1]?.followersCount).toBe(150); // Alice
+			expect(topUsers[2]?.followersCount).toBe(100); // John
 		});
 
 		// Skip tests that rely on relationships not present in the current schema
@@ -514,18 +514,18 @@ describe('integration: query building functionality', () => {
 				.execute();
 
 			// Active users should come first, ordered by followers
-			expect(users[0].status).toBe('active');
-			expect(users[0].name).toBe('Jane Smith'); // 200 followers
-			expect(users[1].status).toBe('active');
-			expect(users[1].name).toBe('Alice Brown'); // 150 followers
-			expect(users[2].status).toBe('active');
-			expect(users[2].name).toBe('John Doe'); // 100 followers
+			expect(users[0]?.status).toBe('active');
+			expect(users[0]?.name).toBe('Jane Smith'); // 200 followers
+			expect(users[1]?.status).toBe('active');
+			expect(users[1]?.name).toBe('Alice Brown'); // 150 followers
+			expect(users[2]?.status).toBe('active');
+			expect(users[2]?.name).toBe('John Doe'); // 100 followers
 
 			// Then inactive users, ordered by followers
-			expect(users[3].status).toBe('inactive');
-			expect(users[3].name).toBe('Charlie Wilson'); // 75 followers
-			expect(users[4].status).toBe('inactive');
-			expect(users[4].name).toBe('Bob Johnson'); // 50 followers
+			expect(users[3]?.status).toBe('inactive');
+			expect(users[3]?.name).toBe('Charlie Wilson'); // 75 followers
+			expect(users[4]?.status).toBe('inactive');
+			expect(users[4]?.name).toBe('Bob Johnson'); // 50 followers
 		});
 	});
 });

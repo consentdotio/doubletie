@@ -1,14 +1,14 @@
 import type { Selectable } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import withAssign, { ModelWithAssign } from '../../../mixins/assign.js';
-import { createModel } from '../../../model.js';
+import withAssign, { ModelWithAssign } from '../../../mixins/assign';
+import { createModel } from '../../../model';
 import {
 	DB,
 	cleanupDatabase,
 	db,
 	initializeDatabase,
 	toSqliteDate,
-} from '../../fixtures/migration.js';
+} from '../../fixtures/migration';
 
 // Define a type for a user record
 type UserRecord = Selectable<DB['users']>;

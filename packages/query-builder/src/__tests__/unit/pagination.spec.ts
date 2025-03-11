@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createModel } from '../../model.js';
+import { createModel } from '../../model';
 import {
 	MockFn,
 	TestMockDatabase,
 	createMockDatabase,
 	createMockReturnThis,
-} from '../fixtures/mock-db.js';
+} from '../fixtures/mock-db';
 
 describe('unit: pagination functionality', () => {
 	// Define test database types

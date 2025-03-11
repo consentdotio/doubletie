@@ -3,7 +3,7 @@
  *
  * @module isolate
  */
-import type { ModelFunctions } from '../model.js';
+import type { ModelFunctions } from '../model';
 
 /**
  * Type for a model that can be isolated
@@ -57,7 +57,7 @@ export default function isolate<
 		isolatedModels[key] = {
 			...model,
 			isolated: true,
-		};
+		} as IsolatableModel<any, any, any>;
 	}
 
 	return isolatedModels as TModels;
