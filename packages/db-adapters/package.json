@@ -1,0 +1,29 @@
+{
+	"name": "@doubletie/db-adapters",
+	"version": "1.0.0",
+	"description": "Reusable database abstraction layer with multiple adapters",
+	"main": "dist/index.js",
+	"fmt": "pnpm biome format --write . && biome check --formatter-enabled=false --linter-enabled=false --organize-imports-enabled=true --write",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "tsc",
+		"test": "jest"
+	},
+	"files": ["dist", "README.md"],
+	"peerDependencies": {
+		"kysely": "^0.27.0",
+		"drizzle-orm": "^0.29.0",
+		"prisma": "^5.0.0"
+	},
+	"dependencies": {
+		"uuid": "^9.0.0",
+		"@doubletie/query-builder": "workspace:*"
+	},
+	"devDependencies": {
+		"@doubletie/typescript-config": "workspace:*",
+		"jest": "^29.0.0",
+		"@types/jest": "^29.0.0",
+		"@types/node": "^20.0.0",
+		"@types/uuid": "^9.0.0"
+	}
+}

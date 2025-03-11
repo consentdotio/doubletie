@@ -1,5 +1,3 @@
 packages:
-  - "configs/*"
+  - "docs"
   - "packages/**"
-  - "apps/**"
-  - "internals/**"
