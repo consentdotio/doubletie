@@ -36,7 +36,7 @@ import { DeepPartial, DrainOuterGeneric } from './utils/type-utils';
  * Configuration options for the database.
  * Uses PartialBy to make all fields except dialect optional.
  *
- * @template TDatabaseSchema - The database schema type
+ * @typeParam TDatabaseSchema - The database schema type
  */
 export type DatabaseConfig<TDatabaseSchema> = {
 	/** The database dialect to use */
@@ -72,7 +72,7 @@ type AfterCommitCallback = () => Promise<unknown>;
 /**
  * Transaction state information stored in AsyncLocalStorage.
  *
- * @template TDatabaseSchema - The database schema type
+ * @typeParam TDatabaseSchema - The database schema type
  */
 type TransactionState<TDatabaseSchema> = DrainOuterGeneric<{
 	/** Transaction instance */
@@ -86,7 +86,7 @@ type TransactionState<TDatabaseSchema> = DrainOuterGeneric<{
 /**
  * Transaction response object passed to transaction callbacks.
  *
- * @template TDatabaseSchema - The database schema type
+ * @typeParam TDatabaseSchema - The database schema type
  */
 export type TransactionResponse<TDatabaseSchema> = DrainOuterGeneric<{
 	/** Transaction instance */
@@ -98,8 +98,8 @@ export type TransactionResponse<TDatabaseSchema> = DrainOuterGeneric<{
 /**
  * Transaction callback function type.
  *
- * @template TDatabaseSchema - The database schema type
- * @template ResultType - The result type of the transaction
+ * @typeParam TDatabaseSchema - The database schema type
+ * @typeParam ResultType - The result type of the transaction
  * @callback TransactionCallback
  * @param {TransactionResponse<TDatabaseSchema>} trx - The transaction response object
  * @returns {Promise<ResultType>} Promise that resolves with the transaction result
@@ -112,7 +112,7 @@ export type TransactionCallback<TDatabaseSchema, ResultType> = (
  * Registry of models for a database.
  * Uses DeepPartial to allow partial schema definitions during registration.
  *
- * @template TDatabaseSchema - The database schema type
+ * @typeParam TDatabaseSchema - The database schema type
  */
 export type ModelRegistry<TDatabaseSchema> = {
 	[TTableName in keyof TDatabaseSchema & string]?: {
@@ -124,336 +124,16 @@ export type ModelRegistry<TDatabaseSchema> = {
 };
 
 /**
- * The database instance containing all state and functionality
- *
- * @typeParam TDatabaseSchema - Database schema type
- * @typeParam RegistryType - Model registry type
+ * The database instance containing all state and functionality.
+ * 
+ * @typeParam TDatabaseSchema - The database schema type
+ * @typeParam RegistryType - The model registry type
+ * @interface Database
  */
 export interface Database<
 	TDatabaseSchema,
-	RegistryType extends
-		ModelRegistry<TDatabaseSchema> = ModelRegistry<TDatabaseSchema>,
+	RegistryType extends ModelRegistry<TDatabaseSchema> = ModelRegistry<TDatabaseSchema>,
 > extends DrainOuterGeneric<{
-		/** The database dialect */
-		dialect: Dialect;
-		/** The Kysely instance */
-		kysely: Kysely<TDatabaseSchema>;
-		/** AsyncLocalStorage for transaction state */
-		asyncLocalDb: AsyncLocalStorage<TransactionState<TDatabaseSchema>>;
-		/** Whether the database is isolated */
-		readonly isolated: boolean;
-		/** Function to log database events */
-		readonly log?: (event: LogEvent) => void;
-		/** Whether to enable debug mode */
-		readonly debug?: boolean;
-		/** Model registry */
-		_modelRegistry?: RegistryType;
-
-		/**
-		 * Checks if the database is using SQLite dialect
-		 *
-		 * @returns True if the database is using SQLite
-		 */
-		isSqlite: () => boolean;
-
-		/**
-		 * Checks if the database is using MySQL dialect
-		 *
-		 * @returns True if the database is using MySQL
-		 */
-		isMysql: () => boolean;
-
-		/**
-		 * Checks if the database is using PostgreSQL dialect
-		 *
-		 * @returns True if the database is using PostgreSQL
-		 */
-		isPostgres: () => boolean;
-
-		/**
-		 * Creates a model for the specified table
-		 *
-		 * @typeParam TTableName - Table name
-		 * @typeParam TIdColumnName - ID column name
-		 * @param table - Table name
-		 * @param id - ID column name
-		 * @param schema - Schema definition
-		 * @param error - Error to throw when not found
-		 * @returns Model instance
-		 */
-		model: <
-			TTableName extends keyof TDatabaseSchema & string,
-			TIdColumnName extends keyof TDatabaseSchema[TTableName] & string,
-		>(
-			table: TTableName,
-			id: TIdColumnName,
-			schema?: ModelSchema<TDatabaseSchema[TTableName]>,
-			error?: typeof NoResultError
-		) => ReturnType<
-			typeof createModel<TDatabaseSchema, TTableName, TIdColumnName>
-		>;
-
-		/**
-		 * Registers multiple models
-		 *
-		 * @param registry - Model registry
-		 * @returns The database instance
-		 */
-		registerModels: (
-			registry: RegistryType
-		) => Database<TDatabaseSchema, RegistryType>;
-
-		/**
-		 * Gets a registered model by table name
-		 *
-		 * @typeParam TTableName - Table name
-		 * @param table - Table name
-		 * @returns The model for the table
-		 */
-		getModel: <TTableName extends keyof RegistryType & string>(
-			table: TTableName
-		) => ReturnType<Database<TDatabaseSchema, RegistryType>['model']>;
-
-		/**
-		 * Access to Kysely's SQL function builder
-		 */
-		fn: () => typeof Kysely.prototype.fn;
-
-		/**
-		 * Checks if currently in a transaction
-		 */
-		isTransaction: () => boolean;
-
-		/**
-		 * Gets the current database instance
-		 */
-		db: () => Kysely<TDatabaseSchema>;
-
-		/**
-		 * Creates a SELECT query for a table
-		 *
-		 * @typeParam TTableName - Table name
-		 * @param table - Table name
-		 * @returns SELECT query builder
-		 */
-		selectFrom: <TTableName extends keyof TDatabaseSchema & string>(
-			table: TTableName
-		) => SelectQueryBuilder<TDatabaseSchema, any, any>;
-
-		/**
-		 * Creates an INSERT query for a table
-		 *
-		 * @typeParam TTableName - Table name
-		 * @param table - Table name
-		 * @returns INSERT query builder
-		 */
-		insertInto: <TTableName extends keyof TDatabaseSchema & string>(
-			table: TTableName
-		) => InsertQueryBuilder<TDatabaseSchema, TTableName, InsertResult>;
-
-		/**
-		 * Creates an UPDATE query for a table
-		 *
-		 * @typeParam TTableName - Table name
-		 * @param table - Table name
-		 * @returns UPDATE query builder
-		 */
-		updateTable: <TTableName extends keyof TDatabaseSchema & string>(
-			table: TTableName
-		) => UpdateQueryBuilder<TDatabaseSchema, any, any, UpdateResult>;
-
-		/**
-		 * Creates a DELETE query for a table
-		 *
-		 * @typeParam TTableName - Table name
-		 * @param table - Table name
-		 * @returns DELETE query builder
-		 */
-		deleteFrom: <TTableName extends keyof TDatabaseSchema & string>(
-			table: TTableName
-		) => DeleteQueryBuilder<TDatabaseSchema, any, DeleteResult>;
-
-		/**
-		 * Creates a WITH clause for a query
-		 *
-		 * @typeParam TName - CTE name
-		 * @typeParam TExpression - CTE expression type
-		 * @param name - CTE name
-		 * @param expression - CTE expression
-		 * @returns Query builder with WITH clause
-		 */
-		with: <
-			TName extends string,
-			TExpression extends CommonTableExpression<TDatabaseSchema, TName>,
-		>(
-			name: TName,
-			expression: TExpression
-		) => any;
-
-		/**
-		 * Destroys the database connection
-		 */
-		destroy: () => ReturnType<Kysely<TDatabaseSchema>['destroy']>;
-
-		/**
-		 * Executes a function in a transaction
-		 *
-		 * @typeParam TResultType - Result type
-		 * @param callback - Transaction callback
-		 * @returns Result of the transaction
-		 */
-		transaction: <TResultType>(
-			callback: TransactionCallback<TDatabaseSchema, TResultType>
-		) => Promise<TResultType>;
-
-		/**
-		 * Executes a SELECT query without a FROM clause
-		 * Useful for retrieving constants and system values
-		 *
-		 * @returns Query builder with selected constant values
-		 */
-		selectNoFrom: () => ReturnType<Kysely<TDatabaseSchema>['selectNoFrom']>;
-
-		/**
-		 * Creates a tuple for comparison in SQL queries
-		 *
-		 * @typeParam ItemTypes - Tuple item types
-		 * @param items - Tuple items
-		 * @returns Tuple expression builder function
-		 *
-		 * @throws {Error} When tuple has less than 1 or more than 5 items
-		 *
-		 * @example
-		 * ```ts
-		 * db.selectFrom('users')
-		 *   .where(eb =>
-		 *     eb.tuple('name', 'email').eq(db.tuple(['John', 'john@example.com'])(eb))
-		 *   )
-		 * ```
-		 */
-		tuple: <ItemTypes extends unknown[]>(
-			items: readonly [...ItemTypes]
-		) => (expressionBuilder: unknown) => unknown;
-
-		/**
-		 * Casts a value to a specific SQL type
-		 *
-		 * @typeParam ResultType - Type to cast to
-		 * @param value - Value to cast
-		 * @param dataType - SQL data type to cast to
-		 * @returns Cast SQL expression
-		 *
-		 * @example
-		 * ```ts
-		 * // Cast a string to an integer
-		 * const numericValue = db.cast<number>('123', 'INTEGER');
-		 * ```
-		 */
-		cast: <ResultType>(
-			value: unknown,
-			dataType: string
-		) => ReturnType<typeof sql<ResultType>>;
-
-		/**
-		 * Updates a single column in a table
-		 *
-		 * @typeParam TTableName - Table name in the database
-		 * @typeParam ColumnName - Column name to update
-		 * @param table - Table name
-		 * @param column - Column name
-		 * @param value - New value for the column
-		 * @returns Update query builder
-		 *
-		 * @example
-		 * ```ts
-		 * await db.updateColumn('users', 'status', 'active')
-		 *   .where('id', '=', userId)
-		 *   .execute();
-		 * ```
-		 */
-		updateColumn: <
-			TTableName extends keyof TDatabaseSchema & string,
-			ColumnName extends keyof TDatabaseSchema[TTableName] & string,
-		>(
-			table: TTableName,
-			column: ColumnName,
-			value: TDatabaseSchema[TTableName][ColumnName]
-		) => UpdateQueryBuilder<TDatabaseSchema, any, any, UpdateResult>;
-
-		/**
-		 * Creates a query for streaming results from a table
-		 * Currently only supported with SQLite dialect
-		 *
-		 * @typeParam TTableName - Table name in the database
-		 * @typeParam ColumnName - Column names to select
-		 * @param table - Table name
-		 * @param columns - Array of columns to select
-		 * @returns Select query builder configured for streaming
-		 *
-		 * @throws {Error} When used with non-SQLite dialect
-		 *
-		 * @example
-		 * ```ts
-		 * const stream = await db.streamFrom('users', ['id', 'name', 'email'])
-		 *   .where('status', '=', 'active')
-		 *   .stream();
-		 * ```
-		 */
-		streamFrom: <
-			TTableName extends keyof TDatabaseSchema & string,
-			ColumnName extends keyof TDatabaseSchema[TTableName] & string,
-		>(
-			table: TTableName,
-			columns: readonly ColumnName[]
-		) => SelectQueryBuilder<TDatabaseSchema, any, any>;
-
-		/**
-		 * Finds records where a specified column is not null
-		 *
-		 * @typeParam TTableName - Table name in the database
-		 * @typeParam ColumnName - Column name to check for non-null values
-		 * @param table - Table name
-		 * @param column - Column name
-		 * @returns Query builder for records with non-null values in the column
-		 *
-		 * @example
-		 * ```ts
-		 * // Find all users with a non-null email address
-		 * const users = await db.findNotNull('users', 'email').execute();
-		 * ```
-		 */
-		findNotNull: <
-			TTableName extends keyof TDatabaseSchema & string,
-			ColumnName extends keyof TDatabaseSchema[TTableName] & string,
-		>(
-			table: TTableName,
-			column: ColumnName
-		) => SelectQueryBuilder<TDatabaseSchema, any, any>;
-
-		/**
-		 * Inserts a record with default values
-		 *
-		 * @typeParam TTableName - Table name
-		 * @param table - Table name
-		 * @returns Insert query
-		 */
-		insertDefault: <TTableName extends keyof TDatabaseSchema & string>(
-			table: TTableName
-		) => InsertQueryBuilder<TDatabaseSchema, TTableName, InsertResult>;
-
-		/**
-		 * Creates a database migrator
-		 *
-		 * @param options - Migrator options
-		 * @returns Migrator instance
-		 */
-		createMigrator: (options: MigratorOptions) => Migrator;
-
-		/**
-		 * Access to Kysely's dynamic query builder
-		 */
-		dynamic: DynamicModule;
-	}> {
 	/** The database dialect */
 	dialect: Dialect;
 	/** The Kysely instance */
@@ -470,36 +150,36 @@ export interface Database<
 	_modelRegistry?: RegistryType;
 
 	/**
-	 * Checks if the database is using SQLite dialect
-	 *
-	 * @returns True if the database is using SQLite
+	 * Checks if the database is using SQLite dialect.
+	 * 
+	 * @returns {boolean} True if using SQLite dialect
 	 */
 	isSqlite: () => boolean;
 
 	/**
-	 * Checks if the database is using MySQL dialect
-	 *
-	 * @returns True if the database is using MySQL
+	 * Checks if the database is using MySQL dialect.
+	 * 
+	 * @returns {boolean} True if using MySQL dialect
 	 */
 	isMysql: () => boolean;
 
 	/**
-	 * Checks if the database is using PostgreSQL dialect
-	 *
-	 * @returns True if the database is using PostgreSQL
+	 * Checks if the database is using PostgreSQL dialect.
+	 * 
+	 * @returns {boolean} True if using PostgreSQL dialect
 	 */
 	isPostgres: () => boolean;
 
 	/**
-	 * Creates a model for the specified table
-	 *
-	 * @typeParam TTableName - Table name
-	 * @typeParam TIdColumnName - ID column name
-	 * @param table - Table name
-	 * @param id - ID column name
-	 * @param schema - Schema definition
-	 * @param error - Error to throw when not found
-	 * @returns Model instance
+	 * Creates a model for the specified table.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @typeParam TIdColumnName - The ID column name type
+	 * @param {TTableName} table - The table name
+	 * @param {TIdColumnName} id - The ID column name
+	 * @param {ModelSchema<TDatabaseSchema[TTableName]>} [schema] - Optional schema definition
+	 * @param {typeof NoResultError} [error] - Optional error to throw when not found
+	 * @returns {ReturnType<typeof createModel<TDatabaseSchema, TTableName, TIdColumnName>>} The created model instance
 	 */
 	model: <
 		TTableName extends keyof TDatabaseSchema & string,
@@ -509,98 +189,101 @@ export interface Database<
 		id: TIdColumnName,
 		schema?: ModelSchema<TDatabaseSchema[TTableName]>,
 		error?: typeof NoResultError
-	) => ReturnType<
-		typeof createModel<TDatabaseSchema, TTableName, TIdColumnName>
-	>;
+	) => ReturnType<typeof createModel<TDatabaseSchema, TTableName, TIdColumnName>>;
 
 	/**
-	 * Registers multiple models
-	 *
-	 * @param registry - Model registry
-	 * @returns The database instance
+	 * Registers multiple models.
+	 * 
+	 * @param {RegistryType} registry - The model registry
+	 * @returns {Database<TDatabaseSchema, RegistryType>} The database instance
 	 */
-	registerModels: (
-		registry: RegistryType
-	) => Database<TDatabaseSchema, RegistryType>;
+	registerModels: (registry: RegistryType) => Database<TDatabaseSchema, RegistryType>;
 
 	/**
-	 * Gets a registered model by table name
-	 *
-	 * @typeParam TTableName - Table name
-	 * @param table - Table name
-	 * @returns The model for the table
+	 * Gets a registered model by table name.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @param {TTableName} table - The table name
+	 * @returns {ReturnType<Database<TDatabaseSchema, RegistryType>['model']>} The model instance
+	 * @throws {Error} When model is not registered
 	 */
 	getModel: <TTableName extends keyof RegistryType & string>(
 		table: TTableName
 	) => ReturnType<Database<TDatabaseSchema, RegistryType>['model']>;
 
 	/**
-	 * Access to Kysely's SQL function builder
+	 * Access to Kysely's SQL function builder.
+	 * 
+	 * @returns {typeof Kysely.prototype.fn} The SQL function builder
 	 */
 	fn: () => typeof Kysely.prototype.fn;
 
 	/**
-	 * Checks if currently in a transaction
+	 * Checks if currently in a transaction.
+	 * 
+	 * @returns {boolean} True if in a transaction
 	 */
 	isTransaction: () => boolean;
 
 	/**
-	 * Gets the current database instance
+	 * Gets the current database instance.
+	 * 
+	 * @returns {Kysely<TDatabaseSchema>} The current database instance
 	 */
 	db: () => Kysely<TDatabaseSchema>;
 
 	/**
-	 * Creates a SELECT query for a table
-	 *
-	 * @typeParam TTableName - Table name
-	 * @param table - Table name
-	 * @returns SELECT query builder
+	 * Creates a SELECT query for a table.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @param {TTableName} table - The table name
+	 * @returns {SelectQueryBuilder<TDatabaseSchema, any, any>} The SELECT query builder
 	 */
 	selectFrom: <TTableName extends keyof TDatabaseSchema & string>(
 		table: TTableName
 	) => SelectQueryBuilder<TDatabaseSchema, any, any>;
 
 	/**
-	 * Creates an INSERT query for a table
-	 *
-	 * @typeParam TTableName - Table name
-	 * @param table - Table name
-	 * @returns INSERT query builder
+	 * Creates an INSERT query for a table.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @param {TTableName} table - The table name
+	 * @returns {InsertQueryBuilder<TDatabaseSchema, TTableName, InsertResult>} The INSERT query builder
 	 */
 	insertInto: <TTableName extends keyof TDatabaseSchema & string>(
 		table: TTableName
 	) => InsertQueryBuilder<TDatabaseSchema, TTableName, InsertResult>;
 
 	/**
-	 * Creates an UPDATE query for a table
-	 *
-	 * @typeParam TTableName - Table name
-	 * @param table - Table name
-	 * @returns UPDATE query builder
+	 * Creates an UPDATE query for a table.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @param {TTableName} table - The table name
+	 * @returns {UpdateQueryBuilder<TDatabaseSchema, any, any, UpdateResult>} The UPDATE query builder
 	 */
 	updateTable: <TTableName extends keyof TDatabaseSchema & string>(
 		table: TTableName
 	) => UpdateQueryBuilder<TDatabaseSchema, any, any, UpdateResult>;
 
 	/**
-	 * Creates a DELETE query for a table
-	 *
-	 * @typeParam TTableName - Table name
-	 * @param table - Table name
-	 * @returns DELETE query builder
+	 * Creates a DELETE query for a table.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @param {TTableName} table - The table name
+	 * @returns {DeleteQueryBuilder<TDatabaseSchema, any, DeleteResult>} The DELETE query builder
 	 */
 	deleteFrom: <TTableName extends keyof TDatabaseSchema & string>(
 		table: TTableName
 	) => DeleteQueryBuilder<TDatabaseSchema, any, DeleteResult>;
 
 	/**
-	 * Creates a WITH clause for a query
-	 *
-	 * @typeParam TName - CTE name
-	 * @typeParam TExpression - CTE expression type
-	 * @param name - CTE name
-	 * @param expression - CTE expression
-	 * @returns Query builder with WITH clause
+	 * Creates a WITH clause for a query.
+	 * 
+	 * @typeParam TName - The CTE name type
+	 * @typeParam TExpression - The CTE expression type
+	 * @param {TName} name - The CTE name
+	 * @param {TExpression} expression - The CTE expression
+	 * @returns {any} Query builder with WITH clause
 	 */
 	with: <
 		TName extends string,
@@ -611,38 +294,39 @@ export interface Database<
 	) => any;
 
 	/**
-	 * Destroys the database connection
+	 * Destroys the database connection.
+	 * 
+	 * @returns {ReturnType<Kysely<TDatabaseSchema>['destroy']>} Promise that resolves when connection is destroyed
 	 */
 	destroy: () => ReturnType<Kysely<TDatabaseSchema>['destroy']>;
 
 	/**
-	 * Executes a function in a transaction
-	 *
-	 * @typeParam TResultType - Result type
-	 * @param callback - Transaction callback
-	 * @returns Result of the transaction
+	 * Executes a function in a transaction.
+	 * 
+	 * @typeParam TResultType - The result type
+	 * @param {TransactionCallback<TDatabaseSchema, TResultType>} callback - The transaction callback
+	 * @returns {Promise<TResultType>} Promise that resolves with the transaction result
 	 */
 	transaction: <TResultType>(
 		callback: TransactionCallback<TDatabaseSchema, TResultType>
 	) => Promise<TResultType>;
 
 	/**
-	 * Executes a SELECT query without a FROM clause
-	 * Useful for retrieving constants and system values
-	 *
-	 * @returns Query builder with selected constant values
+	 * Executes a SELECT query without a FROM clause.
+	 * Useful for retrieving constants and system values.
+	 * 
+	 * @returns {ReturnType<Kysely<TDatabaseSchema>['selectNoFrom']>} Query builder with selected constant values
 	 */
 	selectNoFrom: () => ReturnType<Kysely<TDatabaseSchema>['selectNoFrom']>;
 
 	/**
-	 * Creates a tuple for comparison in SQL queries
-	 *
-	 * @typeParam ItemTypes - Tuple item types
-	 * @param items - Tuple items
-	 * @returns Tuple expression builder function
-	 *
+	 * Creates a tuple for comparison in SQL queries.
+	 * 
+	 * @typeParam ItemTypes - The tuple item types
+	 * @param {readonly [...ItemTypes]} items - The tuple items
+	 * @returns {(expressionBuilder: unknown) => unknown} Tuple expression builder function
 	 * @throws {Error} When tuple has less than 1 or more than 5 items
-	 *
+	 * 
 	 * @example
 	 * ```ts
 	 * db.selectFrom('users')
@@ -656,13 +340,13 @@ export interface Database<
 	) => (expressionBuilder: unknown) => unknown;
 
 	/**
-	 * Casts a value to a specific SQL type
-	 *
-	 * @typeParam ResultType - Type to cast to
-	 * @param value - Value to cast
-	 * @param dataType - SQL data type to cast to
-	 * @returns Cast SQL expression
-	 *
+	 * Casts a value to a specific SQL type.
+	 * 
+	 * @typeParam ResultType - The type to cast to
+	 * @param {unknown} value - The value to cast
+	 * @param {string} dataType - The SQL data type to cast to
+	 * @returns {ReturnType<typeof sql<ResultType>>} The cast SQL expression
+	 * 
 	 * @example
 	 * ```ts
 	 * // Cast a string to an integer
@@ -675,15 +359,15 @@ export interface Database<
 	) => ReturnType<typeof sql<ResultType>>;
 
 	/**
-	 * Updates a single column in a table
-	 *
-	 * @typeParam TTableName - Table name in the database
-	 * @typeParam ColumnName - Column name to update
-	 * @param table - Table name
-	 * @param column - Column name
-	 * @param value - New value for the column
-	 * @returns Update query builder
-	 *
+	 * Updates a single column in a table.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @typeParam ColumnName - The column name type
+	 * @param {TTableName} table - The table name
+	 * @param {ColumnName} column - The column name
+	 * @param {TDatabaseSchema[TTableName][ColumnName]} value - The new value
+	 * @returns {UpdateQueryBuilder<TDatabaseSchema, any, any, UpdateResult>} The UPDATE query builder
+	 * 
 	 * @example
 	 * ```ts
 	 * await db.updateColumn('users', 'status', 'active')
@@ -701,17 +385,16 @@ export interface Database<
 	) => UpdateQueryBuilder<TDatabaseSchema, any, any, UpdateResult>;
 
 	/**
-	 * Creates a query for streaming results from a table
-	 * Currently only supported with SQLite dialect
-	 *
-	 * @typeParam TTableName - Table name in the database
-	 * @typeParam ColumnName - Column names to select
-	 * @param table - Table name
-	 * @param columns - Array of columns to select
-	 * @returns Select query builder configured for streaming
-	 *
+	 * Creates a query for streaming results from a table.
+	 * Currently only supported with SQLite dialect.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @typeParam ColumnName - The column name type
+	 * @param {TTableName} table - The table name
+	 * @param {readonly ColumnName[]} columns - The columns to select
+	 * @returns {SelectQueryBuilder<TDatabaseSchema, any, any>} Select query builder configured for streaming
 	 * @throws {Error} When used with non-SQLite dialect
-	 *
+	 * 
 	 * @example
 	 * ```ts
 	 * const stream = await db.streamFrom('users', ['id', 'name', 'email'])
@@ -728,14 +411,14 @@ export interface Database<
 	) => SelectQueryBuilder<TDatabaseSchema, any, any>;
 
 	/**
-	 * Finds records where a specified column is not null
-	 *
-	 * @typeParam TTableName - Table name in the database
-	 * @typeParam ColumnName - Column name to check for non-null values
-	 * @param table - Table name
-	 * @param column - Column name
-	 * @returns Query builder for records with non-null values in the column
-	 *
+	 * Finds records where a specified column is not null.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @typeParam ColumnName - The column name type
+	 * @param {TTableName} table - The table name
+	 * @param {ColumnName} column - The column name
+	 * @returns {SelectQueryBuilder<TDatabaseSchema, any, any>} Query builder for records with non-null values
+	 * 
 	 * @example
 	 * ```ts
 	 * // Find all users with a non-null email address
@@ -751,35 +434,354 @@ export interface Database<
 	) => SelectQueryBuilder<TDatabaseSchema, any, any>;
 
 	/**
-	 * Inserts a record with default values
-	 *
-	 * @typeParam TTableName - Table name
-	 * @param table - Table name
-	 * @returns Insert query
+	 * Inserts a record with default values.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @param {TTableName} table - The table name
+	 * @returns {InsertQueryBuilder<TDatabaseSchema, TTableName, InsertResult>} The INSERT query builder
 	 */
 	insertDefault: <TTableName extends keyof TDatabaseSchema & string>(
 		table: TTableName
 	) => InsertQueryBuilder<TDatabaseSchema, TTableName, InsertResult>;
 
 	/**
-	 * Creates a database migrator
-	 *
-	 * @param options - Migrator options
-	 * @returns Migrator instance
+	 * Creates a database migrator.
+	 * 
+	 * @param {MigratorOptions} options - The migrator options
+	 * @returns {Migrator} The migrator instance
 	 */
 	createMigrator: (options: MigratorOptions) => Migrator;
 
+	/** Access to Kysely's dynamic query builder */
+	dynamic: DynamicModule;
+}> {
+	/** The database dialect */
+	dialect: Dialect;
+	/** The Kysely instance */
+	kysely: Kysely<TDatabaseSchema>;
+	/** AsyncLocalStorage for transaction state */
+	asyncLocalDb: AsyncLocalStorage<TransactionState<TDatabaseSchema>>;
+	/** Whether the database is isolated */
+	readonly isolated: boolean;
+	/** Function to log database events */
+	readonly log?: (event: LogEvent) => void;
+	/** Whether to enable debug mode */
+	readonly debug?: boolean;
+	/** Model registry */
+	_modelRegistry?: RegistryType;
+
 	/**
-	 * Access to Kysely's dynamic query builder
+	 * Checks if the database is using SQLite dialect.
+	 * 
+	 * @returns {boolean} True if using SQLite dialect
 	 */
+	isSqlite: () => boolean;
+
+	/**
+	 * Checks if the database is using MySQL dialect.
+	 * 
+	 * @returns {boolean} True if using MySQL dialect
+	 */
+	isMysql: () => boolean;
+
+	/**
+	 * Checks if the database is using PostgreSQL dialect.
+	 * 
+	 * @returns {boolean} True if using PostgreSQL dialect
+	 */
+	isPostgres: () => boolean;
+
+	/**
+	 * Creates a model for the specified table.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @typeParam TIdColumnName - The ID column name type
+	 * @param {TTableName} table - The table name
+	 * @param {TIdColumnName} id - The ID column name
+	 * @param {ModelSchema<TDatabaseSchema[TTableName]>} [schema] - Optional schema definition
+	 * @param {typeof NoResultError} [error] - Optional error to throw when not found
+	 * @returns {ReturnType<typeof createModel<TDatabaseSchema, TTableName, TIdColumnName>>} The created model instance
+	 */
+	model: <
+		TTableName extends keyof TDatabaseSchema & string,
+		TIdColumnName extends keyof TDatabaseSchema[TTableName] & string,
+	>(
+		table: TTableName,
+		id: TIdColumnName,
+		schema?: ModelSchema<TDatabaseSchema[TTableName]>,
+		error?: typeof NoResultError
+	) => ReturnType<typeof createModel<TDatabaseSchema, TTableName, TIdColumnName>>;
+
+	/**
+	 * Registers multiple models.
+	 * 
+	 * @param {RegistryType} registry - The model registry
+	 * @returns {Database<TDatabaseSchema, RegistryType>} The database instance
+	 */
+	registerModels: (registry: RegistryType) => Database<TDatabaseSchema, RegistryType>;
+
+	/**
+	 * Gets a registered model by table name.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @param {TTableName} table - The table name
+	 * @returns {ReturnType<Database<TDatabaseSchema, RegistryType>['model']>} The model instance
+	 * @throws {Error} When model is not registered
+	 */
+	getModel: <TTableName extends keyof RegistryType & string>(
+		table: TTableName
+	) => ReturnType<Database<TDatabaseSchema, RegistryType>['model']>;
+
+	/**
+	 * Access to Kysely's SQL function builder.
+	 * 
+	 * @returns {typeof Kysely.prototype.fn} The SQL function builder
+	 */
+	fn: () => typeof Kysely.prototype.fn;
+
+	/**
+	 * Checks if currently in a transaction.
+	 * 
+	 * @returns {boolean} True if in a transaction
+	 */
+	isTransaction: () => boolean;
+
+	/**
+	 * Gets the current database instance.
+	 * 
+	 * @returns {Kysely<TDatabaseSchema>} The current database instance
+	 */
+	db: () => Kysely<TDatabaseSchema>;
+
+	/**
+	 * Creates a SELECT query for a table.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @param {TTableName} table - The table name
+	 * @returns {SelectQueryBuilder<TDatabaseSchema, any, any>} The SELECT query builder
+	 */
+	selectFrom: <TTableName extends keyof TDatabaseSchema & string>(
+		table: TTableName
+	) => SelectQueryBuilder<TDatabaseSchema, any, any>;
+
+	/**
+	 * Creates an INSERT query for a table.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @param {TTableName} table - The table name
+	 * @returns {InsertQueryBuilder<TDatabaseSchema, TTableName, InsertResult>} The INSERT query builder
+	 */
+	insertInto: <TTableName extends keyof TDatabaseSchema & string>(
+		table: TTableName
+	) => InsertQueryBuilder<TDatabaseSchema, TTableName, InsertResult>;
+
+	/**
+	 * Creates an UPDATE query for a table.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @param {TTableName} table - The table name
+	 * @returns {UpdateQueryBuilder<TDatabaseSchema, any, any, UpdateResult>} The UPDATE query builder
+	 */
+	updateTable: <TTableName extends keyof TDatabaseSchema & string>(
+		table: TTableName
+	) => UpdateQueryBuilder<TDatabaseSchema, any, any, UpdateResult>;
+
+	/**
+	 * Creates a DELETE query for a table.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @param {TTableName} table - The table name
+	 * @returns {DeleteQueryBuilder<TDatabaseSchema, any, DeleteResult>} The DELETE query builder
+	 */
+	deleteFrom: <TTableName extends keyof TDatabaseSchema & string>(
+		table: TTableName
+	) => DeleteQueryBuilder<TDatabaseSchema, any, DeleteResult>;
+
+	/**
+	 * Creates a WITH clause for a query.
+	 * 
+	 * @typeParam TName - The CTE name type
+	 * @typeParam TExpression - The CTE expression type
+	 * @param {TName} name - The CTE name
+	 * @param {TExpression} expression - The CTE expression
+	 * @returns {any} Query builder with WITH clause
+	 */
+	with: <
+		TName extends string,
+		TExpression extends CommonTableExpression<TDatabaseSchema, TName>,
+	>(
+		name: TName,
+		expression: TExpression
+	) => any;
+
+	/**
+	 * Destroys the database connection.
+	 * 
+	 * @returns {ReturnType<Kysely<TDatabaseSchema>['destroy']>} Promise that resolves when connection is destroyed
+	 */
+	destroy: () => ReturnType<Kysely<TDatabaseSchema>['destroy']>;
+
+	/**
+	 * Executes a function in a transaction.
+	 * 
+	 * @typeParam TResultType - The result type
+	 * @param {TransactionCallback<TDatabaseSchema, TResultType>} callback - The transaction callback
+	 * @returns {Promise<TResultType>} Promise that resolves with the transaction result
+	 */
+	transaction: <TResultType>(
+		callback: TransactionCallback<TDatabaseSchema, TResultType>
+	) => Promise<TResultType>;
+
+	/**
+	 * Executes a SELECT query without a FROM clause.
+	 * Useful for retrieving constants and system values.
+	 * 
+	 * @returns {ReturnType<Kysely<TDatabaseSchema>['selectNoFrom']>} Query builder with selected constant values
+	 */
+	selectNoFrom: () => ReturnType<Kysely<TDatabaseSchema>['selectNoFrom']>;
+
+	/**
+	 * Creates a tuple for comparison in SQL queries.
+	 * 
+	 * @typeParam ItemTypes - The tuple item types
+	 * @param {readonly [...ItemTypes]} items - The tuple items
+	 * @returns {(expressionBuilder: unknown) => unknown} Tuple expression builder function
+	 * @throws {Error} When tuple has less than 1 or more than 5 items
+	 * 
+	 * @example
+	 * ```ts
+	 * db.selectFrom('users')
+	 *   .where(eb =>
+	 *     eb.tuple('name', 'email').eq(db.tuple(['John', 'john@example.com'])(eb))
+	 *   )
+	 * ```
+	 */
+	tuple: <ItemTypes extends unknown[]>(
+		items: readonly [...ItemTypes]
+	) => (expressionBuilder: unknown) => unknown;
+
+	/**
+	 * Casts a value to a specific SQL type.
+	 * 
+	 * @typeParam ResultType - The type to cast to
+	 * @param {unknown} value - The value to cast
+	 * @param {string} dataType - The SQL data type to cast to
+	 * @returns {ReturnType<typeof sql<ResultType>>} The cast SQL expression
+	 * 
+	 * @example
+	 * ```ts
+	 * // Cast a string to an integer
+	 * const numericValue = db.cast<number>('123', 'INTEGER');
+	 * ```
+	 */
+	cast: <ResultType>(
+		value: unknown,
+		dataType: string
+	) => ReturnType<typeof sql<ResultType>>;
+
+	/**
+	 * Updates a single column in a table.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @typeParam ColumnName - The column name type
+	 * @param {TTableName} table - The table name
+	 * @param {ColumnName} column - The column name
+	 * @param {TDatabaseSchema[TTableName][ColumnName]} value - The new value
+	 * @returns {UpdateQueryBuilder<TDatabaseSchema, any, any, UpdateResult>} The UPDATE query builder
+	 * 
+	 * @example
+	 * ```ts
+	 * await db.updateColumn('users', 'status', 'active')
+	 *   .where('id', '=', userId)
+	 *   .execute();
+	 * ```
+	 */
+	updateColumn: <
+		TTableName extends keyof TDatabaseSchema & string,
+		ColumnName extends keyof TDatabaseSchema[TTableName] & string,
+	>(
+		table: TTableName,
+		column: ColumnName,
+		value: TDatabaseSchema[TTableName][ColumnName]
+	) => UpdateQueryBuilder<TDatabaseSchema, any, any, UpdateResult>;
+
+	/**
+	 * Creates a query for streaming results from a table.
+	 * Currently only supported with SQLite dialect.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @typeParam ColumnName - The column name type
+	 * @param {TTableName} table - The table name
+	 * @param {readonly ColumnName[]} columns - The columns to select
+	 * @returns {SelectQueryBuilder<TDatabaseSchema, any, any>} Select query builder configured for streaming
+	 * @throws {Error} When used with non-SQLite dialect
+	 * 
+	 * @example
+	 * ```ts
+	 * const stream = await db.streamFrom('users', ['id', 'name', 'email'])
+	 *   .where('status', '=', 'active')
+	 *   .stream();
+	 * ```
+	 */
+	streamFrom: <
+		TTableName extends keyof TDatabaseSchema & string,
+		ColumnName extends keyof TDatabaseSchema[TTableName] & string,
+	>(
+		table: TTableName,
+		columns: readonly ColumnName[]
+	) => SelectQueryBuilder<TDatabaseSchema, any, any>;
+
+	/**
+	 * Finds records where a specified column is not null.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @typeParam ColumnName - The column name type
+	 * @param {TTableName} table - The table name
+	 * @param {ColumnName} column - The column name
+	 * @returns {SelectQueryBuilder<TDatabaseSchema, any, any>} Query builder for records with non-null values
+	 * 
+	 * @example
+	 * ```ts
+	 * // Find all users with a non-null email address
+	 * const users = await db.findNotNull('users', 'email').execute();
+	 * ```
+	 */
+	findNotNull: <
+		TTableName extends keyof TDatabaseSchema & string,
+		ColumnName extends keyof TDatabaseSchema[TTableName] & string,
+	>(
+		table: TTableName,
+		column: ColumnName
+	) => SelectQueryBuilder<TDatabaseSchema, any, any>;
+
+	/**
+	 * Inserts a record with default values.
+	 * 
+	 * @typeParam TTableName - The table name type
+	 * @param {TTableName} table - The table name
+	 * @returns {InsertQueryBuilder<TDatabaseSchema, TTableName, InsertResult>} The INSERT query builder
+	 */
+	insertDefault: <TTableName extends keyof TDatabaseSchema & string>(
+		table: TTableName
+	) => InsertQueryBuilder<TDatabaseSchema, TTableName, InsertResult>;
+
+	/**
+	 * Creates a database migrator.
+	 * 
+	 * @param {MigratorOptions} options - The migrator options
+	 * @returns {Migrator} The migrator instance
+	 */
+	createMigrator: (options: MigratorOptions) => Migrator;
+
+	/** Access to Kysely's dynamic query builder */
 	dynamic: DynamicModule;
 }
 
 /**
  * Creates a new Database instance.
  *
- * @template TDatabaseSchema - The database schema type
- * @template RegistryType - The model registry type
+ * @typeParam TDatabaseSchema - The database schema type
+ * @typeParam RegistryType - The model registry type
  * @param {DatabaseConfig<TDatabaseSchema>} config - The database configuration
  * @returns {Database<TDatabaseSchema, RegistryType>} A new database instance
  */
