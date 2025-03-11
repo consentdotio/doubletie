@@ -37,6 +37,7 @@ We're actively working on additional packages to complete the toolkit:
 ## Development
 
 Prerequisites:
+
 - Node.js >= 18
 - pnpm >= 8
 
@@ -64,10 +65,14 @@ Traditional backend frameworks focus on building monolithic applications. Double
 - 🔐 Better data privacy through self-hosting
 - 📦 Easier integration of backend services into existing applications
 
+## Authors
+
+**Christopher Burns** ([@burnedchris](https://x.com/burnedchris))
+
 ## Contributing
 
 We welcome contributions! See our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ## License
 
-MIT License - see LICENSE file for details 
+MIT License - see LICENSE file for details
