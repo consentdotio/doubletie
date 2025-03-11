@@ -95,8 +95,8 @@ describe('Pagination - Integration Tests', () => {
 			.execute();
 
 		// Create model with proper type casting for integration testing
-		ProductModel = createModel<TestDB, 'products', 'id'>(
-			db as unknown as Database<TestDB, ModelRegistry<TestDB>>,
+		ProductModel = createModel(
+			db as unknown as Database<TestDB>,
 			'products',
 			'id'
 		);
