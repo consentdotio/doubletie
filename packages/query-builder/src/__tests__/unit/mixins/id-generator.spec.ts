@@ -1,17 +1,21 @@
-import type { InsertObject } from 'kysely';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createModelWithIdGenerator } from '../../fixtures/mixins-helpers';
-import { MockFn } from '../../fixtures/mock-db';
-import { IdGeneratorTestDB } from '../../fixtures/test-db-types';
+import { MockFn, createModelWithIdGenerator } from '../../fixtures/mock-db';
 
-// Create a type alias for compatibility
-type InsertObjectOrList<TDatabase, TTable extends keyof TDatabase> =
-	| InsertObject<TDatabase, TTable>
-	| InsertObject<TDatabase, TTable>[];
-
-// Use the shared IdGeneratorTestDB type
-type TableName = 'users' | 'posts';
-type DatabaseSchema = IdGeneratorTestDB;
+/**
+ * Test database for ID generator functionality
+ */
+export interface IdGeneratorTestDB {
+	users: {
+		id: string | number;
+		name: string;
+		email: string;
+	};
+	posts: {
+		id: string;
+		title: string;
+		content: string;
+	};
+}
 
 describe('ID Generator Mixin - Unit', () => {
 	// Mock model setup

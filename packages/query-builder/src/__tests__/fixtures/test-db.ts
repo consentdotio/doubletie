@@ -1,7 +1,8 @@
 //@ts-ignore
 import { SQLite } from 'better-sqlite3';
 import { Kysely, type LogEvent, SqliteDialect } from 'kysely';
-import { type Database, createDatabase } from '../../database';
+import { createDatabase } from '../../database';
+import type { Database } from '../../database.types';
 import { cleanupDatabase, initializeDatabase } from './migration';
 
 // Define TestDB types here

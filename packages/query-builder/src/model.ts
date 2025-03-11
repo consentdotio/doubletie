@@ -22,7 +22,8 @@ import {
 	sql,
 } from 'kysely';
 
-import type { Database, TransactionCallback } from './database';
+import type { Database, TransactionCallback } from './database.types';
+
 import { ExtractRawTypeFromReferenceExpression } from './utils/kysley-types';
 import type {
 	FieldDefinition,

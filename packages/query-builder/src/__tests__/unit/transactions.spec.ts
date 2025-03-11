@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Database } from '../../database';
+import type { Database } from '../../database.types';
 import { createModel } from '../../model';
 import { MockFn, createMockDatabase } from '../fixtures/mock-db';
 

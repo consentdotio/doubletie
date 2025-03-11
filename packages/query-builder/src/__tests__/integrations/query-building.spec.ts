@@ -1,12 +1,8 @@
 import { sql } from 'kysely';
-import type { Kysely } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Database, ModelRegistry } from '../../database';
 import { createModel } from '../../model';
 import {
-	Articles,
 	DB,
-	Users,
 	cleanupDatabase,
 	initializeDatabase,
 	db as testDb,

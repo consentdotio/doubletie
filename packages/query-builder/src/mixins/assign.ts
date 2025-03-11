@@ -1,9 +1,4 @@
 import type { Selectable } from 'kysely';
-/**
- * Provides data assignment functionality for models
- *
- * @module assign
- */
 import type { ModelFunctions } from '../model';
 import { DrainOuterGeneric } from '../utils/type-utils';
 

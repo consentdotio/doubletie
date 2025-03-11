@@ -1,12 +1,3 @@
-import type {
-	InsertObject,
-	OperandValueExpressionOrList,
-	SelectExpression,
-	SelectType,
-	Selectable,
-	UpdateObject,
-} from 'kysely';
-
 /**
  * Slug generation mixin for models
  *
@@ -16,7 +7,17 @@ import slugify from 'url-slug';
 import type { ModelFunctions } from '../model';
 import { DrainOuterGeneric } from '../utils/type-utils';
 
-// Type alias for insert objects or arrays of insert objects
+import type {
+	InsertObject,
+	OperandValueExpressionOrList,
+	SelectType,
+	Selectable,
+	UpdateObject,
+} from 'kysely';
+
+/**
+ * Type alias for insert objects or arrays of insert objects
+ */
 type InsertObjectOrList<TDatabase, TTableName extends keyof TDatabase> =
 	| InsertObject<TDatabase, TTableName>
 	| Array<InsertObject<TDatabase, TTableName>>;

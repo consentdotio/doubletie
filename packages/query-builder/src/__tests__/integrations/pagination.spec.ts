@@ -1,7 +1,6 @@
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ModelRegistry } from '../../database';
-import { Database } from '../../database';
+import { Database } from '../../database.types';
 import { createModel } from '../../model';
 
 interface TestDB {

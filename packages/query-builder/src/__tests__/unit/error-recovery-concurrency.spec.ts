@@ -1,6 +1,5 @@
-import type { Transaction } from 'kysely';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Database } from '../../database';
+import type { Database } from '../../database.types';
 import { createModel } from '../../model';
 import type { ModelFunctions } from '../../model';
 

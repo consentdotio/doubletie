@@ -1,15 +1,5 @@
 import { OrderByDirectionExpression, type Selectable, sql } from 'kysely';
-
-/**
- * Provides cursor-based pagination functionality for models
- *
- * This module implements relay-style cursor pagination with support for
- * forward and backward navigation through result sets.
- *
- * @module cursorable
- */
 import type { ModelFunctions } from '../model';
-
 /**
  * Configuration options for how a column should be sorted in cursor pagination.
  *

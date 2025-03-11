@@ -1,6 +1,5 @@
-import type { Kysely, SelectQueryBuilder } from 'kysely';
 import { describe, expect, it, vi } from 'vitest';
-import type { Database } from '../../database';
+import type { Database } from '../../database.types';
 import { createModel } from '../../model';
 
 // Define test database type

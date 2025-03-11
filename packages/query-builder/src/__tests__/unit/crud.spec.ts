@@ -1,15 +1,7 @@
 import type { DeleteResult, UpdateResult } from 'kysely';
 import { describe, expect, it, vi } from 'vitest';
-import type { Database } from '../../database';
-import { createModel } from '../../model';
 import {
-	type TestMockDatabase,
 	createMockDatabase,
-	createMockDeleteChain,
-	createMockInsertChain,
-	createMockReturnThis,
-	createMockSelectChain,
-	createMockUpdateChain,
 	createTestData,
 	toSqliteDate,
 } from '../fixtures/mock-db';

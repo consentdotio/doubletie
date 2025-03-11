@@ -1,4 +1,4 @@
-import type { OperandValueExpressionOrList, SelectType, SqlBool } from 'kysely';
+import type { OperandValueExpressionOrList, SelectType } from 'kysely';
 
 import type { ModelFunctions, UpdateObjectExpression } from '../model';
 

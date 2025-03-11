@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { beforeEach, vi } from 'vitest';
-import type { Database } from '../../database';
+import type { Database } from '../../database.types';
 import type { ModelFunctions } from '../../model';
 import { createModel } from '../../model';
 

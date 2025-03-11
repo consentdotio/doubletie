@@ -1,12 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Database } from '../../../database';
 import { withGlobalId } from '../../../mixins/global-id';
 import { createModel } from '../../../model';
-import {
-	MockFn,
-	createMockDatabase,
-	createMockReturnThis,
-} from '../../fixtures/mock-db';
+import { MockFn, createMockDatabase } from '../../fixtures/mock-db';
 
 describe('unit: Global ID mixin', () => {
 	// Define test database types and model

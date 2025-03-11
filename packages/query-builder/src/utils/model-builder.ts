@@ -5,7 +5,6 @@ import type { RelationType } from '../constants/relation-type';
  *
  * @module model-builder
  */
-import type { ModelRegistry } from '../database';
 import type {
 	ModelExtensions,
 	ModelSchema,

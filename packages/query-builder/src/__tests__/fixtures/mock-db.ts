@@ -6,22 +6,14 @@
  */
 
 import {
-	DeleteResult,
-	ExpressionBuilder,
-	InsertQueryBuilder,
-	Kysely,
-	OperandValueExpressionOrList,
 	OrderByDirectionExpression,
 	ReferenceExpression,
 	SelectExpression,
-	SelectQueryBuilder,
-	UpdateResult,
 } from 'kysely';
 import { vi } from 'vitest';
-import type { MockInstance } from 'vitest';
-import { Database } from '../../database';
-import { ModelRegistry } from '../../database';
-import type { IdGeneratorOptions } from '../../mixins/id-generator';
+import type { Database } from '../../database.types';
+import type { ModelRegistry } from '../../database.types';
+import { withIdGenerator } from '../../mixins/id-generator';
 import { createModel } from '../../model';
 
 // Define helper types for mocks
@@ -33,11 +25,6 @@ export type MockFn = ReturnType<typeof vi.fn> & {
 
 export type MockReturnThis = MockFn & { mockReturnThis: () => MockReturnThis };
 
-export function createMockFn(implementation?: (...args: any[]) => any): MockFn {
-	const mockFn = vi.fn(implementation) as MockFn;
-	return mockFn;
-}
-
 /**
  * Create a mock function that returns itself, useful for chainable method mocks
  */
@@ -46,47 +33,6 @@ export function createMockReturnThis(): MockReturnThis {
 	fn.mockReturnThis = () => fn;
 	fn.mockReturnThis();
 	return fn;
-}
-
-/**
- * Common database types that can be reused in tests
- */
-export interface BaseTestDB {
-	users: {
-		id: number;
-		name: string;
-		email: string;
-		createdAt?: string;
-		updatedAt?: string;
-	};
-}
-
-/**
- * Extended test database type with more common tables
- */
-export interface ExtendedTestDB extends BaseTestDB {
-	posts: {
-		id: number;
-		title: string;
-		content: string;
-		user_id: number;
-		published: boolean;
-		created_at: Date;
-	};
-	comments: {
-		id: number;
-		user_id: number;
-		post_id: number;
-		content: string;
-	};
-	categories: {
-		id: number;
-		name: string;
-	};
-	post_categories: {
-		post_id: number;
-		category_id: number;
-	};
 }
 
 /**
@@ -778,14 +724,84 @@ export function createMockModel<
 	);
 }
 
+/**
+ * Options for creating a mock model with the ID generator mixin
+ */
+export interface IdGeneratorMixinOptions {
+	prefix: string;
+	fieldName?: string;
+	autoGenerate?: boolean;
+	idColumn?: string;
+}
+
+/**
+ * Creates a model with the ID generator mixin applied
+ *
+ * @param tableName - The table name for the model
+ * @param idField - The ID field name for the model
+ * @param options - Options for the ID generator mixin
+ * @returns A model with the ID generator mixin applied
+ */
 export function createModelWithIdGenerator<
-	TDatabase extends Record<string, any>,
-	TTableName extends keyof TDatabase & string,
-	TIdColumn extends keyof TDatabase[TTableName] & string,
+	TDatabase extends Record<string, any> = any,
+	TTableName extends keyof TDatabase & string = string,
+	TIdField extends keyof TDatabase[TTableName] & string = string,
 >(
 	tableName: TTableName,
-	idColumn: TIdColumn,
-	options: Partial<IdGeneratorOptions> = {}
+	idField: TIdField,
+	options: IdGeneratorMixinOptions = { prefix: 'id' }
 ) {
-	// ... existing code ...
+	// Create mock database
+	const mockDb = createMockDatabaseWithTransaction();
+
+	// Set up executeTakeFirst for ID generation
+	mockDb.executeTakeFirst = vi.fn().mockResolvedValue({ maxId: 42 });
+
+	// Create base model
+	const baseModel = createModel(
+		mockDb as unknown as Database<TDatabase>,
+		tableName,
+		idField
+	) as any;
+
+	// Add processDataBeforeInsert for the mixin to enhance
+	baseModel.processDataBeforeInsert = vi
+		.fn()
+		.mockImplementation((data) => data);
+
+	// Apply ID generator mixin
+	const modelWithIdGenerator = withIdGenerator(
+		baseModel as any,
+		options
+	) as any;
+
+	// For insert tests, mock the executeTakeFirst to return objects with string IDs
+	// This needs to happen after the model is created
+	if (mockDb.executeTakeFirst) {
+		// Handle the case with prefix
+		const prefix = options.prefix || 'id';
+		mockDb.executeTakeFirst = vi.fn().mockImplementation((query) => {
+			// For findById queries, return an object with the ID field
+			return Promise.resolve({
+				id: prefix ? `${prefix}_123` : '_123',
+				name: 'Test User',
+			});
+		});
+	}
+
+	// Mock the insertWithGeneratedId method to return consistent test values
+	modelWithIdGenerator.insertWithGeneratedId = vi
+		.fn()
+		.mockImplementation((data) => {
+			return Promise.resolve({
+				name: data.name || 'Test User',
+				...data,
+				id: `${options.prefix}_123`,
+			});
+		});
+
+	return {
+		model: modelWithIdGenerator,
+		mockDb,
+	};
 }

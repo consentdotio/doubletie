@@ -16,14 +16,7 @@ export {
 // Export the main classes, types and utilities
 export { createDatabase } from './database';
 
-export type {
-	Database,
-	DatabaseConfig,
-	MigratorOptions,
-	ModelRegistry,
-	TransactionCallback,
-	TransactionResponse,
-} from './database';
+export * from './database.types';
 
 export * from './model';
 
