@@ -1,17 +1,28 @@
 //@ts-ignore
-import SQLite from 'better-sqlite3';
-import { ColumnType, Kysely, SqliteDialect } from 'kysely';
-import { Database, ModelRegistry } from '../../database.js'; // Adjust the import path as necessary
+import { SQLite } from 'better-sqlite3';
+import { Kysely, type LogEvent, SqliteDialect } from 'kysely';
+import { type Database, createDatabase } from '../../database.js';
 import { cleanupDatabase, initializeDatabase } from './migration.js';
 
-export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
-	? ColumnType<S, I | undefined, U>
-	: ColumnType<T, T | undefined, T>;
+// Define TestDB types here
+export type Generated<T> = T extends TestColumnType<infer S, infer I, infer U>
+	? TestColumnType<S, I | undefined, U>
+	: TestColumnType<T, T | undefined, T>;
 
-export type Timestamp = ColumnType<Date, Date | string, Date | string>;
+export type Timestamp = TestColumnType<Date, Date | string, Date | string>;
 
-// Define the database interface
-interface TestDB {
+// Define custom ColumnType to avoid import conflicts
+interface TestColumnType<S, I, U> {
+	/** The data type in the database. */
+	dataType: S;
+	/** The data type in the insert/update statements. */
+	inputType: I;
+	/** The data type in the select statements. */
+	outputType: U;
+}
+
+// Define test database schema
+export interface TestDB {
 	users: {
 		id: Generated<string>;
 		email: string;
@@ -66,11 +77,8 @@ export async function teardownTestDatabase(db: Kysely<TestDB>) {
 	await db.destroy();
 }
 
-// Export the TestDB interface for use in tests
-export type { TestDB };
-
 /**
- * Sets up a real in-memory SQLite database for e2e tests.
+ * Sets up a real database for testing
  * It initializes the database schema using the migration functions.
  */
 export async function setupRealDatabase() {
@@ -78,11 +86,11 @@ export async function setupRealDatabase() {
 
 	const dialect = new SqliteDialect({ database: sqlite });
 
-	const database = new Database<TestDB>({
+	const database = createDatabase<TestDB>({
 		dialect,
 		isolated: true,
 		debug: true,
-		log: (event) => console.log(event),
+		log: (event: LogEvent) => console.log(event),
 	});
 
 	await initializeDatabase();

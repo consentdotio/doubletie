@@ -13,7 +13,7 @@ describe('integration: Global ID mixin', () => {
 
 	beforeEach(async () => {
 		await initializeDatabase();
-		const baseModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const baseModel = createModel(db, 'users', 'id');
 		UserModel = withGlobalId(baseModel, 'id', 'User');
 	});
 

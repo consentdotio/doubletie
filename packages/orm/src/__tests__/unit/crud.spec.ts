@@ -46,12 +46,7 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 			insertInto: vi.fn().mockReturnValue(mockInsertChain),
 		});
 
-		// Create a model
-		const UserModel = createModel<TestDB, 'users', 'id'>(
-			mockDb as unknown as Database<TestDB>,
-			'users',
-			'id'
-		);
+	
 
 		// Define create user function
 		const createUser = async (userData: any) => {
@@ -102,13 +97,6 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 			selectFrom: vi.fn().mockReturnValue(mockSelectChain),
 		});
 
-		// Create a model
-		const UserModel = createModel<TestDB, 'users', 'id'>(
-			mockDb as unknown as Database<TestDB>,
-			'users',
-			'id'
-		);
-
 		// Define get user function
 		const getUserByEmail = async (email: string) => {
 			return mockDb
@@ -147,12 +135,7 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 			updateTable: vi.fn().mockReturnValue(mockUpdateChain),
 		});
 
-		// Create a model
-		const UserModel = createModel<TestDB, 'users', 'id'>(
-			mockDb as unknown as Database<TestDB>,
-			'users',
-			'id'
-		);
+
 
 		// Define update user function
 		const updateUserName = async (id: number, name: string) => {
@@ -190,13 +173,7 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 		// Override the default implementation
 		(mockDb.deleteFrom as any) = vi.fn().mockReturnValue(mockDeleteChain);
 
-		// Create a model
-		const UserModel = createModel<TestDB, 'users', 'id'>(
-			mockDb as unknown as Database<TestDB>,
-			'users',
-			'id'
-		);
-
+	
 		// Define delete user function
 		const deleteUser = async (id: number) => {
 			return mockDb.deleteFrom('users').where('id', '=', id).execute();
@@ -239,12 +216,6 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 			.fn()
 			.mockReturnValue(mockUpdateColumnChain);
 
-		// Create a model
-		const UserModel = createModel<TestDB, 'users', 'id'>(
-			mockDb as unknown as Database<TestDB>,
-			'users',
-			'id'
-		);
 
 		// Test direct column update
 		await mockDb
@@ -311,12 +282,6 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 			selectFrom: vi.fn().mockReturnValue(mockSelectChain),
 		});
 
-		// Create a model
-		const UserModel = createModel<TestDB, 'users', 'id'>(
-			mockDb as unknown as Database<TestDB>,
-			'users',
-			'id'
-		);
 
 		// Define a pagination function
 		const getUsers = async (cursor: string | null, limit: number) => {

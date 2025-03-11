@@ -14,8 +14,8 @@ describe('integration: slug mixin', () => {
 
 	beforeEach(async () => {
 		await initializeDatabase();
-		const baseModel = createModel<DB, 'articles', 'id'>(db, 'articles', 'id');
-		const slugMixin = withSlug<DB, 'articles', 'id'>(
+		const baseModel = createModel(db, 'articles', 'id');
+		const slugMixin = withSlug(
 			baseModel,
 			'slug',
 			'title'

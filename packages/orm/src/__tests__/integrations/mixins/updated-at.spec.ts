@@ -115,7 +115,7 @@ describe('integration: updatedAt mixin', () => {
 	});
 
 	it('should work with other mixins', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 
 		// Create a mixin that modifies the status
 		const addProcessedStatus = (model: typeof UserModel) => {

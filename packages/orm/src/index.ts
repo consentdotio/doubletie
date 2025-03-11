@@ -14,11 +14,15 @@ export {
 } from 'kysely';
 
 // Export the main classes, types and utilities
-export {
+export { createDatabase } from './database.js';
+
+export type {
 	Database,
-	type DatabaseConfig,
-	type MigratorOptions,
-	type ModelRegistry,
+	DatabaseConfig,
+	MigratorOptions,
+	ModelRegistry,
+	TransactionCallback,
+	TransactionResponse,
 } from './database.js';
 
 export * from './model.js';

@@ -55,7 +55,7 @@ describe('unit: transaction handling', () => {
 		});
 
 		// Create model with mock db
-		model = createModel<TestDB, 'users', 'id'>(
+		model = createModel(
 			mockDb as unknown as Database<TestDB>,
 			'users',
 			'id'

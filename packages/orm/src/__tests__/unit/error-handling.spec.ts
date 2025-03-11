@@ -37,7 +37,7 @@ describe('Error Handling - Unit Tests', () => {
 	};
 
 	// Create a model with the mock database
-	const UserModel = createModel<TestDB, 'users', 'id'>(
+	const UserModel = createModel(
 		mockDb as unknown as Database<TestDB>,
 		'users',
 		'id'

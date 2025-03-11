@@ -19,7 +19,7 @@ describe('unit: pagination functionality', () => {
 	}
 
 	let mockDb: TestMockDatabase<TestDB>;
-	let userModel: ReturnType<typeof createModel<TestDB, 'users', 'id'>> & {
+	let userModel: ReturnType<typeof createModel> & {
 		paginate: any;
 		paginateByPage: any;
 		paginateWithCursor: any;
@@ -47,7 +47,7 @@ describe('unit: pagination functionality', () => {
 		// Create model with mock db
 		userModel = createModel<TestDB, 'users', 'id'>(
 			mockDb as any,
-			'users',
+		'users',
 			'id'
 		) as any;
 

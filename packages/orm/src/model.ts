@@ -1,43 +1,31 @@
-/**
- * Functional model factory that creates database model operations
- *
- * @typeParam DatabaseSchema - Database schema type
- * @typeParam TableName - Table name in the database
- * @typeParam IdColumnName - Name of the ID column
- *
- * @param db - Database instance
- * @param table - Table name
- * @param id - Primary key column name
- * @param noResultError - Error to throw when no result is found
- * @returns Object with model operations
- */
-
 import {
 	type DeleteQueryBuilder,
 	type DeleteResult,
+	type DynamicModule,
+	type ExpressionBuilder,
+	type ExpressionOrFactory,
 	type InsertQueryBuilder,
+	type Kysely,
 	NoResultError,
 	type OnConflictDatabase,
 	type OnConflictTables,
+	type ReferenceExpression,
 	type SelectQueryBuilder,
 	type SelectType,
 	type Selectable,
+	type SqlBool,
 	type UpdateQueryBuilder,
 	type UpdateResult,
+	sql,
 } from 'kysely';
 
-import { sql } from 'kysely';
-import type {
-	ExpressionBuilder,
-	InsertObject,
-	InsertResult,
-	UpdateObject,
-} from 'kysely';
+import type { ExpressionWrapper, InsertObject, InsertResult, OperandExpression, OperandValueExpressionOrList, QueryNode, UpdateObject, ValueExpression } from 'kysely';
 import type { Database, TransactionCallback } from './database.js';
 import type {
 	FieldDefinition,
 	RelationDefinition,
 } from './utils/model-builder.js';
+import { ExtractRawTypeFromReferenceExpression } from 'utils/kysley-types.js';
 
 /*
 this type is not exported from kysely, so we need to define it here
@@ -58,7 +46,7 @@ export type SqlLiteral = string | number | boolean | Date | null | Buffer;
  * SQL expression type
  * Represents a complex SQL expression that will be processed by Kysely
  */
-export type SqlExpression = unknown;
+export type SqlExpression = any;
 
 /**
  * Core model functions that provide CRUD operations and utilities for database tables
@@ -288,7 +276,7 @@ export type ModelFunctions<
 	 * ```
 	 */
 	withExpressionLimit: (
-		expr: any
+		expr: ValueExpression<DatabaseSchema, TableName, number | bigint>
 	) => SelectQueryBuilder<DatabaseSchema, TableName, Record<string, never>>;
 };
 
@@ -345,6 +333,8 @@ export type UpdateObjectExpression<
 	TDatabase,
 	TTableName extends keyof TDatabase,
 > = UpdateObject<TDatabase, TTableName>;
+
+
 
 /**
  * Creates a model with database operations
@@ -443,17 +433,22 @@ export function createModel<
 
 		return selectFrom()
 			.selectAll()
-			.where(db.dynamic.ref(`${table}.${column}`), isArray ? 'in' : '=', values)
+			.where((eb) => {
+				const columnRef = eb.ref(`${table}.${column}`);
+				return isArray
+					? eb.and([eb(columnRef, 'in', values as any)])
+					: eb.and([eb(columnRef, '=', values as any)]);
+			})
 			.$if(
 				!!func,
 				(qb) =>
 					func?.(
-						qb as unknown as SelectQueryBuilder<
+						qb as SelectQueryBuilder<
 							TDatabase,
 							TTableName,
 							Record<string, never>
 						>
-					) as unknown as typeof qb
+					) || qb
 			)
 			.execute();
 	};
@@ -464,38 +459,33 @@ export function createModel<
 		func?: (
 			qb: SelectQueryBuilder<TDatabase, TTableName, Record<string, never>>
 		) => SelectQueryBuilder<TDatabase, TTableName, Record<string, never>>
-	) => {
+	): Promise<Selectable<TTable> | undefined> => {
 		return selectFrom()
 			.selectAll()
-			.where(db.dynamic.ref(`${table}.${column}`), '=', value)
-			.$if(
-				!!func,
-				(qb) =>
-					func?.(
-						qb as unknown as SelectQueryBuilder<
-							TDatabase,
-							TTableName,
-							Record<string, never>
-						>
-					) as unknown as typeof qb
-			)
-			.executeTakeFirst();
+			.where((eb) => eb(eb.ref(`${table}.${column}`), '=', value as OperandValueExpressionOrList<TDatabase, TTableName, ExpressionWrapper<TDatabase, TTableName, SelectType<ExtractRawTypeFromReferenceExpression<TDatabase, TTableName, `${TTableName}.${TColumnName}`, unknown>>>>))
+			.$if(!!func, (qb) => {
+				const result = func?.(
+					qb as SelectQueryBuilder<TDatabase, TTableName, Record<string, never>>
+				);
+				return result || qb;
+			})
+			.executeTakeFirst() as Promise<Selectable<TTable> | undefined>;
 	};
 
 	const findById = (
-		idValue: Readonly<SelectType<TDatabase[TTableName][TIdColumnName]>>,
+		idValue: OperandValueExpressionOrList<TDatabase, TTableName, ExpressionWrapper<TDatabase, TTableName, SelectType<ExtractRawTypeFromReferenceExpression<TDatabase, TTableName, `${TTableName}.${TIdColumnName}`, unknown>>>>,
 		func?: (
 			qb: SelectQueryBuilder<TDatabase, TTableName, Record<string, never>>
 		) => SelectQueryBuilder<TDatabase, TTableName, Record<string, never>>,
 		options?: { throwIfNotFound?: boolean; error?: typeof NoResultError }
-	) => {
+	): Promise<Selectable<TTable> | undefined> => {
 		const { throwIfNotFound = false, error = noResultError } = options || {};
 
 		if (!throwIfNotFound) {
-			// Cast the ID column to a compatible type for findOne
+			// Use a properly typed version of the id parameter
 			return findOne(
-				id as unknown as keyof TTable & string,
-				idValue as unknown as Readonly<
+				id as  keyof TTable & string,
+				idValue as  Readonly<
 					SelectType<TTable[keyof TTable & string]>
 				>,
 				func
@@ -504,19 +494,14 @@ export function createModel<
 
 		return selectFrom()
 			.selectAll()
-			.where(db.dynamic.ref(`${table}.${id}`), '=', idValue)
-			.$if(
-				!!func,
-				(qb) =>
-					func?.(
-						qb as unknown as SelectQueryBuilder<
-							TDatabase,
-							TTableName,
-							Record<string, never>
-						>
-					) as unknown as typeof qb
-			)
-			.executeTakeFirstOrThrow(error);
+			.where((eb) => eb(eb.ref(`${table}.${id}`), '=', idValue ))
+			.$if(!!func, (qb) => {
+				const result = func?.(
+					qb as SelectQueryBuilder<TDatabase, TTableName, Record<string, never>>
+				);
+				return result || qb;
+			})
+			.executeTakeFirstOrThrow(error) as Promise<Selectable<TTable>>;
 	};
 
 	const findByIds = (
@@ -529,7 +514,7 @@ export function createModel<
 	};
 
 	const getById = (
-		idValue: Readonly<SelectType<TDatabase[TTableName][TIdColumnName]>>,
+		idValue: OperandValueExpressionOrList<TDatabase, TTableName, ExpressionWrapper<TDatabase, TTableName, SelectType<ExtractRawTypeFromReferenceExpression<TDatabase, TTableName, `${TTableName}.${TIdColumnName}`, unknown>>>>,
 		func?: (
 			qb: SelectQueryBuilder<TDatabase, TTableName, Record<string, never>>
 		) => SelectQueryBuilder<TDatabase, TTableName, Record<string, never>>,
@@ -541,11 +526,6 @@ export function createModel<
 		});
 	};
 
-	const lit = (value: SqlLiteral): SqlExpression => {
-		// Using any for db.dynamic since the exact type is not available
-		return (db.dynamic as any).lit(value);
-	};
-
 	const cast = <TResultType>(
 		value: SqlLiteral | SqlExpression,
 		dataType: string
@@ -553,20 +533,28 @@ export function createModel<
 		return db.cast<TResultType>(value, dataType);
 	};
 
-	const findByAndConditions = async (
+	const findByAndConditions = async <TTable>(
 		conditions: Record<string, SqlLiteral>
-	) => {
+	): Promise<Selectable<TTable>[]> => {
 		const query = selectFrom()
 			.selectAll()
-			.where((eb) => eb.and(conditions as any));
+			.where((eb) => {
+				// Construct a proper AND condition using column names directly
+				return eb.and(
+					Object.entries(conditions).map(([column, value]) => 
 
-		return query.execute() as unknown as Promise<Selectable<TTable>[]>;
+						eb(column as ReferenceExpression<TDatabase, TTableName>, '=', value)
+					)
+				);
+			});
+
+		return query.execute() as Promise<Selectable<TTable>[]>;
 	};
 
 	const findByTuple = async <TColumnName extends keyof TTable & string>(
 		columns: readonly TColumnName[],
 		values: readonly SqlLiteral[]
-	) => {
+	): Promise<Selectable<TTable>[]> => {
 		if (columns.length !== values.length) {
 			throw new Error('Columns and values arrays must have the same length');
 		}
@@ -575,34 +563,35 @@ export function createModel<
 
 		if (columns.length === 1) {
 			// Simple case - no need for tuples
-			query = query.where(String(columns[0]) as any, '=', values[0]);
-			return query.execute() as unknown as Promise<Selectable<TTable>[]>;
+			query = query.where((eb) => 
+				// Use column name directly
+				eb(columns[0], '=', values[0] as OperandValueExpressionOrList<TDatabase, TTableName, TColumnName>)
+			);
+			return query.execute() as Promise<Selectable<TTable>[]>;
 		}
 
 		if (columns.length === 2) {
 			// Use direct conditions for better performance
-			query = query.where((eb: any) =>
+			query = query.where((eb) => 
 				eb.and([
-					eb(String(columns[0]) as any, '=', values[0]),
-					eb(String(columns[1]) as any, '=', values[1]),
+					eb(columns[0], '=', values[0] as OperandValueExpressionOrList<TDatabase, TTableName, TColumnName>),
+					eb(columns[1], '=', values[1] as OperandValueExpressionOrList<TDatabase, TTableName, TColumnName>)
 				])
 			);
-			return query.execute() as unknown as Promise<Selectable<TTable>[]>;
+			return query.execute() as Promise<Selectable<TTable>[]>;
 		}
 
 		if (columns.length >= 3 && columns.length <= 5) {
 			// For 3-5 columns, use the tuple support in Kysely
-			query = query.where((eb: any) => {
-				// Create an array of column references
-				const columnRefs = [...columns].map((col) =>
-					eb.ref(String(col) as any)
+			query = query.where((eb) => {
+				// Use db.tuple instead of sql.tuple
+				return eb(
+					db.tuple(columns as TColumnName[]) as ReferenceExpression<TDatabase, TTableName>, 
+					'=', 
+					db.tuple(values as readonly SqlLiteral[]) as ReferenceExpression<TDatabase, TTableName>
 				);
-
-				// Use the tuple method to create tuples for both columns and values
-				// In 0.27.0, expression builders have more consistent typings
-				return eb(db.tuple(columnRefs), '=', db.tuple([...values]));
 			});
-			return query.execute() as unknown as Promise<Selectable<TTable>[]>;
+			return query.execute() as Promise<Selectable<TTable>[]>;
 		}
 
 		throw new Error(
@@ -614,13 +603,10 @@ export function createModel<
 		column: TColumnName
 	) => {
 		const qb = selectFrom();
-		return (
-			qb
-				.selectAll()
-				// @ts-expect-error - Will fix when Kysely 0.27.0 upgrade is complete
-				.where((eb) => eb(`${table}.${column}`, 'is not', null))
-				.execute()
-		);
+		return qb
+			.selectAll()
+			.where((eb) => eb(`${table}.${column}`, 'is not', null))
+			.execute();
 	};
 
 	const getByIdForUpdate = async (
@@ -638,56 +624,46 @@ export function createModel<
 
 		if (!result) {
 			// Create the error message safely
-			const errorMessage = `No ${table} found with id ${idValue}`;
-			throw new (error || noResultError)(errorMessage as any);
+			const errorMessage = `No ${table} found with id ${idValue}` as unknown as QueryNode;
+			throw new (error || noResultError)(errorMessage);
 		}
 
 		return result as TData;
 	};
 
-	const withExpressionLimit = (expr: any) => {
+	const withExpressionLimit = (expr: ValueExpression<TDatabase, TTableName, number | bigint>) => {
 		// Create a query with expression-based limit
 		// Cast the return value to make the types compatible
-		return selectFrom().limit(expr) as SelectQueryBuilder<
-			TDatabase,
-			TTableName,
-			Record<string, never>
-		>;
+		return selectFrom().limit(expr) 
+		;
+	};
+
+	// Define lit function that handles SQL literals safely
+	const lit = (value: SqlLiteral): SqlExpression => {
+		// Convert a literal value to an SQL expression
+		return sql`${value}`;
 	};
 
 	// Create and return the model object
 	const model: ModelFunctions<TDatabase, TTableName, TIdColumnName> = {
 		// Database and table references
-		db,
+		db: db as Database<TDatabase>,
 		table,
 		id,
 		noResultError,
-		isolated: false,
+		isolated: db.isolated,
 
 		// Database operations
-		selectFrom: selectFrom as unknown as () => SelectQueryBuilder<
-			TDatabase,
-			TTableName,
-			Record<string, never>
-		>,
-		updateTable: updateTable as unknown as () => UpdateQueryBuilder<
-			TDatabase,
-			TTableName,
-			TTableName,
-			UpdateResult
-		>,
-		insertInto: insertInto,
-		deleteFrom: deleteFrom as unknown as () => DeleteQueryBuilder<
-			TDatabase,
-			TTableName,
-			DeleteResult
-		>,
+		selectFrom: () => selectFrom(),
+		updateTable: () => updateTable(),
+		insertInto,
+		deleteFrom: () => deleteFrom(),
 		transaction: db.transaction.bind(db),
 
 		// Utility methods
 		ref: (reference: string): SqlExpression => {
-			// Using any for db.dynamic since the exact type is not available
-			return (db.dynamic as any).ref(reference);
+			// Kysely has sql.ref for creating references
+			return sql.ref(reference);
 		},
 		lit,
 		cast,
@@ -706,67 +682,63 @@ export function createModel<
 		afterSingleUpsert,
 
 		// Find operations
-		find: find as unknown as ModelFunctions<
-			TDatabase,
-			TTableName,
-			TIdColumnName
-		>['find'],
-		findOne: findOne as unknown as ModelFunctions<
+		find: find as ModelFunctions<TDatabase, TTableName, TIdColumnName>['find'],
+		findOne: findOne as ModelFunctions<
 			TDatabase,
 			TTableName,
 			TIdColumnName
 		>['findOne'],
-		findById: findById as unknown as ModelFunctions<
+		findById: findById as ModelFunctions<
 			TDatabase,
 			TTableName,
 			TIdColumnName
 		>['findById'],
-		findByIds: findByIds as unknown as ModelFunctions<
+		findByIds: findByIds as ModelFunctions<
 			TDatabase,
 			TTableName,
 			TIdColumnName
 		>['findByIds'],
-		getById: getById as unknown as ModelFunctions<
+		getById: getById as ModelFunctions<
 			TDatabase,
 			TTableName,
 			TIdColumnName
 		>['getById'],
 
 		// Additional helper methods
-		findByAndConditions: findByAndConditions as unknown as (
+		findByAndConditions: findByAndConditions as (
 			conditions: Record<string, SqlLiteral>
 		) => Promise<Selectable<TTable>[]>,
-		findByTuple: findByTuple as unknown as ModelFunctions<
+		findByTuple: findByTuple as ModelFunctions<
 			TDatabase,
 			TTableName,
 			TIdColumnName
 		>['findByTuple'],
-		// @ts-expect-error - Will fix when Kysely 0.27.0 upgrade is complete
-		findByNotNull,
 
-		// New direct column update methods (Kysely 0.27.0)
-		//@ts-expect-error
-		updateById: async <
+		findByNotNull: findByNotNull as ModelFunctions<
+			TDatabase,
+			TTableName,
+			TIdColumnName
+		>['findByNotNull'],
+
+		updateById: (async <
 			TColumnName extends keyof TDatabase[TTableName] & string,
 		>(
 			id: Readonly<SelectType<TDatabase[TTableName][TIdColumnName]>>,
 			column: TColumnName,
 			value: TDatabase[TTableName][TColumnName]
-		) => {
+		): Promise<Selectable<TTable>> => {
 			// Use the new single-column set method introduced in Kysely 0.27.0
 			const result = await updateTable()
 				.where(sql`${table}.${id}`, '=', id)
-				//@ts-expect-error
-				.set({ [column]: value })
-				//@ts-expect-error
-				.returning(['*'])
+				.set({ [column]: value } as UpdateObjectExpression<TDatabase, TTableName>)
+				.returningAll()
 				.executeTakeFirst();
 
 			if (result) {
-				return result;
+				return result as Selectable<TTable>;
 			}
 			throw new Error(`Failed to update ${column} for ${table} with id ${id}`);
-		},
+		}) as ModelFunctions<TDatabase, TTableName, TIdColumnName>['updateById'],
 
 		// Row locking methods (Kysely 0.27.1+)
 		getByIdForUpdate,

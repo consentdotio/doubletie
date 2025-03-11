@@ -22,7 +22,7 @@ describe('Integration: CRUD Operations', () => {
 	});
 
 	it('should create a new user', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 		const userData = {
 			email: 'test@example.com',
 			name: 'Test User',
@@ -46,7 +46,7 @@ describe('Integration: CRUD Operations', () => {
 	});
 
 	it('should retrieve user profile by id', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 		const userData = {
 			email: 'profile@example.com',
 			name: 'Profile User',
@@ -73,7 +73,7 @@ describe('Integration: CRUD Operations', () => {
 	});
 
 	it('should update user profile', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 		const userData = {
 			email: 'update@example.com',
 			name: 'Update User',
@@ -108,7 +108,7 @@ describe('Integration: CRUD Operations', () => {
 	});
 
 	it('should create a new post', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 		const userData = {
 			email: 'post_author@example.com',
 			name: 'Post Author',
@@ -147,7 +147,7 @@ describe('Integration: CRUD Operations', () => {
 	});
 
 	it('should retrieve post details by id', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 		const userData = {
 			email: 'post_details_author@example.com',
 			name: 'Post Details Author',
@@ -223,7 +223,7 @@ describe('Integration: CRUD Operations', () => {
 	});
 
 	it('should delete a post', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 		const userData = {
 			email: 'post_delete_author@example.com',
 			name: 'Post Delete Author',
@@ -266,7 +266,7 @@ describe('Integration: CRUD Operations', () => {
 	});
 
 	it('should add a comment to a post', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 		const userData = {
 			email: 'comment_author@example.com',
 			name: 'Comment Author',
@@ -314,7 +314,7 @@ describe('Integration: CRUD Operations', () => {
 	});
 
 	it('should retrieve a feed of posts with pagination and comment counts', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 		const userData = {
 			email: 'feed_author@example.com',
 			name: 'Feed Author',
@@ -377,7 +377,7 @@ describe('Integration: CRUD Operations', () => {
 
 	describe('transaction operations', () => {
 		it('should maintain consistency during fund transfers', async () => {
-			const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+			const UserModel = createModel(db, 'users', 'id');
 
 			// Create two users with initial balances
 			const user1Data = {
@@ -451,7 +451,7 @@ describe('Integration: CRUD Operations', () => {
 		});
 
 		it('should roll back changes on error', async () => {
-			const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+			const UserModel = createModel(db, 'users', 'id');
 
 			// Create initial user
 			const userData = {

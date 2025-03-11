@@ -18,7 +18,7 @@ describe('Integration: Concurrency Control', () => {
 	});
 
 	it('should handle concurrent updates using version numbers', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 
 		// Create initial user
 		const userData = {
@@ -86,7 +86,7 @@ describe('Integration: Concurrency Control', () => {
 	});
 
 	it('should handle concurrent operations with row-level locking', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 
 		// Create initial user
 		const userData = {

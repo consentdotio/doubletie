@@ -26,16 +26,16 @@ describe('integration: query building functionality', () => {
 
 		// Check the database schema
 		try {
-			const tableInfo = await db.db.selectFrom('users').selectAll().execute();
+			const tableInfo = await db.selectFrom('users').selectAll().execute();
 			console.log('Users table schema:', tableInfo);
 		} catch (error) {
 			console.error('Error getting table schema:', error);
 		}
 
 		// Create models
-		UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
-		ArticleModel = createModel<DB, 'articles', 'id'>(db, 'articles', 'id');
-		CommentModel = createModel<DB, 'comments', 'id'>(db, 'comments', 'id');
+		UserModel = createModel(db, 'users', 'id');
+		ArticleModel = createModel(db, 'articles', 'id');
+		CommentModel = createModel(db, 'comments', 'id');
 
 		// Seed test data
 		type UserInsert = {

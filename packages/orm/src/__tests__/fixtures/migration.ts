@@ -2,7 +2,7 @@
 import SQLiteDatabase from 'better-sqlite3';
 import { ColumnType, type Kysely, sql } from 'kysely';
 import { SqliteDialect } from 'kysely';
-import { Database } from '../../database.js';
+import { Database, createDatabase } from '../../database.js';
 
 // Helper functions for date handling
 export function toSqliteDate(date: Date | string): string {
@@ -83,7 +83,7 @@ const dialect = new SqliteDialect({
 });
 
 // Create a proper database instance
-export const db = new Database<DB>({
+export const db = createDatabase<DB>({
 	dialect,
 	debug: true, // Enable debug mode for tests
 });
@@ -95,7 +95,7 @@ export async function initializeDatabase(): Promise<void> {
 		console.log('Creating database tables...');
 
 		// Run the up() function directly to create all tables
-		await up(db.db);
+		await up(db.db());
 
 		console.log('Database tables created successfully');
 	} catch (err) {
@@ -110,7 +110,7 @@ export async function cleanupDatabase(): Promise<void> {
 		console.log('Cleaning up database...');
 
 		// Run the down() function to drop all tables
-		await down(db.db);
+		await down(db.db());
 
 		console.log('Database cleanup completed');
 	} catch (err) {

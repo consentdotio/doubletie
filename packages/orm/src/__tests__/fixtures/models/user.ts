@@ -1,20 +1,21 @@
-import type {
-	CompiledQuery,
-	DatabaseConnection,
-	DatabaseIntrospector,
-	DatabaseMetadata,
-	Dialect,
-	DialectAdapter,
-	Driver,
-	Kysely,
-	MigrationLockOptions,
-	QueryCompiler,
-	QueryResult,
-	RootOperationNode,
+import {
+	type CompiledQuery,
+	type DatabaseConnection,
+	type DatabaseIntrospector,
+	type DatabaseMetadata,
+	type Dialect,
+	type DialectAdapter,
+	type Driver,
+	type Kysely,
+	type MigrationLockOptions,
+	NoResultError,
+	type QueryCompiler,
+	type QueryResult,
+	type RootOperationNode,
 } from 'kysely';
 import { vi } from 'vitest';
 
-import { Database } from '../../../database.js';
+import { type Database, createDatabase } from '../../../database.js';
 import { createModel } from '../../../model.js';
 import type { TestDatabase } from './base-schema.js';
 
@@ -105,13 +106,13 @@ class MockSQLiteDialect implements Dialect {
  * Creates a user model for testing
  */
 export function createUserModel(kysely: Kysely<TestDatabase>) {
-	const db = new Database<TestDatabase>({
+	const db = createDatabase<TestDatabase>({
 		dialect: new MockSQLiteDialect(),
 	});
 
 	(db as any).kysely = kysely;
 
-	const UserModel = createModel<TestDatabase, 'users', 'id'>(db, 'users', 'id');
+	const UserModel = createModel(db, 'users', 'id');
 
 	return UserModel;
 }
@@ -132,23 +133,26 @@ export function createUserModelWithMixins(kysely: Kysely<TestDatabase>) {
  * Creates a mock user model for pure unit testing
  */
 export function createMockUserModel() {
-	// Fix syntax errors in mock functions
 	const mockFindOne = vi.fn();
-	const mockInsertInto = vi.fn().mockReturnValue({
-		values: vi.fn().mockReturnValue({
-			returning: vi.fn().mockReturnValue({
-				executeTakeFirst: vi.fn(),
-			}),
-		}),
-	});
+	mockFindOne.mockImplementation(() =>
+		Promise.resolve({ id: '1', name: 'Test User' })
+	);
 
-	// Create a basic mock model
+	const mockFind = vi.fn();
+	mockFind.mockImplementation(() =>
+		Promise.resolve([{ id: '1', name: 'Test User' }])
+	);
+
+	// Create a basic mock model with appropriate typing
 	const MockUserModel = {
-		db: {} as Database<TestDatabase>,
+		db: {} as any, // Use 'any' type to avoid complex typing issues
 		table: 'users' as const,
 		id: 'id' as const,
+		noResultError: NoResultError,
+		isolated: false,
 		findOne: mockFindOne,
-		insertInto: mockInsertInto,
+		find: mockFind,
+		// Add other required methods as needed
 	};
 
 	return MockUserModel;

@@ -86,7 +86,7 @@ describe('unit: mixin composition', () => {
 		};
 
 		// Create base model
-		const baseModel = createModel<TestDB, 'users', 'id'>(
+		const baseModel = createModel(
 			mockDb as unknown as Database<TestDB>,
 			'users',
 			'id'

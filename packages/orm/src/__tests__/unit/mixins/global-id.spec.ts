@@ -25,11 +25,11 @@ describe('unit: Global ID mixin', () => {
 
 	// Properly type the variables with explicit TestDB type
 	let mockDb: ReturnType<typeof createMockDatabase<TestDB>>;
-	let baseUserModel: ReturnType<typeof createModel<TestDB, 'users', 'id'>> & {
+	let baseUserModel: ReturnType<typeof createModel> & {
 		findById?: MockFn;
 		findByIds?: MockFn;
 	};
-	let basePostModel: ReturnType<typeof createModel<TestDB, 'posts', 'id'>>;
+	let basePostModel: ReturnType<typeof createModel>;
 
 	beforeEach(() => {
 		// Set up mock database with properly typed mock functions using TestDB generic
@@ -40,16 +40,16 @@ describe('unit: Global ID mixin', () => {
 		});
 
 		// Create base models with proper typing
-		baseUserModel = createModel<TestDB, 'users', 'id'>(
-			mockDb as unknown as Database<TestDB>,
+		baseUserModel = createModel(
+			mockDb,
 			'users',
 			'id'
-		) as ReturnType<typeof createModel<TestDB, 'users', 'id'>> & {
+		) as ReturnType<typeof createModel> & {
 			findById?: MockFn;
 			findByIds?: MockFn;
 		};
-		basePostModel = createModel<TestDB, 'posts', 'id'>(
-			mockDb as unknown as Database<TestDB>,
+		basePostModel = createModel(
+			mockDb,
 			'posts',
 			'id'
 		);

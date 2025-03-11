@@ -19,7 +19,7 @@ describe('Integration: Error Handling', () => {
 	});
 
 	it('handles record not found errors', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 
 		const user = await UserModel.findById('nonexistent-id');
 
@@ -27,7 +27,7 @@ describe('Integration: Error Handling', () => {
 	});
 
 	it('handles custom error types', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 
 		// Create custom error class
 		class CustomNotFoundError extends Error {
@@ -86,7 +86,7 @@ describe('Integration: Error Handling', () => {
 	});
 
 	it('handles unique constraint violations', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 
 		// Create initial user
 		const userData = {
@@ -112,7 +112,7 @@ describe('Integration: Error Handling', () => {
 	});
 
 	it('handles foreign key constraint violations', async () => {
-		const CommentModel = createModel<DB, 'comments', 'id'>(
+		const CommentModel = createModel(
 			db,
 			'comments',
 			'id'
@@ -135,7 +135,7 @@ describe('Integration: Error Handling', () => {
 	});
 
 	it('handles transaction rollbacks', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 
 		const createUserWithTransaction = async (userData: Partial<Users>) => {
 			const result = await UserModel.transaction(async (db) => {
@@ -203,7 +203,7 @@ describe('Integration: Error Handling', () => {
 	});
 
 	it('supports error recovery with retry logic', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 
 		// Create initial user for testing
 		const userData = {

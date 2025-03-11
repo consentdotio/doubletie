@@ -58,12 +58,7 @@ describe('Advanced Model Operations - Unit Tests', () => {
 			updateTable: vi.fn().mockReturnValue(mockUpdateBuilder),
 		});
 
-		// Create a model
-		const UserModel = createModel<TestDB, 'users', 'id'>(
-			mockDb as unknown as Database<TestDB>,
-			'users',
-			'id'
-		);
+	
 
 		// Create a batch update function using a custom query builder
 		const batchUpdateStatus = async (
@@ -116,12 +111,7 @@ describe('Advanced Model Operations - Unit Tests', () => {
 			selectFrom: vi.fn().mockReturnValue(mockQueryChain),
 		});
 
-		// Create a model
-		const UserModel = createModel<TestDB, 'users', 'id'>(
-			mockDb as unknown as Database<TestDB>,
-			'users',
-			'id'
-		);
+	
 
 		// Create a function to get multiple users by IDs
 		const getUsersByIds = async (ids: number[]) => {

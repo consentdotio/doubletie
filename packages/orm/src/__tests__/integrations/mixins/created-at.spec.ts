@@ -23,7 +23,7 @@ describe('integration: createdAt mixin', () => {
 	});
 
 	it('should automatically set createdAt on insert', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 		const UserWithCreatedAt = withCreatedAt(UserModel, 'createdAt');
 
 		const user = await UserWithCreatedAt.insertInto()
@@ -46,7 +46,7 @@ describe('integration: createdAt mixin', () => {
 	});
 
 	it('should handle batch inserts with createdAt', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 		const UserWithCreatedAt = withCreatedAt(UserModel, 'createdAt');
 
 		const users = await UserWithCreatedAt.insertInto()
@@ -83,7 +83,7 @@ describe('integration: createdAt mixin', () => {
 	});
 
 	it('should preserve existing createdAt values', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 		const UserWithCreatedAt = withCreatedAt(UserModel, 'createdAt');
 
 		const existingDate = new Date('2023-01-01').toISOString();
@@ -106,7 +106,7 @@ describe('integration: createdAt mixin', () => {
 	});
 
 	it('should work with other mixins', async () => {
-		const UserModel = createModel<DB, 'users', 'id'>(db, 'users', 'id');
+		const UserModel = createModel(db, 'users', 'id');
 
 		// Create a mixin that modifies the status
 		const addProcessedStatus = (model: typeof UserModel) => {
