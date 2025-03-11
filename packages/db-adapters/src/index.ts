@@ -1,5 +1,5 @@
 /**
- * @c15t/db - A database abstraction layer with multiple adapters
+ * @doubletie/db-adapters - A database abstraction layer with multiple adapters
  *
  * This package provides a unified interface for working with different database systems.
  * It includes adapters for common database technologies and utilities for managing database connections.

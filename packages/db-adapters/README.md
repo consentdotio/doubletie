@@ -1,4 +1,4 @@
-# @c15t/db
+# @doubletie/db-adapters
 
 A database abstraction layer with multiple adapters for Node.js applications.
 
@@ -13,7 +13,7 @@ A database abstraction layer with multiple adapters for Node.js applications.
 ## Installation
 
 ```bash
-npm install @c15t/db
+npm install @doubletie/db-adapters
 ```
 
 ## Optional peer dependencies
@@ -34,7 +34,7 @@ npm install prisma @prisma/client
 ## Basic Usage
 
 ```typescript
-import { getAdapter, DBConfig } from '@c15t/db';
+import { getAdapter, DBConfig } from '@doubletie/db-adapters';
 
 // Configure the database
 const config: DBConfig = {
@@ -103,7 +103,7 @@ await db.transaction({
 You can create your own custom adapter by implementing the `Adapter` interface:
 
 ```typescript
-import { Adapter, registerAdapter } from '@c15t/db';
+import { Adapter, registerAdapter } from '@doubletie/db-adapters';
 
 function myCustomAdapter(options: Record<string, unknown>): Adapter {
   // Implement the adapter interface
