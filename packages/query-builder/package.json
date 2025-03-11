@@ -1,5 +1,5 @@
 {
-	"name": "@doubletie/orm",
+	"name": "@doubletie/query-builder",
 	"version": "0.0.1",
 	"description": "Type safe ORM for kysely",
 	"repository": {

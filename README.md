@@ -1,14 +1,40 @@
-<div align="center">
-  <h1>🪢 Double Tie</h1>
-  <p>A Backend Framework for building out backend SDK's</p>
+# 🪢 Double Tie
 
-  [![GitHub stars](https://img.shields.io/github/stars/consentdotio/doubletie?style=flat-square)](https://github.com/consentdotio/doubletie)
-  [![CI](https://img.shields.io/github/actions/workflow/status/consentdotio/doubletie/ci.yml?style=flat-square)](https://github.com/consentdotio/doubletie/actions/workflows/ci.yml)
-  [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-</div>
+A TypeScript toolkit for building self-hostable backend SDKs. Double Tie provides a complete set of tools to help developers create type-safe, self-hostable backend services that can be distributed as npm packages.
 
+## Vision
 
-## 🏗️ Development
+Double Tie enables developers to build and distribute backend functionality as type-safe npm packages, allowing end users to self-host their backend services while maintaining full type safety from client to database.
+
+## Available Packages
+
+### 📦 @doubletie/query-builder
+
+A type-safe, functional query builder and model layer built on top of Kysely. Our first package provides the foundation for type-safe database operations.
+
+[Read more about @doubletie/query-builder](./packages/query-builder/README.md)
+
+## Coming Soon
+
+We're actively working on additional packages to complete the toolkit:
+
+- 🏗️ `@doubletie/sdk-builder` - Create type-safe SDK packages with client and server components
+- 📡 `@doubletie/client` - Type-safe client library generator
+- 🛠️ `@doubletie/cli` - Migration and deployment tools
+- 📊 `@doubletie/model-mapper` - Database schema to type-safe models
+- ⚡ `@doubletie/functions` - Self-hostable function runtime
+
+## Features (Planned)
+
+- 🔒 **End-to-end Type Safety**: Full type inference from database to client
+- 🏠 **Self-hostable**: Package your backend as a distributable npm module
+- 🚀 **Multiple Deploy Targets**: Support for Docker, AWS, Vercel, and more
+- 📦 **Zero Config Deployment**: Automated deployment with sensible defaults
+- 🔄 **Database Migrations**: Version-controlled database schema management
+- 🛡️ **Built-in Security**: Best practices for auth and data protection
+- 📡 **Type-safe Clients**: Auto-generated client libraries with full type support
+
+## Development
 
 Prerequisites:
 - Node.js >= 18
@@ -17,57 +43,31 @@ Prerequisites:
 ```bash
 # Clone repository
 git clone https://github.com/consentdotio/doubletie.git
-cd c15t
+cd doubletie
 
 # Install dependencies
 pnpm install
 
-# Start development
-pnpm dev
+# Build packages
+pnpm build
 
 # Run tests
 pnpm test
 ```
 
-## 🧪 Testing
+## Why Double Tie?
 
-We use Vitest and Playwright for testing:
+Traditional backend frameworks focus on building monolithic applications. Double Tie takes a different approach by helping developers create distributable, self-hostable backend SDKs. This enables:
 
-```bash
-# Run unit tests
-pnpm test:unit
+- 🏢 Companies to maintain control of their data while using third-party services
+- 👩‍💻 Developers to distribute backend functionality as npm packages
+- 🔐 Better data privacy through self-hosting
+- 📦 Easier integration of backend services into existing applications
 
-# Run E2E tests
-pnpm test:e2e
+## Contributing
 
-# Run all tests
-pnpm test
-```
+We welcome contributions! See our [Contributing Guide](CONTRIBUTING.md) for details.
 
-## 📚 Documentation
+## License
 
-- [Getting Started](https://doubletie.com/docs)
-- [Core Concepts](https://doubletie.com/docs/concepts)
-- [API Reference](https://doubletie.com/docs/api)
-- [UI Components](https://doubletie.com/docs/framework/react)
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md).
-
-- 🐛 [Report bugs](https://github.com/consentdotio/doubletie/issues/new?template=bug_report.yml)
-- ✨ [Request features](https://github.com/consentdotio/doubletie/issues/new?template=feature_request.yml)
-- 📚 [Improve docs](https://github.com/consentdotio/doubletie/issues/new?template=doc_report.yml)
-- 🧪 [Fix tests](https://github.com/consentdotio/doubletie/issues/new?template=test.yml)
-- ⚡ [Report performance issues](https://github.com/consentdotio/doubletie/issues/new?template=performance.yml)
-
-
-## 📜 License
-
-[MIT v3.0](LICENSE) - See [LICENSE](LICENSE) for details.
-
----
-
-<div align="center">
-  <strong>Built with ❤️ by the consent.io team</strong>
-</div>
+MIT License - see LICENSE file for details 
