@@ -8,7 +8,7 @@ import { Hero } from './_components/hero';
 import { siteConfig } from './config';
 
 export const metadata: Metadata = {
-	title: 'React Privacy Components for the Modern Web',
+	title: '🪢 Double Tie',
 	description: siteConfig.hero.description,
 };
 

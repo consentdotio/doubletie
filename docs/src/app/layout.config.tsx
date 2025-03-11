@@ -39,7 +39,7 @@ export const homePageOptions: BaseLayoutProps = {
 		},
 		{
 			text: 'Query Builder',
-			url: '/packages/query-builder',
+			url: '/docs/packages/query-builder',
 		},
 	],
 };
