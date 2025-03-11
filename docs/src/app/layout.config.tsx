@@ -1,17 +1,6 @@
 import type { LinkItemType } from 'fumadocs-ui/layouts/links';
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
-import Image from 'next/image';
 import { GithubIcon } from '~/components/icons/github';
-import GetStarted from '../../public/cookie-banner.png';
-
-import {
-	Book,
-	Cookie,
-	MessageSquare,
-	MessageSquareCode,
-	Palette,
-} from 'lucide-react';
-import { LogoWithBadge } from '~/components/logo';
 
 export const linkItems: LinkItemType[] = [
 	{
@@ -32,7 +21,7 @@ export const linkItems: LinkItemType[] = [
  */
 export const docsOptions: BaseLayoutProps = {
 	nav: {
-		title: <LogoWithBadge />,
+		title: "🪢 Double Tie",
 		transparentMode: 'top',
 	},
 	links: [...linkItems],
@@ -40,7 +29,7 @@ export const docsOptions: BaseLayoutProps = {
 
 export const homePageOptions: BaseLayoutProps = {
 	nav: {
-		title: <LogoWithBadge />,
+		title: "🪢 Double Tie",
 		transparentMode: 'top',
 	},
 	links: [
