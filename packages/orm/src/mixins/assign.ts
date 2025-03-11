@@ -7,6 +7,23 @@ import type { Selectable } from 'kysely';
 import type { ModelFunctions } from '../model.js';
 
 /**
+ * Type for a model with assign functionality
+ */
+export interface ModelWithAssign<
+	TDatabase,
+	TTableName extends keyof TDatabase & string,
+	TIdColumnName extends keyof TDatabase[TTableName] & string,
+> extends ModelFunctions<TDatabase, TTableName, TIdColumnName> {
+	/**
+	 * Assigns data values to the model instance
+	 *
+	 * @param data - Data to assign (can be partial)
+	 * @returns Model instance with assigned data and all model properties
+	 */
+	assign(data?: Partial<Selectable<TDatabase[TTableName]>>): any;
+}
+
+/**
  * Enhances a model with data assignment functionality
  *
  * @typeParam TDatabase - Database schema type
@@ -20,17 +37,19 @@ export default function withAssign<
 	TDatabase,
 	TTableName extends keyof TDatabase & string,
 	TIdColumnName extends keyof TDatabase[TTableName] & string,
->(model: ModelFunctions<TDatabase, TTableName, TIdColumnName>) {
+>(
+	model: ModelFunctions<TDatabase, TTableName, TIdColumnName>
+): ModelWithAssign<TDatabase, TTableName, TIdColumnName> {
 	return {
 		...model,
 
 		/**
 		 * Assigns data values to the model instance
 		 *
-		 * @param data - Data to assign
+		 * @param data - Data to assign (can be partial)
 		 * @returns Model instance with assigned data
 		 */
-		assign(data: Selectable<TDatabase[TTableName]>) {
+		assign(data?: Partial<Selectable<TDatabase[TTableName]>>) {
 			// Create a new object with all the model properties
 			const instance = { ...this };
 

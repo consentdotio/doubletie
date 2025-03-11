@@ -28,11 +28,9 @@ describe('unit: updatedAt mixin', () => {
 		mockExecuteTakeFirstOrThrow = vi
 			.fn()
 			.mockResolvedValue({ id: '1', name: 'Updated User' });
-		mockReturningAll = vi
-			.fn()
-			.mockReturnValue({
-				executeTakeFirstOrThrow: mockExecuteTakeFirstOrThrow,
-			});
+		mockReturningAll = vi.fn().mockReturnValue({
+			executeTakeFirstOrThrow: mockExecuteTakeFirstOrThrow,
+		});
 		mockSet = vi.fn().mockReturnValue({ returningAll: mockReturningAll });
 		mockWhere = vi.fn().mockReturnValue({ set: mockSet });
 		mockUpdateTable = vi.fn().mockReturnValue({
