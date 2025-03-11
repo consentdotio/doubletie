@@ -5,6 +5,7 @@ import type { Selectable } from 'kysely';
  * @module assign
  */
 import type { ModelFunctions } from '../model';
+import { DrainOuterGeneric } from '../utils/type-utils';
 
 /**
  * Type for a model with assign functionality
@@ -13,15 +14,17 @@ export interface ModelWithAssign<
 	TDatabase,
 	TTableName extends keyof TDatabase & string,
 	TIdColumnName extends keyof TDatabase[TTableName] & string,
-> extends ModelFunctions<TDatabase, TTableName, TIdColumnName> {
-	/**
-	 * Assigns data values to the model instance
-	 *
-	 * @param data - Data to assign (can be partial)
-	 * @returns Model instance with assigned data and all model properties
-	 */
-	assign(data?: Partial<Selectable<TDatabase[TTableName]>>): any;
-}
+> extends DrainOuterGeneric<
+		ModelFunctions<TDatabase, TTableName, TIdColumnName> & {
+			/**
+			 * Assigns data values to the model instance
+			 *
+			 * @param data - Data to assign (can be partial)
+			 * @returns Model instance with assigned data and all model properties
+			 */
+			assign(data?: Partial<Selectable<TDatabase[TTableName]>>): any;
+		}
+	> {}
 
 /**
  * Enhances a model with data assignment functionality

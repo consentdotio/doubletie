@@ -2,17 +2,7 @@ import type {
 	ModelFunctions,
 	InsertObjectOrList as ModelInsertObjectOrList,
 } from '../model';
-/**
- * Provides automatic created_at timestamp functionality for models
- *
- * @module createdAt
- */
-
-// Type for a single object with createdAt
-type WithCreatedAt<T> = T & { createdAt: Date };
-
-// Type for the return value of processDataBeforeInsert
-type ProcessResult<T, R> = T extends any[] ? R[] : R;
+import { DrainOuterGeneric } from '../utils/type-utils';
 
 /**
  * Enhances a model with automatic created_at timestamp functionality
@@ -32,7 +22,17 @@ export default function withCreatedAt<
 >(
 	model: ModelFunctions<TDatabase, TTableName, TIdColumnName>,
 	field: keyof TDatabase[TTableName] & string
-) {
+): DrainOuterGeneric<
+	ModelFunctions<TDatabase, TTableName, TIdColumnName> & {
+		processDataBeforeInsert<
+			T extends ModelInsertObjectOrList<TDatabase, TTableName>,
+		>(
+			data: T
+		): T extends any[]
+			? Array<T[number] & { [K in typeof field]: Date }>
+			: T & { [K in typeof field]: Date };
+	}
+> {
 	// Get the original processDataBeforeInsert function to extend
 	const originalProcessDataBeforeInsert =
 		model.processDataBeforeInsert || ((data) => data);
@@ -54,7 +54,9 @@ export default function withCreatedAt<
 			T extends ModelInsertObjectOrList<TDatabase, TTableName>,
 		>(
 			data: T
-		): ProcessResult<T, WithCreatedAt<T extends any[] ? T[number] : T>> {
+		): T extends any[]
+			? Array<T[number] & { [K in typeof field]: Date }>
+			: T & { [K in typeof field]: Date } {
 			// Process with original method first
 			let processedData = originalProcessDataBeforeInsert(data);
 
@@ -65,13 +67,17 @@ export default function withCreatedAt<
 				return processedData.map((item) => ({
 					...item,
 					[field]: (item as any)[field] ?? timestamp,
-				})) as ProcessResult<T, WithCreatedAt<T extends any[] ? T[number] : T>>;
+				})) as T extends any[]
+					? Array<T[number] & { [K in typeof field]: Date }>
+					: T & { [K in typeof field]: Date };
 			}
 
 			return {
 				...processedData,
 				[field]: (processedData as any)[field] ?? timestamp,
-			} as ProcessResult<T, WithCreatedAt<T extends any[] ? T[number] : T>>;
+			} as T extends any[]
+				? Array<T[number] & { [K in typeof field]: Date }>
+				: T & { [K in typeof field]: Date };
 		},
 	};
 }

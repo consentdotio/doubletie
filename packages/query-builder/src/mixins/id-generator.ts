@@ -67,7 +67,13 @@ export default function withIdGenerator<
 >(
 	model: ModelFunctions<TDatabase, TTableName, TIdField>,
 	options: IdGeneratorOptions = { prefix: 'id' }
-) {
+): ModelFunctions<TDatabase, TTableName, TIdField> & {
+	generateId: () => string;
+	insertWithGeneratedId: (
+		data: Omit<InsertObjectOrList<TDatabase, TTableName>, TIdField>
+	) => Promise<Selectable<TDatabase[TTableName]>>;
+	isGeneratedId: (id: string) => boolean;
+} {
 	// Determine the ID column to use (default to model's primary key)
 	const idColumn = options.idColumn || model.id;
 

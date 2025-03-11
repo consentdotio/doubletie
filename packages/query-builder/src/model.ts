@@ -1,31 +1,39 @@
 import {
 	type DeleteQueryBuilder,
 	type DeleteResult,
-	type DynamicModule,
 	type ExpressionBuilder,
-	type ExpressionOrFactory,
+	type ExpressionWrapper,
+	type InsertObject,
 	type InsertQueryBuilder,
-	type Kysely,
+	type InsertResult,
 	NoResultError,
 	type OnConflictDatabase,
 	type OnConflictTables,
+	type OperandValueExpressionOrList,
+	type QueryNode,
 	type ReferenceExpression,
 	type SelectQueryBuilder,
 	type SelectType,
 	type Selectable,
-	type SqlBool,
+	type UpdateObject,
 	type UpdateQueryBuilder,
 	type UpdateResult,
+	type ValueExpression,
 	sql,
 } from 'kysely';
 
-import type { ExpressionWrapper, InsertObject, InsertResult, OperandExpression, OperandValueExpressionOrList, QueryNode, UpdateObject, ValueExpression } from 'kysely';
 import type { Database, TransactionCallback } from './database';
+import { ExtractRawTypeFromReferenceExpression } from './utils/kysley-types';
 import type {
 	FieldDefinition,
 	RelationDefinition,
 } from './utils/model-builder';
-import { ExtractRawTypeFromReferenceExpression } from './utils/kysley-types';
+import {
+	AtLeastOne,
+	DeepPartial,
+	DrainOuterGeneric,
+	RequiredBy,
+} from './utils/type-utils';
 
 /*
 this type is not exported from kysely, so we need to define it here
@@ -49,6 +57,21 @@ export type SqlLiteral = string | number | boolean | Date | null | Buffer;
 export type SqlExpression = any;
 
 /**
+ * Type for insert operations that require certain fields
+ */
+export type RequiredInsert<T, K extends keyof T> = RequiredBy<T, K>;
+
+/**
+ * Type for update operations where all fields are optional
+ */
+export type UpdateFields<T> = DeepPartial<T>;
+
+/**
+ * Type for search operations requiring at least one field
+ */
+export type SearchCriteria<T> = AtLeastOne<T>;
+
+/**
  * Core model functions that provide CRUD operations and utilities for database tables
  *
  * @typeParam DatabaseSchema - Database schema type
@@ -59,7 +82,7 @@ export type ModelFunctions<
 	DatabaseSchema,
 	TableName extends keyof DatabaseSchema & string,
 	IdColumnName extends keyof DatabaseSchema[TableName] & string,
-> = {
+> = DrainOuterGeneric<{
 	// Database and table references
 	readonly db: Database<DatabaseSchema>;
 	readonly table: TableName;
@@ -278,7 +301,29 @@ export type ModelFunctions<
 	withExpressionLimit: (
 		expr: ValueExpression<DatabaseSchema, TableName, number | bigint>
 	) => SelectQueryBuilder<DatabaseSchema, TableName, Record<string, never>>;
-};
+
+	/**
+	 * Creates an insert with required fields
+	 */
+	insertRequired: <K extends keyof DatabaseSchema[TableName]>(
+		data: RequiredInsert<DatabaseSchema[TableName], K>
+	) => Promise<Selectable<DatabaseSchema[TableName]>>;
+
+	/**
+	 * Updates with partial fields
+	 */
+	updatePartial: (
+		id: DatabaseSchema[TableName][IdColumnName],
+		data: UpdateFields<DatabaseSchema[TableName]>
+	) => Promise<Selectable<DatabaseSchema[TableName]>>;
+
+	/**
+	 * Searches with at least one criteria
+	 */
+	searchBy: (
+		criteria: SearchCriteria<DatabaseSchema[TableName]>
+	) => Promise<Selectable<DatabaseSchema[TableName]>[]>;
+}>;
 
 /**
  * Model extensions type for adding custom methods to models
@@ -294,7 +339,7 @@ export type ModelExtensions<TEntityType = unknown> = {
  *
  * @typeParam TEntityType - Entity type
  */
-export type ModelSchema<TEntityType = unknown> = {
+export type ModelSchema<TEntityType = unknown> = DrainOuterGeneric<{
 	fields: { [K in keyof TEntityType]: FieldDefinition };
 	relations?: Record<string, RelationDefinition<TEntityType, unknown>>;
 	indexes?: Array<{
@@ -303,7 +348,7 @@ export type ModelSchema<TEntityType = unknown> = {
 		unique?: boolean;
 	}>;
 	extensions?: ModelExtensions<TEntityType>;
-};
+}>;
 
 /**
  * Extract the fields type from a model schema
@@ -333,8 +378,6 @@ export type UpdateObjectExpression<
 	TDatabase,
 	TTableName extends keyof TDatabase,
 > = UpdateObject<TDatabase, TTableName>;
-
-
 
 /**
  * Creates a model with database operations
@@ -462,7 +505,28 @@ export function createModel<
 	): Promise<Selectable<TTable> | undefined> => {
 		return selectFrom()
 			.selectAll()
-			.where((eb) => eb(eb.ref(`${table}.${column}`), '=', value as OperandValueExpressionOrList<TDatabase, TTableName, ExpressionWrapper<TDatabase, TTableName, SelectType<ExtractRawTypeFromReferenceExpression<TDatabase, TTableName, `${TTableName}.${TColumnName}`, unknown>>>>))
+			.where((eb) =>
+				eb(
+					eb.ref(`${table}.${column}`),
+					'=',
+					value as OperandValueExpressionOrList<
+						TDatabase,
+						TTableName,
+						ExpressionWrapper<
+							TDatabase,
+							TTableName,
+							SelectType<
+								ExtractRawTypeFromReferenceExpression<
+									TDatabase,
+									TTableName,
+									`${TTableName}.${TColumnName}`,
+									unknown
+								>
+							>
+						>
+					>
+				)
+			)
 			.$if(!!func, (qb) => {
 				const result = func?.(
 					qb as SelectQueryBuilder<TDatabase, TTableName, Record<string, never>>
@@ -473,7 +537,22 @@ export function createModel<
 	};
 
 	const findById = (
-		idValue: OperandValueExpressionOrList<TDatabase, TTableName, ExpressionWrapper<TDatabase, TTableName, SelectType<ExtractRawTypeFromReferenceExpression<TDatabase, TTableName, `${TTableName}.${TIdColumnName}`, unknown>>>>,
+		idValue: OperandValueExpressionOrList<
+			TDatabase,
+			TTableName,
+			ExpressionWrapper<
+				TDatabase,
+				TTableName,
+				SelectType<
+					ExtractRawTypeFromReferenceExpression<
+						TDatabase,
+						TTableName,
+						`${TTableName}.${TIdColumnName}`,
+						unknown
+					>
+				>
+			>
+		>,
 		func?: (
 			qb: SelectQueryBuilder<TDatabase, TTableName, Record<string, never>>
 		) => SelectQueryBuilder<TDatabase, TTableName, Record<string, never>>,
@@ -484,17 +563,15 @@ export function createModel<
 		if (!throwIfNotFound) {
 			// Use a properly typed version of the id parameter
 			return findOne(
-				id as  keyof TTable & string,
-				idValue as  Readonly<
-					SelectType<TTable[keyof TTable & string]>
-				>,
+				id as keyof TTable & string,
+				idValue as Readonly<SelectType<TTable[keyof TTable & string]>>,
 				func
 			);
 		}
 
 		return selectFrom()
 			.selectAll()
-			.where((eb) => eb(eb.ref(`${table}.${id}`), '=', idValue ))
+			.where((eb) => eb(eb.ref(`${table}.${id}`), '=', idValue))
 			.$if(!!func, (qb) => {
 				const result = func?.(
 					qb as SelectQueryBuilder<TDatabase, TTableName, Record<string, never>>
@@ -514,7 +591,22 @@ export function createModel<
 	};
 
 	const getById = (
-		idValue: OperandValueExpressionOrList<TDatabase, TTableName, ExpressionWrapper<TDatabase, TTableName, SelectType<ExtractRawTypeFromReferenceExpression<TDatabase, TTableName, `${TTableName}.${TIdColumnName}`, unknown>>>>,
+		idValue: OperandValueExpressionOrList<
+			TDatabase,
+			TTableName,
+			ExpressionWrapper<
+				TDatabase,
+				TTableName,
+				SelectType<
+					ExtractRawTypeFromReferenceExpression<
+						TDatabase,
+						TTableName,
+						`${TTableName}.${TIdColumnName}`,
+						unknown
+					>
+				>
+			>
+		>,
 		func?: (
 			qb: SelectQueryBuilder<TDatabase, TTableName, Record<string, never>>
 		) => SelectQueryBuilder<TDatabase, TTableName, Record<string, never>>,
@@ -541,8 +633,7 @@ export function createModel<
 			.where((eb) => {
 				// Construct a proper AND condition using column names directly
 				return eb.and(
-					Object.entries(conditions).map(([column, value]) => 
-
+					Object.entries(conditions).map(([column, value]) =>
 						eb(column as ReferenceExpression<TDatabase, TTableName>, '=', value)
 					)
 				);
@@ -563,19 +654,43 @@ export function createModel<
 
 		if (columns.length === 1) {
 			// Simple case - no need for tuples
-			query = query.where((eb) => 
+			query = query.where((eb) =>
 				// Use column name directly
-				eb(columns[0] as TColumnName, '=', values[0] as OperandValueExpressionOrList<TDatabase, TTableName, TColumnName>)
+				eb(
+					columns[0] as TColumnName,
+					'=',
+					values[0] as OperandValueExpressionOrList<
+						TDatabase,
+						TTableName,
+						TColumnName
+					>
+				)
 			);
 			return query.execute() as Promise<Selectable<TTable>[]>;
 		}
 
 		if (columns.length === 2) {
 			// Use direct conditions for better performance
-			query = query.where((eb) => 
+			query = query.where((eb) =>
 				eb.and([
-					eb(columns[0] as TColumnName, '=', values[0] as OperandValueExpressionOrList<TDatabase, TTableName, TColumnName>),
-					eb(columns[1] as TColumnName, '=', values[1] as OperandValueExpressionOrList<TDatabase, TTableName, TColumnName>)
+					eb(
+						columns[0] as TColumnName,
+						'=',
+						values[0] as OperandValueExpressionOrList<
+							TDatabase,
+							TTableName,
+							TColumnName
+						>
+					),
+					eb(
+						columns[1] as TColumnName,
+						'=',
+						values[1] as OperandValueExpressionOrList<
+							TDatabase,
+							TTableName,
+							TColumnName
+						>
+					),
 				])
 			);
 			return query.execute() as Promise<Selectable<TTable>[]>;
@@ -586,9 +701,15 @@ export function createModel<
 			query = query.where((eb) => {
 				// Use db.tuple instead of sql.tuple
 				return eb(
-					db.tuple(columns as TColumnName[]) as ReferenceExpression<TDatabase, TTableName>, 
-					'=', 
-					db.tuple(values as readonly SqlLiteral[]) as ReferenceExpression<TDatabase, TTableName>
+					db.tuple(columns as TColumnName[]) as ReferenceExpression<
+						TDatabase,
+						TTableName
+					>,
+					'=',
+					db.tuple(values as readonly SqlLiteral[]) as ReferenceExpression<
+						TDatabase,
+						TTableName
+					>
 				);
 			});
 			return query.execute() as Promise<Selectable<TTable>[]>;
@@ -624,18 +745,20 @@ export function createModel<
 
 		if (!result) {
 			// Create the error message safely
-			const errorMessage = `No ${table} found with id ${idValue}` as unknown as QueryNode;
+			const errorMessage =
+				`No ${table} found with id ${idValue}` as unknown as QueryNode;
 			throw new (error || noResultError)(errorMessage);
 		}
 
 		return result as TData;
 	};
 
-	const withExpressionLimit = (expr: ValueExpression<TDatabase, TTableName, number | bigint>) => {
+	const withExpressionLimit = (
+		expr: ValueExpression<TDatabase, TTableName, number | bigint>
+	) => {
 		// Create a query with expression-based limit
 		// Cast the return value to make the types compatible
-		return selectFrom().limit(expr) 
-		;
+		return selectFrom().limit(expr);
 	};
 
 	// Define lit function that handles SQL literals safely
@@ -730,7 +853,10 @@ export function createModel<
 			// Use the new single-column set method introduced in Kysely 0.27.0
 			const result = await updateTable()
 				.where(sql`${table}.${id}`, '=', id)
-				.set({ [column]: value } as UpdateObjectExpression<TDatabase, TTableName>)
+				.set({ [column]: value } as UpdateObjectExpression<
+					TDatabase,
+					TTableName
+				>)
 				.returningAll()
 				.executeTakeFirst();
 
@@ -745,6 +871,61 @@ export function createModel<
 
 		// New expression limit method (Kysely 0.27.1+)
 		withExpressionLimit,
+
+		// Additional helper methods
+		insertRequired: async <K extends keyof TTable>(
+			data: RequiredInsert<TTable, K>
+		): Promise<Selectable<TTable>> => {
+			const result = await insertInto()
+				.values(data as unknown as InsertObject<TDatabase, TTableName>)
+				.returningAll()
+				.executeTakeFirst();
+
+			if (result) {
+				return result as Selectable<TTable>;
+			}
+			throw new Error(
+				`Failed to insert ${table} with data ${JSON.stringify(data)}`
+			);
+		},
+
+		updatePartial: async (
+			id: TTable[TIdColumnName],
+			data: UpdateFields<TTable>
+		): Promise<Selectable<TTable>> => {
+			const result = await updateTable()
+				.where(sql`${table}.${id}`, '=', id)
+				.set(data as unknown as UpdateObject<TDatabase, TTableName>)
+				.returningAll()
+				.executeTakeFirst();
+
+			if (result) {
+				return result as Selectable<TTable>;
+			}
+			throw new Error(
+				`Failed to update ${table} with id ${id} and data ${JSON.stringify(data)}`
+			);
+		},
+
+		searchBy: async (
+			criteria: SearchCriteria<TTable>
+		): Promise<Selectable<TTable>[]> => {
+			const query = selectFrom()
+				.selectAll()
+				.where((eb) => {
+					return eb.and(
+						Object.entries(criteria).map(([column, value]) =>
+							eb(
+								column as ReferenceExpression<TDatabase, TTableName>,
+								'=',
+								value
+							)
+						)
+					);
+				});
+
+			return query.execute() as Promise<Selectable<TTable>[]>;
+		},
 	};
 
 	return model;

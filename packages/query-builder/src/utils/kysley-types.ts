@@ -11,8 +11,8 @@ import {
 	UpdateObject,
 	UpdateQueryBuilder,
 } from 'kysely';
-import { ShallowRecord } from './type-utils';
 import { UpdateObjectFactory } from '../model';
+import { ShallowRecord } from './type-utils';
 
 /**
  * Parses a string like 'id, first_name' into a type 'id' | 'first_name'
@@ -103,33 +103,31 @@ type ExtractRowFromCommonTableExpression<CTE> = CTE extends (
 					: never
 	: never;
 
-	export interface SelectQueryBuilderExpression<O>
-  extends AliasableExpression<O> {
-  get isSelectQueryBuilder(): true
-  toOperationNode(): SelectQueryNode
+export interface SelectQueryBuilderExpression<O>
+	extends AliasableExpression<O> {
+	get isSelectQueryBuilder(): true;
+	toOperationNode(): SelectQueryNode;
 }
 
-
-	export type ExtractRawTypeFromReferenceExpression<
-  DB,
-  TB extends keyof DB,
-  RE,
-  DV = unknown,
+export type ExtractRawTypeFromReferenceExpression<
+	DB,
+	TB extends keyof DB,
+	RE,
+	DV = unknown,
 > = RE extends string
-  ? ExtractTypeFromStringReference<DB, TB, RE>
-  : RE extends SelectQueryBuilderExpression<infer O>
-    ? O[keyof O] | null
-    : RE extends (qb: any) => SelectQueryBuilderExpression<infer O>
-      ? O[keyof O] | null
-      : RE extends Expression<infer O>
-        ? O
-        : RE extends (qb: any) => Expression<infer O>
-          ? O
-          : DV
+	? ExtractTypeFromStringReference<DB, TB, RE>
+	: RE extends SelectQueryBuilderExpression<infer O>
+		? O[keyof O] | null
+		: RE extends (qb: any) => SelectQueryBuilderExpression<infer O>
+			? O[keyof O] | null
+			: RE extends Expression<infer O>
+				? O
+				: RE extends (qb: any) => Expression<infer O>
+					? O
+					: DV;
 
-
-		  export type UpdateObjectExpression<
-  DB,
-  TB extends keyof DB,
-  UT extends keyof DB = TB,
-> = UpdateObject<DB, TB, UT> | UpdateObjectFactory<DB, TB, UT>
+export type UpdateObjectExpression<
+	DB,
+	TB extends keyof DB,
+	UT extends keyof DB = TB,
+> = UpdateObject<DB, TB, UT> | UpdateObjectFactory<DB, TB, UT>;

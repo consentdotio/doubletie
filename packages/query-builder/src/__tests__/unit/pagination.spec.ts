@@ -47,7 +47,7 @@ describe('unit: pagination functionality', () => {
 		// Create model with mock db
 		userModel = createModel<TestDB, 'users', 'id'>(
 			mockDb as any,
-		'users',
+			'users',
 			'id'
 		) as any;
 

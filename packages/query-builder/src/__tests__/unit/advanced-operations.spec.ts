@@ -58,8 +58,6 @@ describe('Advanced Model Operations - Unit Tests', () => {
 			updateTable: vi.fn().mockReturnValue(mockUpdateBuilder),
 		});
 
-	
-
 		// Create a batch update function using a custom query builder
 		const batchUpdateStatus = async (
 			userIds: number[],
@@ -110,8 +108,6 @@ describe('Advanced Model Operations - Unit Tests', () => {
 		const mockDb = createMockDatabase<TestDB>({
 			selectFrom: vi.fn().mockReturnValue(mockQueryChain),
 		});
-
-	
 
 		// Create a function to get multiple users by IDs
 		const getUsersByIds = async (ids: number[]) => {

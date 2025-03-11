@@ -15,11 +15,7 @@ describe('integration: slug mixin', () => {
 	beforeEach(async () => {
 		await initializeDatabase();
 		const baseModel = createModel(db, 'articles', 'id');
-		const slugMixin = withSlug(
-			baseModel,
-			'slug',
-			'title'
-		);
+		const slugMixin = withSlug(baseModel, 'slug', 'title');
 		if (typeof slugMixin === 'function') {
 			throw new Error('Expected SlugModelType, got function');
 		}

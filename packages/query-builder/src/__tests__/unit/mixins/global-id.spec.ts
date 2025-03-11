@@ -40,19 +40,13 @@ describe('unit: Global ID mixin', () => {
 		});
 
 		// Create base models with proper typing
-		baseUserModel = createModel(
-			mockDb,
-			'users',
-			'id'
-		) as ReturnType<typeof createModel> & {
+		baseUserModel = createModel(mockDb, 'users', 'id') as ReturnType<
+			typeof createModel
+		> & {
 			findById?: MockFn;
 			findByIds?: MockFn;
 		};
-		basePostModel = createModel(
-			mockDb,
-			'posts',
-			'id'
-		);
+		basePostModel = createModel(mockDb, 'posts', 'id');
 	});
 
 	describe('global ID generation', () => {

@@ -180,7 +180,7 @@ export function defineModels<TDatabase>(
 			primaryKey: PrimaryKeySpecification<TDatabase[TTableName]>;
 		};
 	}
-): ModelRegistry<TDatabase> {
+) {
 	return models;
 }
 

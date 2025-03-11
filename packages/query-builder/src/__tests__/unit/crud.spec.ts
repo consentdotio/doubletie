@@ -46,8 +46,6 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 			insertInto: vi.fn().mockReturnValue(mockInsertChain),
 		});
 
-	
-
 		// Define create user function
 		const createUser = async (userData: any) => {
 			return mockDb
@@ -135,8 +133,6 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 			updateTable: vi.fn().mockReturnValue(mockUpdateChain),
 		});
 
-
-
 		// Define update user function
 		const updateUserName = async (id: number, name: string) => {
 			return mockDb
@@ -173,7 +169,6 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 		// Override the default implementation
 		(mockDb.deleteFrom as any) = vi.fn().mockReturnValue(mockDeleteChain);
 
-	
 		// Define delete user function
 		const deleteUser = async (id: number) => {
 			return mockDb.deleteFrom('users').where('id', '=', id).execute();
@@ -215,7 +210,6 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 		(mockDb as any).updateColumn = vi
 			.fn()
 			.mockReturnValue(mockUpdateColumnChain);
-
 
 		// Test direct column update
 		await mockDb
@@ -281,7 +275,6 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 		const mockDb = createMockDatabase<TestDB>({
 			selectFrom: vi.fn().mockReturnValue(mockSelectChain),
 		});
-
 
 		// Define a pagination function
 		const getUsers = async (cursor: string | null, limit: number) => {

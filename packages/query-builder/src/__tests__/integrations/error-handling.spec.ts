@@ -112,11 +112,7 @@ describe('Integration: Error Handling', () => {
 	});
 
 	it('handles foreign key constraint violations', async () => {
-		const CommentModel = createModel(
-			db,
-			'comments',
-			'id'
-		);
+		const CommentModel = createModel(db, 'comments', 'id');
 
 		// Try to insert a comment with a non-existent user
 		try {

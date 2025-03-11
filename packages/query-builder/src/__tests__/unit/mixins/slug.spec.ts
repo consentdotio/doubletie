@@ -1,4 +1,3 @@
-import { DB } from '../../fixtures/migration';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	Operation,
@@ -7,6 +6,7 @@ import {
 	default as withSlug,
 } from '../../../mixins/slug';
 import type { ModelFunctions } from '../../../model';
+import { DB } from '../../fixtures/migration';
 
 describe('unit: slug mixin', () => {
 	describe('generateSlugValue', () => {

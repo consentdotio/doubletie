@@ -14,6 +14,7 @@ import type {
  */
 import slugify from 'url-slug';
 import type { ModelFunctions } from '../model';
+import { DrainOuterGeneric } from '../utils/type-utils';
 
 // Type alias for insert objects or arrays of insert objects
 type InsertObjectOrList<TDatabase, TTableName extends keyof TDatabase> =
@@ -166,30 +167,35 @@ export type SlugModelType<
 	TDatabase,
 	TTableName extends keyof TDatabase & string,
 	TIdColumnName extends keyof TDatabase[TTableName] & string,
-> = ModelFunctions<TDatabase, TTableName, TIdColumnName> & {
-	findBySlug(
-		value: string,
-		column?: keyof TDatabase[TTableName] & string
-	): Promise<Selectable<TDatabase[TTableName]> | undefined>;
-	insertWithSlug(
-		values: TableValues<TDatabase, TTableName>
-	): Promise<Selectable<TDatabase[TTableName]>>;
-	insertIfNotExistsWithSlug(
-		values: TableValues<TDatabase, TTableName>,
-		uniqueColumn: keyof TDatabase[TTableName] & string
-	): Promise<Selectable<TDatabase[TTableName]> | undefined>;
-	upsertWithSlug(
-		criteria: { column: keyof TDatabase[TTableName] & string; value: unknown },
-		insertValues: TableValues<TDatabase, TTableName>,
-		updateValues?: TableValues<TDatabase, TTableName>
-	): Promise<Selectable<TDatabase[TTableName]> | undefined>;
-	insertMany(
-		values: Array<TableValues<TDatabase, TTableName>>
-	): Promise<Array<Selectable<TDatabase[TTableName]>>>;
-	generateUniqueSlug(
-		values: TableValues<TDatabase, TTableName>
-	): Promise<string | undefined>;
-};
+> = DrainOuterGeneric<
+	ModelFunctions<TDatabase, TTableName, TIdColumnName> & {
+		findBySlug(
+			value: string,
+			column?: keyof TDatabase[TTableName] & string
+		): Promise<Selectable<TDatabase[TTableName]> | undefined>;
+		insertWithSlug(
+			values: TableValues<TDatabase, TTableName>
+		): Promise<Selectable<TDatabase[TTableName]>>;
+		insertIfNotExistsWithSlug(
+			values: TableValues<TDatabase, TTableName>,
+			uniqueColumn: keyof TDatabase[TTableName] & string
+		): Promise<Selectable<TDatabase[TTableName]> | undefined>;
+		upsertWithSlug(
+			criteria: {
+				column: keyof TDatabase[TTableName] & string;
+				value: unknown;
+			},
+			insertValues: TableValues<TDatabase, TTableName>,
+			updateValues?: TableValues<TDatabase, TTableName>
+		): Promise<Selectable<TDatabase[TTableName]> | undefined>;
+		insertMany(
+			values: Array<TableValues<TDatabase, TTableName>>
+		): Promise<Array<Selectable<TDatabase[TTableName]>>>;
+		generateUniqueSlug(
+			values: TableValues<TDatabase, TTableName>
+		): Promise<string | undefined>;
+	}
+>;
 
 /**
  * Adds slug generation functionality to a model

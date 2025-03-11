@@ -85,7 +85,10 @@ export function withGlobalId<
 	getGlobalId(id: TIdType | string | number): string;
 	getLocalId(globalId: string): TIdType;
 	parseGlobalId(globalId: string | null | undefined): TIdType | string | null;
-	findByGlobalId(globalId: string, options?: { throwIfNotFound?: boolean; error?: typeof NoResultError }): Promise<any>;
+	findByGlobalId(
+		globalId: string,
+		options?: { throwIfNotFound?: boolean; error?: typeof NoResultError }
+	): Promise<any>;
 	getByGlobalId(globalId: string, error?: typeof NoResultError): Promise<any>;
 	findByGlobalIds(globalIds: string[]): Promise<any[]>;
 } {
