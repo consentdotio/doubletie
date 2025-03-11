@@ -9,58 +9,93 @@ import type { ColumnDefinition, TableDefinition } from './adapter';
  */
 import { BaseAdapter } from './base-adapter';
 
+// Define interface for SQLite-specific column properties
+interface SQLiteColumnDefinition<T extends string = string>
+	extends ColumnDefinition<T> {
+	_references?: { table: string; column: string };
+	_onDelete?: string;
+	_onUpdate?: string;
+}
+
 /**
  * SQLite adapter for mapping schema fields to SQLite table definitions
  */
 export class SQLiteAdapter extends BaseAdapter {
-	readonly type = 'sqlite';
-	readonly displayName = 'SQLite';
+	type = 'sqlite';
+	displayName = 'SQLite';
 
 	/**
 	 * Map a schema field to a SQLite column definition
 	 */
-	mapFieldToColumn(
-		field: SchemaField,
+	mapFieldToColumn<
+		TFieldType extends string = string,
+		TColumnType extends string = string,
+	>(
+		field: SchemaField<TFieldType>,
 		fieldName: string,
 		entity: EntitySchemaDefinition
-	): ColumnDefinition {
-		// Extract hints if available
-		const hints = (field as any).databaseHints as DatabaseHints;
-		const sqliteHints = hints?.sqlite;
+	): ColumnDefinition<TColumnType> {
+		// Create the basic column definition
+		const columnDef: SQLiteColumnDefinition<TColumnType> = {
+			name: fieldName,
+			type: this.mapFieldTypeToSQLiteType(field),
+			nullable: !field.required,
+			primaryKey: field.primaryKey === true,
+			unique: field.databaseHints?.unique === true,
+		};
 
-		// If SQLite type is explicitly specified, use it
-		if (sqliteHints?.type) {
-			return {
-				name: fieldName,
-				type: sqliteHints.type,
-				nullable: field.required !== true,
-				defaultValue: this.getDefaultValue(field),
-				primaryKey: field.primaryKey === true,
-				unique: hints?.unique === true,
-				autoIncrement: sqliteHints.autoIncrement === true,
-			};
+		// Handle autoincrement for numbers
+		if (
+			field.type === 'number' &&
+			(field.databaseHints as any)?.autoIncrement === true
+		) {
+			columnDef.autoIncrement = true;
 		}
 
-		// Otherwise map based on field type
-		const columnType = this.mapFieldTypeToSQLiteType(field, hints);
+		// Add relationship reference
+		if (field.relationship) {
+			// Add reference information but not directly on the column definition
+			const reference = {
+				table: field.relationship.entity, // Use entity instead of model
+				column: field.relationship.field,
+			};
 
-		return {
-			name: fieldName,
-			type: columnType,
-			nullable: field.required !== true,
-			defaultValue: this.getDefaultValue(field),
-			primaryKey: field.primaryKey === true,
-			unique: hints?.unique === true,
-			autoIncrement:
-				sqliteHints?.autoIncrement === true ||
-				(field.type === 'number' && fieldName === 'id'),
-		};
+			// Store reference in a custom property
+			columnDef._references = reference;
+
+			// Handle relationship options if present
+			if (field.relationship.relationship) {
+				const relConfig = field.relationship.relationship;
+				if (relConfig.onDelete) {
+					columnDef._onDelete = relConfig.onDelete;
+				}
+				if (relConfig.onUpdate) {
+					columnDef._onUpdate = relConfig.onUpdate;
+				}
+			}
+		}
+
+		columnDef.defaultValue = this.getDefaultValue(field);
+
+		return columnDef;
 	}
 
 	/**
 	 * Generate SQL to create a table in SQLite
 	 */
-	generateCreateTableSQL(tableDef: TableDefinition): string {
+	generateCreateTableSQL<
+		TTableOptions extends Record<string, any> = {},
+		TColumnType extends string = string,
+		TPrimaryKeyType extends string = string,
+		TOnAction extends string = string,
+	>(
+		tableDef: TableDefinition<
+			TTableOptions,
+			TColumnType,
+			TPrimaryKeyType,
+			TOnAction
+		>
+	): string {
 		const columnDefs = tableDef.columns.map((col) => {
 			let colDef = `"${col.name}" ${col.type}`;
 
@@ -87,21 +122,34 @@ export class SQLiteAdapter extends BaseAdapter {
 		});
 
 		// Add primary key constraint if it's not a single column
-		if (tableDef.primaryKey && tableDef.primaryKey.length > 1) {
+		if (
+			tableDef.primaryKey &&
+			typeof tableDef.primaryKey === 'object' &&
+			Array.isArray(tableDef.primaryKey.columns) &&
+			tableDef.primaryKey.columns.length > 1
+		) {
 			columnDefs.push(
-				`PRIMARY KEY (${tableDef.primaryKey.map((col) => `"${col}"`).join(', ')})`
+				`PRIMARY KEY (${tableDef.primaryKey.columns.map((col) => `"${col}"`).join(', ')})`
 			);
 		}
 
 		// Add foreign key constraints
-		if (tableDef.foreignKeys) {
+		if (tableDef.foreignKeys && tableDef.foreignKeys.length > 0) {
 			tableDef.foreignKeys.forEach((fk) => {
-				const constraint =
-					`FOREIGN KEY (${fk.columns.map((col) => `"${col}"`).join(', ')}) ` +
-					`REFERENCES "${fk.referencedTable}" (${fk.referencedColumns.map((col) => `"${col}"`).join(', ')})` +
-					(fk.onDelete ? ` ON DELETE ${fk.onDelete}` : '') +
-					(fk.onUpdate ? ` ON UPDATE ${fk.onUpdate}` : '');
-				columnDefs.push(constraint);
+				if (
+					fk.columns &&
+					fk.columns.length > 0 &&
+					fk.referencedTable &&
+					fk.referencedColumns &&
+					fk.referencedColumns.length > 0
+				) {
+					const constraint =
+						`FOREIGN KEY (${fk.columns.map((col) => `"${col}"`).join(', ')}) ` +
+						`REFERENCES "${fk.referencedTable}" (${fk.referencedColumns.map((col) => `"${col}"`).join(', ')})` +
+						(fk.onDelete ? ` ON DELETE ${fk.onDelete}` : '') +
+						(fk.onUpdate ? ` ON UPDATE ${fk.onUpdate}` : '');
+					columnDefs.push(constraint);
+				}
 			});
 		}
 
@@ -109,11 +157,13 @@ export class SQLiteAdapter extends BaseAdapter {
 
 		// Add indexes as separate statements
 		let indexSql = '';
-		if (tableDef.indexes) {
+		if (tableDef.indexes && tableDef.indexes.length > 0) {
 			tableDef.indexes.forEach((idx) => {
-				indexSql +=
-					`\nCREATE ${idx.unique ? 'UNIQUE ' : ''}INDEX IF NOT EXISTS "${idx.name}" ` +
-					`ON "${tableDef.name}" (${idx.columns.map((col) => `"${col}"`).join(', ')});`;
+				if (idx.columns && idx.columns.length > 0) {
+					indexSql +=
+						`\nCREATE ${idx.unique ? 'UNIQUE ' : ''}INDEX IF NOT EXISTS "${idx.name}" ` +
+						`ON "${tableDef.name}" (${idx.columns.map((col) => `"${col}"`).join(', ')});`;
+				}
 			});
 		}
 
@@ -123,62 +173,65 @@ export class SQLiteAdapter extends BaseAdapter {
 	/**
 	 * Map field types to SQLite column types
 	 */
-	private mapFieldTypeToSQLiteType(
-		field: SchemaField,
-		hints?: DatabaseHints
-	): string {
+	mapFieldTypeToSQLiteType(field: SchemaField): string {
 		switch (field.type) {
 			case 'string':
 				return 'TEXT';
-
 			case 'number':
-				// Check if this is an ID field or autoincrement
-				if (hints?.sqlite?.autoIncrement || (field as any).autoIncrement) {
-					return 'INTEGER';
-				}
-				// Check for integers vs. floats
-				if (hints?.precision === 0 || (field as any).integer) {
-					return 'INTEGER';
-				}
-				return 'REAL';
-
+				return field.databaseHints?.integer ? 'INTEGER' : 'REAL';
 			case 'boolean':
-				return 'INTEGER'; // SQLite has no native boolean
-
+				return 'INTEGER'; // SQLite has no dedicated boolean type
 			case 'date':
-				// Use INTEGER for unix timestamps, TEXT for ISO strings
-				const format = (field as any).format;
-				if (format === 'unix' || format === 'unix_ms') {
-					return 'INTEGER';
-				}
-				return 'TEXT';
-
-			case 'uuid':
-				return 'TEXT';
-
+				return 'TEXT'; // Store dates as ISO strings in SQLite
 			case 'json':
-			case 'array':
-				return 'TEXT'; // Store as stringified JSON
-
+				return 'TEXT'; // Store JSON as stringified text
 			default:
-				return 'TEXT'; // Default fallback
+				return 'TEXT'; // Default to TEXT for unknown types
 		}
 	}
 
 	/**
 	 * Get default value appropriate for SQLite
 	 */
-	private getDefaultValue(field: SchemaField): any {
-		if (field.defaultValue === undefined) {
-			return undefined;
+	protected getDefaultValue(field: SchemaField): any {
+		if (field.defaultValue === undefined || field.defaultValue === null) {
+			return null;
 		}
 
-		// If it's a function, we can't represent it directly in SQLite
+		// Handle special cases for default values (like functions)
 		if (typeof field.defaultValue === 'function') {
-			return undefined; // Will be handled at application level
+			// Special handling for function defaults
+			if (field.type === 'date') {
+				return 'CURRENT_TIMESTAMP';
+			}
+			// Other function defaults may need special treatment
+			return null;
 		}
 
-		return field.defaultValue;
+		// For primitive values, handle them directly instead of using toDatabase
+		if (typeof field.defaultValue === 'string') {
+			return `'${field.defaultValue.replace(/'/g, "''")}'`;
+		}
+
+		if (typeof field.defaultValue === 'number') {
+			return field.defaultValue.toString();
+		}
+
+		if (typeof field.defaultValue === 'boolean') {
+			return field.defaultValue ? '1' : '0';
+		}
+
+		if (field.defaultValue instanceof Date) {
+			return `'${field.defaultValue.toISOString()}'`;
+		}
+
+		if (typeof field.defaultValue === 'object') {
+			// For objects, convert to JSON string
+			return `'${JSON.stringify(field.defaultValue).replace(/'/g, "''")}'`;
+		}
+
+		// For any other types, use string representation
+		return `'${String(field.defaultValue).replace(/'/g, "''")}'`;
 	}
 
 	/**

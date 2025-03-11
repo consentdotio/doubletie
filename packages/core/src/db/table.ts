@@ -86,9 +86,13 @@ export function generateTable(entityDef: ResolvedEntitySchema<any>) {
 
 				if (data[logicalName] !== undefined) {
 					// Apply any input transformations
-					let value = data[logicalName];
+					let value: unknown = data[logicalName];
 					if (fieldDef.transform?.input) {
-						value = fieldDef.transform.input(value, data);
+						const inputTransform = fieldDef.transform.input;
+						value =
+							typeof inputTransform === 'function'
+								? inputTransform(value)
+								: value;
 					}
 
 					result[dbFieldName] = value;
@@ -120,7 +124,11 @@ export function generateTable(entityDef: ResolvedEntitySchema<any>) {
 					// Apply output transformations if any
 					let transformedValue = value;
 					if (fieldDef?.transform?.output) {
-						transformedValue = fieldDef.transform.output(value, data);
+						const outputTransform = fieldDef.transform.output;
+						transformedValue =
+							typeof outputTransform === 'function'
+								? outputTransform(value)
+								: value;
 					}
 
 					result[logicalName] = transformedValue;

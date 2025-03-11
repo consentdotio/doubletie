@@ -15,17 +15,16 @@ export type {
 	EntityWithRelationships,
 	EntityInput,
 	EntityOutput,
+	EntityFieldsByType,
 	WithRelationships,
 } from './entity.types';
 
 // Relationship types
 export type {
 	RelationshipType,
-	JoinTableConfig,
 	RelationshipConfig,
 	EntityFieldReference,
-	ValidatedRelationship,
-	ValidateRelationships,
-	IsValidRelationship,
 	RelationshipHelpers,
+	BasicRelationshipOptions,
+	ManyToManyOptions,
 } from './relationship.types';

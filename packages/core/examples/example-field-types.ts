@@ -1,11 +1,11 @@
 import { z } from 'zod';
+import { defineEntity } from '../src/entity';
 /**
  * Example demonstrating all the specialized field types
  */
 import {
 	// Timestamp fields
 	createdAtField,
-	defineEntity,
 	deletedAtField,
 	emailField,
 	// JSON fields
@@ -25,7 +25,7 @@ import {
 	urlField,
 	// ID fields
 	uuidField,
-} from '../src/index';
+} from '../src/schema/fields';
 
 // User entity with various field types
 const userEntity = defineEntity({

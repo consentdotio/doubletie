@@ -1,10 +1,11 @@
+import { TableDefinition, getAdapter } from '../src/db/adapters';
+import { defineEntity } from '../src/entity';
 /**
  * Example demonstrating the database adapters with different entity types
  */
 import {
 	booleanField,
 	createdAtField,
-	defineEntity,
 	deletedAtField,
 	emailField,
 	incrementalIdField,
@@ -14,9 +15,7 @@ import {
 	stringField,
 	updatedAtField,
 	uuidField,
-} from '../src/index';
-
-import { TableDefinition, getAdapter } from '../src/db/adapters';
+} from '../src/schema/fields';
 
 // Define a user entity with UUID primary key
 const userEntity = defineEntity({

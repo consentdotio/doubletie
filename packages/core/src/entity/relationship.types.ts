@@ -1,8 +1,7 @@
-import type { SchemaField } from '../schema/schema.types';
 import type { EntityFields, EntityStructure } from './entity.types';
 
 /**
- * Supported relationship types
+ * Relationship type identifiers
  */
 export type RelationshipType =
 	| 'oneToOne'
@@ -11,215 +10,205 @@ export type RelationshipType =
 	| 'manyToMany';
 
 /**
- * Join table configuration for many-to-many relationships
+ * Configuration for a relationship between entities
+ * @template TSourceEntity Source entity in the relationship
+ * @template TTargetEntity Target entity in the relationship
  */
-export interface JoinTableConfig<
-	SourceEntity extends EntityStructure = any,
-	TargetEntity extends EntityStructure = any,
+export interface RelationshipConfig<
+	TSourceEntity extends EntityStructure = EntityStructure,
+	TTargetEntity extends EntityStructure = EntityStructure,
+	TSourceField extends string = string,
+	TTargetField extends keyof TTargetEntity['fields'] &
+		string = keyof TTargetEntity['fields'] & string,
 > {
 	/**
-	 * Name of the join table
+	 * Foreign key field to use for the relationship. This can be a field name from either
+	 * the source or target entity, or a custom string if the field hasn't been created yet.
 	 */
-	tableName: string;
+	foreignKey: string;
 
 	/**
-	 * Column in the join table that references the source entity
-	 * If not provided, defaults to `${sourceName}Id`
+	 * Type of relationship
 	 */
-	sourceColumn?: (keyof SourceEntity['fields'] & string) | string;
+	type: RelationshipType;
 
 	/**
-	 * Column in the join table that references the target entity
-	 * If not provided, defaults to `${targetName}Id`
+	 * Configuration for a join table in many-to-many relationships
 	 */
-	targetColumn?: (keyof TargetEntity['fields'] & string) | string;
+	joinTable?: {
+		/**
+		 * Name of the join table
+		 */
+		tableName: string;
 
-	/**
-	 * Additional columns to include in the join table
-	 */
-	additionalColumns?: Record<string, SchemaField>;
+		/**
+		 * Source column name (defaults to `${source.name}Id`)
+		 */
+		sourceColumn?: string;
+
+		/**
+		 * Target column name (defaults to `${target.name}Id`)
+		 */
+		targetColumn?: string;
+
+		/**
+		 * Additional fields to add to the join table
+		 */
+		fields?: Record<string, any>;
+	};
 }
 
 /**
- * Configuration for an entity relationship
+ * Reference to a field in another entity
+ * @template TSourceEntity Source entity in the relationship
+ * @template TTargetEntity Target entity in the relationship
+ * @template TTargetField Field in the target entity being referenced
  */
-export type RelationshipConfig<
-	E1 extends EntityStructure,
-	E2 extends EntityStructure,
-> = {
-	type: 'oneToOne' | 'oneToMany' | 'manyToOne' | 'manyToMany';
+export interface EntityFieldReference<
+	TSourceEntity extends EntityStructure = EntityStructure,
+	TTargetEntity extends EntityStructure = EntityStructure,
+	TTargetField extends keyof TTargetEntity['fields'] &
+		string = keyof TTargetEntity['fields'] & string,
+> {
 	/**
-	 * Name of the column that stores the foreign key in source entity
-	 * Only used for oneToOne and manyToOne relationships
+	 * The name of the target entity
 	 */
-	foreignKey?: keyof E1['fields'] & string;
+	entity: TTargetEntity['name'];
+
 	/**
-	 * Configuration for a join table - only used for manyToMany relationships
+	 * The field in the target entity
 	 */
-	joinTable?: JoinTableConfig<E1, E2>;
-	cascade?: boolean;
-	fetch?: 'lazy' | 'eager';
-};
+	field: TTargetField;
 
-/**
- * A relationship to a field in an entity, used to build foreign keys
- */
-export type EntityFieldReference<
-	E extends EntityStructure,
-	F extends EntityFields<E> & string,
-> = {
-	model: E['name'];
-	field: F;
-	relationship?: RelationshipConfig<any, E>;
-};
-
-/**
- * Helper type to validate a relationship at build time
- * This will cause a compile error if the field doesn't exist on the target entity
- */
-export type ValidatedRelationship<
-	TargetEntity extends EntityStructure,
-	FieldName extends EntityFields<TargetEntity> & string,
-> = EntityFieldReference<TargetEntity, FieldName>;
-
-/**
- * Validate that a foreign key is a valid field name in the target entity
- */
-export type ValidateForeignKey<
-	Source extends EntityStructure,
-	Target extends EntityStructure,
-	Key extends string,
-> = Key extends EntityFields<Target> ? Key : never;
-
-/**
- * Validate that the relationship configuration is valid
- */
-export type ValidateRelationshipConfig<
-	Source extends EntityStructure,
-	Target extends EntityStructure,
-	Config extends RelationshipConfig<Source, Target>,
-> = {
-	type?: Config['type'];
-
-	// For one-to-many, the foreignKey must be a valid field name in the target entity
-	foreignKey?: Config['type'] extends 'oneToMany'
-		? ValidateForeignKey<Source, Target, NonNullable<Config['foreignKey']>>
-		: Config['foreignKey'];
-
-	// Join table validation occurs at runtime since we don't have the structure
-	// of the join table at build time
-	joinTable?: Config['joinTable'];
-
-	cascade?: Config['cascade'];
-	fetch?: Config['fetch'];
-};
-
-/**
- * Get a fully validated relationship configuration
- */
-export type GetValidatedRelationshipConfig<
-	Source extends EntityStructure,
-	Target extends EntityStructure,
-	Config extends RelationshipConfig<Source, Target>,
-> = Config extends any
-	? ValidateRelationshipConfig<Source, Target, Config>
-	: never;
-
-/**
- * Validate relationship integrity at build time
- * This will cause a compile error if an invalid relationship is detected
- */
-export type ValidateRelationships<
-	E extends EntityStructure,
-	R extends Record<
-		string,
-		{ model: string; field: any; relationship?: RelationshipConfig<any, any> }
-	>,
-> = {
-	[K in keyof R]: K extends keyof E['fields']
-		? R[K]['field'] extends EntityFields<{
-				name: R[K]['model'];
-				fields: Record<string, any>;
-			}>
-			? R[K]
-			: never // Invalid relationship field
-		: never; // Invalid source field
-};
-
-/**
- * Check if a relationship is valid at build time
- * Usage: type check = IsValidRelationship<typeof targetEntity, 'id'> // true or false
- */
-export type IsValidRelationship<
-	E extends EntityStructure,
-	F extends string,
-> = F extends EntityFields<E> ? true : false;
-
-/**
- * Define the interface for relationship helper methods
- */
-export interface RelationshipHelpers {
 	/**
-	 * Create a type-safe many-to-one relationship to another entity's field
+	 * Configuration for the relationship
 	 */
-	manyToOne<
-		E extends any,
-		F extends EntityFields<E> & string,
-		SourceEntity extends EntityStructure,
+	relationship?: RelationshipConfig<TSourceEntity, TTargetEntity>;
+}
+
+/**
+ * Helper to create an entity field reference
+ */
+export interface EntityFieldReferenceCreator {
+	<
+		TTargetEntity extends EntityStructure,
+		TTargetField extends keyof TTargetEntity['fields'] &
+			string = keyof TTargetEntity['fields'] & string,
 	>(
-		targetEntity: E,
-		fieldName: F,
-		options?: Omit<
-			RelationshipConfig<SourceEntity, E>,
-			'type' | 'foreignKey' | 'joinTable'
-		>
-	): ValidatedRelationship<E, F>;
+		entity: TTargetEntity,
+		field: TTargetField
+	): EntityFieldReference<EntityStructure, TTargetEntity, TTargetField>;
+}
 
+/**
+ * Options for one-to-one and many-to-one relationships
+ */
+export interface BasicRelationshipOptions {
 	/**
-	 * Create a type-safe one-to-one relationship to another entity's field
+	 * Foreign key field to use for the relationship
 	 */
-	oneToOne<
-		E extends any,
-		F extends EntityFields<E> & string,
-		SourceEntity extends EntityStructure,
-	>(
-		targetEntity: E,
-		fieldName: F,
-		options?: Omit<
-			RelationshipConfig<SourceEntity, E>,
-			'type' | 'joinTable'
-		> & {
-			foreignKey?: keyof E['fields'] & string;
-		}
-	): ValidatedRelationship<E, F>;
+	foreignKey?: string;
+}
 
-	/**
-	 * Create a type-safe one-to-many relationship to another entity
-	 */
-	oneToMany<
-		E extends any,
-		F extends EntityFields<E> & string,
-		SourceEntity extends EntityStructure,
-	>(
-		targetEntity: E,
-		fieldName: F,
-		options: Omit<RelationshipConfig<SourceEntity, E>, 'type' | 'joinTable'> & {
-			foreignKey: keyof E['fields'] & string;
-		}
-	): ValidatedRelationship<E, F>;
+/**
+ * Helper to create a many-to-one relationship
+ */
+export interface ManyToOneHelper {
+	<TTargetEntity extends EntityStructure>(
+		entity: TTargetEntity,
+		options?: BasicRelationshipOptions
+	): EntityFieldReference<EntityStructure, TTargetEntity>;
+}
 
+/**
+ * Helper to create a one-to-one relationship
+ */
+export interface OneToOneHelper {
+	<TTargetEntity extends EntityStructure>(
+		entity: TTargetEntity,
+		options?: BasicRelationshipOptions
+	): EntityFieldReference<EntityStructure, TTargetEntity>;
+}
+
+/**
+ * Helper to create a one-to-many relationship
+ */
+export interface OneToManyHelper {
+	<TTargetEntity extends EntityStructure>(
+		entity: TTargetEntity,
+		options?: BasicRelationshipOptions
+	): EntityFieldReference<EntityStructure, TTargetEntity>;
+}
+
+/**
+ * Options for many-to-many relationships
+ */
+export interface ManyToManyOptions {
 	/**
-	 * Create a type-safe many-to-many relationship with another entity
+	 * Join table configuration
 	 */
-	manyToMany<E extends any, SourceEntity extends EntityStructure>(
-		targetEntity: E,
-		joinTableConfig: JoinTableConfig<SourceEntity, E> & {
-			cascade?: boolean;
-			fetch?: 'lazy' | 'eager';
-		}
-	): {
-		model: E['name'];
-		field: 'id';
-		relationship: RelationshipConfig<SourceEntity, E>;
+	joinTable: {
+		/**
+		 * Name of the join table
+		 */
+		tableName: string;
+
+		/**
+		 * Source column name (defaults to `${source.name}Id`)
+		 */
+		sourceColumn?: string;
+
+		/**
+		 * Target column name (defaults to `${target.name}Id`)
+		 */
+		targetColumn?: string;
+
+		/**
+		 * Additional fields to add to the join table
+		 */
+		fields?: Record<string, any>;
 	};
+}
+
+/**
+ * Helper to create a many-to-many relationship
+ */
+export interface ManyToManyHelper {
+	<TTargetEntity extends EntityStructure>(
+		entity: TTargetEntity,
+		options: ManyToManyOptions
+	): EntityFieldReference<EntityStructure, TTargetEntity>;
+}
+
+/**
+ * Helpers for creating entity relationships
+ * @template TSourceEntity The source entity these helpers will be used with
+ */
+export interface RelationshipHelpers<
+	TSourceEntity extends EntityStructure = EntityStructure,
+> {
+	/**
+	 * Create a reference to a field in another entity
+	 */
+	ref: EntityFieldReferenceCreator;
+
+	/**
+	 * Create a many-to-one relationship
+	 */
+	manyToOne: ManyToOneHelper;
+
+	/**
+	 * Create a one-to-one relationship
+	 */
+	oneToOne: OneToOneHelper;
+
+	/**
+	 * Create a one-to-many relationship
+	 */
+	oneToMany: OneToManyHelper;
+
+	/**
+	 * Create a many-to-many relationship
+	 */
+	manyToMany: ManyToManyHelper;
 }

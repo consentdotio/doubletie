@@ -11,10 +11,15 @@ import type { SchemaField } from '../schema.types';
  * @param options Field options including a validator
  * @returns A schema field definition with a validator
  */
-export function field<T extends StandardSchemaV1>(
-	type: SchemaField['type'],
-	options: Partial<Omit<SchemaField, 'type'>> & { validator: T }
-): SchemaField & { validator: T } {
+export function field<
+	TFieldType extends string,
+	TValidator extends StandardSchemaV1,
+>(
+	type: TFieldType,
+	options: Partial<Omit<SchemaField<TFieldType>, 'type'>> & {
+		validator: TValidator;
+	}
+): SchemaField<TFieldType> & { validator: TValidator } {
 	return {
 		type,
 		...options,
@@ -29,14 +34,26 @@ export function field<T extends StandardSchemaV1>(
  * @param options Field options
  * @returns A schema field definition
  */
-export function createField(
-	type: SchemaField['type'],
-	options?: Partial<Omit<SchemaField, 'type'>>
-): SchemaField {
+export function createField<
+	TFieldType extends string,
+	TValueType = TFieldType extends 'string' ? string :
+		TFieldType extends 'number' ? number :
+		TFieldType extends 'boolean' ? boolean :
+		TFieldType extends 'date' | 'timestamp' | 'createdAt' | 'updatedAt' ? Date :
+		TFieldType extends 'array' ? unknown[] :
+		TFieldType extends 'object' | 'json' ? Record<string, unknown> :
+		TFieldType extends 'uuid' | 'id' | 'email' | 'url' | 'slug' | 'phone' ? string :
+		TFieldType extends `${string}_id` ? string :
+		TFieldType extends 'incremental_id' ? number :
+		unknown
+>(
+	type: TFieldType,
+	options?: Partial<Omit<SchemaField<TFieldType, TValueType>, 'type'>>
+): SchemaField<TFieldType, TValueType> {
 	return {
 		type,
 		...options,
-	};
+	} as SchemaField<TFieldType, TValueType>;
 }
 
 /**

@@ -2,9 +2,9 @@
  * Timestamp field utilities for entity schema definitions
  */
 import { z } from 'zod';
-import { createField } from '../schema';
-import type { SchemaField } from '../schema.types';
-import type { DatabaseHints } from './field-hints';
+import { SchemaField } from '../schema.types';
+import { createField } from './basic-fields';
+import type { DatabaseHints, SQLiteTypeOption, StorageTypeCategory } from './field-hints';
 
 /**
  * Format for storing timestamp data
@@ -75,7 +75,7 @@ export interface TimestampFieldOptions
  * @param options Configuration options for the timestamp field
  * @returns A schema field configured for timestamps
  */
-export function timestampField(options?: TimestampFieldOptions): SchemaField {
+export function timestampField(options?: TimestampFieldOptions): SchemaField<string, Date> {
 	const {
 		autoCreate = true,
 		autoUpdate = false,
@@ -111,7 +111,7 @@ export function timestampField(options?: TimestampFieldOptions): SchemaField {
 	}
 
 	// Input transform to handle auto-creation/update and format conversion
-	const inputTransform = (value: unknown, data: Record<string, unknown>) => {
+	const inputTransform = (value: unknown) => {
 		// If value is explicitly provided, convert it to the desired format
 		if (value !== undefined) {
 			return formatTimestamp(value, {
@@ -122,8 +122,8 @@ export function timestampField(options?: TimestampFieldOptions): SchemaField {
 			});
 		}
 
-		// For new entities with no existing value
-		if (autoCreate && !data.id) {
+		// For auto-create/update fields, generate a current timestamp
+		if ((autoCreate && !autoUpdate) || autoUpdate) {
 			return formatTimestamp(new Date(), {
 				format,
 				formatFn,
@@ -132,89 +132,103 @@ export function timestampField(options?: TimestampFieldOptions): SchemaField {
 			});
 		}
 
-		// For updates to existing entities
-		if (autoUpdate && data.id) {
-			return formatTimestamp(new Date(), {
-				format,
-				formatFn,
-				timezone,
-				includeTimezone,
-			});
-		}
-
-		// Return the value unchanged if no auto behavior applies
-		return value;
+		// No auto-create/update and no explicit value
+		return undefined;
 	};
 
-	// Output transform for database to application conversion
+	// Output transform to convert from stored format to desired format
 	const outputTransform = (value: unknown) => {
-		if (value === null || value === undefined) {
-			return value;
+		if (value === undefined || value === null) {
+			return null;
 		}
 
-		// Convert from stored format to desired output format (Date or ISO string)
-		return parseTimestamp(value, { format, parseFn });
+		return parseTimestamp(value, {
+			format,
+			parseFn,
+			timezone,
+		});
 	};
 
-	// Determine appropriate DB field type based on format
-	const fieldType =
-		format === 'unix' || format === 'unix_ms' ? 'number' : 'date';
+	// Generate appropriate database hints
+	let storageType: StorageTypeCategory;
+	let sqliteType: SQLiteTypeOption;
+	let mysqlType: string;
+	let postgresType: string;
 
-	// Generate database hints based on format and options
+	switch (format) {
+		case 'unix':
+			storageType = 'numeric' as const;
+			sqliteType = 'INTEGER' as const;
+			mysqlType = 'BIGINT';
+			postgresType = 'BIGINT';
+			break;
+		case 'unix_ms':
+			storageType = 'numeric' as const;
+			sqliteType = 'INTEGER' as const;
+			mysqlType = 'BIGINT';
+			postgresType = 'BIGINT';
+			break;
+		case 'date':
+			storageType = 'text' as const;
+			sqliteType = 'TEXT' as const;
+			mysqlType = 'VARCHAR(255)';
+			postgresType = 'VARCHAR(255)';
+			break;
+		case 'iso':
+		default:
+			storageType = 'temporal' as const;
+			sqliteType = 'TEXT' as const; // SQLite doesn't have a native timestamp type
+			mysqlType = 'TIMESTAMP';
+			postgresType = includeTimezone ? 'TIMESTAMPTZ' : 'TIMESTAMP';
+			break;
+	}
+
+	// Database hints for timestamp fields
 	const databaseHints: DatabaseHints = {
-		storageType:
-			format === 'unix' || format === 'unix_ms' ? 'numeric' : 'temporal',
-		hasTimezone: includeTimezone,
-		precision: format === 'unix_ms' ? 'millisecond' : 'second',
-
-		// SQLite hints
+		storageType: storageType as StorageTypeCategory,
+		indexed: autoCreate || autoUpdate, // Index created_at and updated_at by default
 		sqlite: {
-			type: format === 'unix' || format === 'unix_ms' ? 'INTEGER' : 'TEXT',
+			type: sqliteType as SQLiteTypeOption,
 		},
-
-		// MySQL hints
 		mysql: {
-			// TIMESTAMP for server timezone, DATETIME to preserve original timezone
-			type: includeTimezone
-				? 'DATETIME'
-				: format === 'unix' || format === 'unix_ms'
-					? 'BIGINT'
-					: 'TIMESTAMP',
+			type: mysqlType,
 		},
-
-		// PostgreSQL hints
 		postgres: {
-			// TIMESTAMPTZ for timezone-aware, TIMESTAMP for non-timezone
-			type: includeTimezone
-				? 'TIMESTAMPTZ'
-				: format === 'unix' || format === 'unix_ms'
-					? 'BIGINT'
-					: 'TIMESTAMP',
+			type: postgresType,
 		},
 
-		// Merge with any custom hints provided
+		// Custom database hints to override defaults
 		...customHints,
 	};
 
+	// Determine field type based on format
+	let fieldType: string;
+	switch (format) {
+		case 'unix':
+		case 'unix_ms':
+			fieldType = 'number';
+			break;
+		case 'date':
+			fieldType = 'date';
+			break;
+		case 'iso':
+		case 'custom':
+		default:
+			fieldType = 'timestamp';
+			break;
+	}
+
 	return createField(fieldType as any, {
-		required: true,
-		defaultValue: autoCreate
-			? () =>
-					formatTimestamp(new Date(), {
-						format,
-						formatFn,
-						timezone,
-						includeTimezone,
-					})
-			: undefined,
+		required: autoCreate,
+		defaultValue: autoCreate ? () => new Date() : undefined,
+		validator,
 		transform: {
 			input: inputTransform,
 			output: outputTransform,
 		},
-		validator,
 		databaseHints,
 		...rest,
-	});
+	}) as SchemaField<string, Date>;
 }
 
 /**
@@ -322,9 +336,10 @@ function parseTimestamp(
 	options: {
 		format: TimestampFormat;
 		parseFn?: (value: unknown) => Date;
+		timezone?: string;
 	}
 ): Date | string {
-	const { format, parseFn } = options;
+	const { format, parseFn, timezone } = options;
 
 	if (value === null || value === undefined) {
 		return value as any;
@@ -352,12 +367,60 @@ function parseTimestamp(
 			date = new Date(value as any);
 	}
 
+	// Apply timezone if specified
+	if (timezone) {
+		try {
+			// Convert to a date in the specified timezone
+			const options: Intl.DateTimeFormatOptions = {
+				timeZone: timezone,
+				year: 'numeric',
+				month: '2-digit',
+				day: '2-digit',
+				hour: '2-digit',
+				minute: '2-digit',
+				second: '2-digit',
+				hour12: false,
+			};
+
+			// Create a formatter for the timezone
+			const formatter = new Intl.DateTimeFormat('en-US', options);
+
+			// For 'iso' format with timezone, use toLocaleString to preserve TZ info
+			if (format === 'iso') {
+				return formatter.format(date);
+			}
+
+			// For other formats, just adjust the time but keep the format
+			const parts = formatter.formatToParts(date);
+			const dateObj: Record<string, string> = {};
+			parts.forEach((part) => {
+				if (part.type !== 'literal') {
+					dateObj[part.type] = part.value;
+				}
+			});
+
+			// Reconstruct a date in the target timezone
+			const newDate = new Date(
+				Number(dateObj.year),
+				Number(dateObj.month) - 1,
+				Number(dateObj.day),
+				Number(dateObj.hour),
+				Number(dateObj.minute),
+				Number(dateObj.second)
+			);
+
+			date = newDate;
+		} catch (e) {
+			console.warn(`Invalid timezone: ${timezone}, using system timezone`);
+		}
+	}
+
 	// Return ISO string for consistency in application layer
 	return date;
 }
 
 /**
- * Creates a createdAt timestamp field that auto-populates on entity creation
+ * Creates a createdAt timestamp field that auto-sets on creation
  *
  * @param options Additional options for the timestamp field
  * @returns A schema field configured for tracking creation time
@@ -367,12 +430,12 @@ function parseTimestamp(
  * createdAtField()
  *
  * @example
- * // Unix timestamp createdAt
+ * // Unix timestamp createdAt field
  * createdAtField({ format: 'unix' })
  */
 export function createdAtField(
 	options?: Omit<TimestampFieldOptions, 'autoCreate' | 'autoUpdate'>
-): SchemaField {
+): SchemaField<string, Date> {
 	return timestampField({
 		autoCreate: true,
 		autoUpdate: false,
@@ -397,7 +460,7 @@ export function createdAtField(
  */
 export function updatedAtField(
 	options?: Omit<TimestampFieldOptions, 'autoCreate' | 'autoUpdate'>
-): SchemaField {
+): SchemaField<string, Date> {
 	return timestampField({
 		autoCreate: true,
 		autoUpdate: true,
@@ -417,34 +480,34 @@ export function updatedAtField(
  * deletedAtField()
  *
  * @example
- * // Unix timestamp deletedAt in UTC
- * deletedAtField({ format: 'unix', timezone: 'UTC' })
+ * // Unix timestamp deletedAt field
+ * deletedAtField({ format: 'unix' })
  */
 export function deletedAtField(
 	options?: Omit<TimestampFieldOptions, 'autoCreate' | 'autoUpdate'>
-): SchemaField {
+): SchemaField<string, Date> {
 	return timestampField({
 		autoCreate: false,
 		autoUpdate: false,
 		required: false,
-		description: 'Timestamp when the record was deleted (for soft deletes)',
+		description: 'Timestamp when the record was soft-deleted',
 		...options,
 	});
 }
 
 /**
- * Creates an expiresAt timestamp field for content with an expiration date
+ * Creates an expiresAt timestamp field for content that expires
  *
  * @param options Additional options for the timestamp field
- * @returns A schema field configured for tracking expiration time
+ * @returns A schema field configured for expiration time
  *
  * @example
- * // Basic expiresAt field
- * expiresAtField()
+ * // Token that expires in 24 hours
+ * expiresAtField({ defaultValue: () => new Date(Date.now() + 24 * 60 * 60 * 1000) })
  */
 export function expiresAtField(
 	options?: Omit<TimestampFieldOptions, 'autoCreate' | 'autoUpdate'>
-): SchemaField {
+): SchemaField<string, Date> {
 	return timestampField({
 		autoCreate: false,
 		autoUpdate: false,

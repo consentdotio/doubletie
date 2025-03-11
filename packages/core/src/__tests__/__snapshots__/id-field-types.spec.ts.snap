@@ -1,0 +1,34 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ID Field Types > Custom ID field generates and validates with custom format > ticket1 1`] = `
+{
+  "id": "TKT-2024-00001",
+  "subject": "Technical issue",
+}
+`;
+
+exports[`ID Field Types > Custom ID field generates and validates with custom format > ticket2 1`] = `
+{
+  "id": "TKT-2024-00002",
+  "subject": "Feature request",
+}
+`;
+
+exports[`ID Field Types > Incremental ID field generates and validates sequential IDs > order1 1`] = `
+{
+  "id": 1000,
+  "items": [
+    "item1",
+    "item2",
+  ],
+}
+`;
+
+exports[`ID Field Types > Incremental ID field generates and validates sequential IDs > order2 1`] = `
+{
+  "id": 1001,
+  "items": [
+    "item3",
+  ],
+}
+`;

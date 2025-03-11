@@ -2,8 +2,8 @@
  * ID field creation utilities with multiple generation strategies
  */
 import { z } from 'zod';
-import { createField } from '../schema';
-import type { SchemaField } from '../schema.types';
+import { SchemaField } from '../schema.types';
+import { createField } from './basic-fields';
 import type { DatabaseHints } from './field-hints';
 
 // ID type and generation options
@@ -39,9 +39,14 @@ const sequences: Record<string, number> = {};
  * // Auto-incrementing numeric ID
  * idField({ idType: 'incremental', incrementStart: 1000 })
  */
-export function idField(options?: IdFieldOptions): SchemaField {
+export function idField<T extends IdType = 'uuid'>(
+	options?: IdFieldOptions & { idType?: T }
+): SchemaField<
+	string, 
+	T extends 'incremental' ? number : string
+> {
 	const {
-		idType = 'uuid',
+		idType = 'uuid' as T,
 		prefix = '',
 		length = 10,
 		generator,
@@ -193,7 +198,7 @@ export function idField(options?: IdFieldOptions): SchemaField {
 		databaseHints,
 		description: `Unique identifier (${idType} format)`,
 		...rest,
-	});
+	}) as SchemaField<string, T extends 'incremental' ? number : string>;
 }
 
 /**
@@ -204,7 +209,7 @@ export function idField(options?: IdFieldOptions): SchemaField {
  */
 export function uuidField(
 	options?: Omit<IdFieldOptions, 'idType'>
-): SchemaField {
+): SchemaField<string, string> {
 	return idField({ idType: 'uuid', ...options });
 }
 
@@ -218,7 +223,7 @@ export function uuidField(
 export function prefixedIdField(
 	prefix: string,
 	options?: Omit<IdFieldOptions, 'idType' | 'prefix'>
-): SchemaField {
+): SchemaField<string, string> {
 	return idField({ idType: 'prefixed', prefix, ...options });
 }
 
@@ -232,7 +237,7 @@ export function prefixedIdField(
 export function incrementalIdField(
 	startFrom = 1,
 	options?: Omit<IdFieldOptions, 'idType' | 'incrementStart'>
-): SchemaField {
+): SchemaField<string, number> {
 	return idField({
 		idType: 'incremental',
 		incrementStart: startFrom,

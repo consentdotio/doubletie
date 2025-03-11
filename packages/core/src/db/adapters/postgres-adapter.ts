@@ -1,64 +1,118 @@
-import { DatabaseHints, PostgresHints } from '../../schema/fields/field-hints';
-import type {
-	EntitySchemaDefinition,
-	SchemaField,
-} from '../../schema/schema.types';
-import type { ColumnDefinition, TableDefinition } from './adapter';
-/**
- * PostgreSQL-specific database adapter implementation
- */
+import { SchemaField } from '../../schema/schema.types';
+import type { EntitySchemaDefinition } from '../../schema/schema.types';
+import { ColumnDefinition, TableDefinition } from './adapter';
 import { BaseAdapter } from './base-adapter';
 
+// Define PostgreSQL-specific hints interface
+interface PostgresExtendedHints {
+	schema?: string;
+	uuid?: boolean;
+	// Add other PostgreSQL-specific hints as needed
+}
+
+// Define PostgreSQL-specific column definition
+interface PostgresColumnDefinition<T extends string = string>
+	extends ColumnDefinition<T> {
+	_schema?: string;
+	_references?: { table: string; column: string };
+	_onDelete?: string;
+	_onUpdate?: string;
+}
+
 /**
- * PostgreSQL adapter for mapping schema fields to PostgreSQL table definitions
+ * PostgreSQL database adapter implementation
+ *
+ * This adapter handles mapping between schema fields and PostgreSQL-specific
+ * column definitions, as well as generating SQL for table creation.
  */
 export class PostgresAdapter extends BaseAdapter {
-	readonly type = 'postgres';
-	readonly displayName = 'PostgreSQL';
+	type = 'postgres';
+	displayName = 'PostgreSQL';
 
 	/**
-	 * Map a schema field to a PostgreSQL column definition
+	 * Maps a schema field to a PostgreSQL column definition
 	 */
-	mapFieldToColumn(
-		field: SchemaField,
+	mapFieldToColumn<
+		TFieldType extends string = string,
+		TColumnType extends string = string,
+	>(
+		field: SchemaField<TFieldType>,
 		fieldName: string,
 		entity: EntitySchemaDefinition
-	): ColumnDefinition {
-		// Extract hints if available
-		const hints = (field as any).databaseHints as DatabaseHints;
-		const pgHints = hints?.postgres;
+	): ColumnDefinition<TColumnType> {
+		// Create the basic column definition
+		const columnDef: PostgresColumnDefinition<TColumnType> = {
+			name: fieldName,
+			type: this.mapFieldTypeToPostgresType(field),
+			nullable: !field.required,
+			primaryKey: field.primaryKey === true,
+			unique: field.databaseHints?.unique === true,
+		};
 
-		// If PostgreSQL type is explicitly specified, use it
-		if (pgHints?.type) {
-			return {
-				name: fieldName,
-				type: pgHints.type,
-				nullable: field.required !== true,
-				defaultValue: this.getDefaultValue(field),
-				primaryKey: field.primaryKey === true,
-				unique: hints?.unique === true,
-				autoIncrement: pgHints.useSerial === true,
-			};
+		// Handle PostgreSQL-specific features
+		const pgHints = field.databaseHints?.postgres as
+			| PostgresExtendedHints
+			| undefined;
+
+		// Handle autoincrement for numbers
+		if (
+			field.type === 'number' &&
+			(field.databaseHints as any)?.autoIncrement === true
+		) {
+			columnDef.autoIncrement = true;
 		}
 
-		// Otherwise map based on field type
-		const columnType = this.mapFieldTypeToPostgresType(field, hints);
+		// Add relationship reference
+		if (field.relationship) {
+			// Add reference information but not directly on the column definition
+			const reference = {
+				table: field.relationship.entity, // Use entity instead of model
+				column: field.relationship.field,
+			};
 
-		return {
-			name: fieldName,
-			type: columnType,
-			nullable: field.required !== true,
-			defaultValue: this.getDefaultValue(field),
-			primaryKey: field.primaryKey === true,
-			unique: hints?.unique === true,
-			comment: field.description,
-		};
+			// Store reference in a custom property
+			columnDef._references = reference;
+
+			// Handle relationship options if present
+			if (field.relationship.relationship) {
+				const relConfig = field.relationship.relationship;
+				if (relConfig.onDelete) {
+					columnDef._onDelete = relConfig.onDelete;
+				}
+				if (relConfig.onUpdate) {
+					columnDef._onUpdate = relConfig.onUpdate;
+				}
+			}
+		}
+
+		// Add PostgreSQL-specific hints if available
+		if (pgHints && typeof pgHints === 'object') {
+			if (pgHints.schema) {
+				columnDef._schema = pgHints.schema;
+			}
+		}
+
+		columnDef.defaultValue = this.getDefaultValue(field);
+
+		return columnDef;
 	}
 
 	/**
 	 * Generate SQL to create a table in PostgreSQL
 	 */
-	generateCreateTableSQL(tableDef: TableDefinition): string {
+	generateCreateTableSQL<
+		TTableOptions extends Record<string, any> = {},
+		TColumnType extends string = string,
+		TPrimaryKeyType extends string = string,
+		TOnAction extends string = string,
+	>(
+		tableDef: TableDefinition<
+			TTableOptions,
+			TColumnType,
+			TPrimaryKeyType,
+			TOnAction
+		>
+	): string {
 		const columnDefs = tableDef.columns.map((col) => {
 			let colDef = `"${col.name}" ${col.type}`;
 
@@ -78,7 +132,9 @@ export class PostgresAdapter extends BaseAdapter {
 				colDef += ` DEFAULT ${this.formatDefaultValue(col.defaultValue)}`;
 			}
 
-			if (col.comment) {
+			// Handle column comment
+			const colComment = (col as any).comment;
+			if (colComment) {
 				// Add comment later as a separate command
 			}
 
@@ -86,43 +142,62 @@ export class PostgresAdapter extends BaseAdapter {
 		});
 
 		// Add primary key constraint if it's a composite key
-		if (tableDef.primaryKey && tableDef.primaryKey.length > 1) {
+		if (
+			tableDef.primaryKey &&
+			typeof tableDef.primaryKey === 'object' &&
+			Array.isArray(tableDef.primaryKey.columns) &&
+			tableDef.primaryKey.columns.length > 1
+		) {
 			columnDefs.push(
-				`PRIMARY KEY (${tableDef.primaryKey.map((col) => `"${col}"`).join(', ')})`
+				`PRIMARY KEY (${tableDef.primaryKey.columns.map((col) => `"${col}"`).join(', ')})`
 			);
 		}
 
 		// Add foreign key constraints
-		if (tableDef.foreignKeys) {
+		if (tableDef.foreignKeys && tableDef.foreignKeys.length > 0) {
 			tableDef.foreignKeys.forEach((fk) => {
-				const constraint =
-					`CONSTRAINT "${fk.name}" FOREIGN KEY (${fk.columns.map((col) => `"${col}"`).join(', ')}) ` +
-					`REFERENCES "${fk.referencedTable}" (${fk.referencedColumns.map((col) => `"${col}"`).join(', ')})` +
-					(fk.onDelete ? ` ON DELETE ${fk.onDelete}` : '') +
-					(fk.onUpdate ? ` ON UPDATE ${fk.onUpdate}` : '');
-				columnDefs.push(constraint);
+				if (
+					fk.columns &&
+					fk.columns.length > 0 &&
+					fk.referencedTable &&
+					fk.referencedColumns &&
+					fk.referencedColumns.length > 0
+				) {
+					const constraint =
+						`CONSTRAINT "${fk.name || ''}" FOREIGN KEY (${fk.columns.map((col) => `"${col}"`).join(', ')}) ` +
+						`REFERENCES "${fk.referencedTable}" (${fk.referencedColumns.map((col) => `"${col}"`).join(', ')})` +
+						(fk.onDelete ? ` ON DELETE ${fk.onDelete}` : '') +
+						(fk.onUpdate ? ` ON UPDATE ${fk.onUpdate}` : '');
+					columnDefs.push(constraint);
+				}
 			});
 		}
 
 		let sql = `CREATE TABLE IF NOT EXISTS "${tableDef.name}" (\n  ${columnDefs.join(',\n  ')}\n);\n`;
 
 		// Add table comments if provided
-		if (tableDef.comment) {
-			sql += `COMMENT ON TABLE "${tableDef.name}" IS '${this.escapeString(tableDef.comment)}';\n`;
+		const tableComment = (tableDef as any).comment;
+		if (tableComment) {
+			sql += `COMMENT ON TABLE "${tableDef.name}" IS '${this.escapeString(tableComment)}';\n`;
 		}
 
 		// Add column comments
 		tableDef.columns.forEach((col) => {
-			if (col.comment) {
-				sql += `COMMENT ON COLUMN "${tableDef.name}"."${col.name}" IS '${this.escapeString(col.comment)}';\n`;
+			const colComment = (col as any).comment;
+			if (colComment) {
+				sql += `COMMENT ON COLUMN "${tableDef.name}"."${col.name}" IS '${this.escapeString(colComment)}';\n`;
 			}
 		});
 
 		// Add indexes as separate statements
-		if (tableDef.indexes) {
+		if (tableDef.indexes && tableDef.indexes.length > 0) {
 			tableDef.indexes.forEach((idx) => {
-				const indexType = idx.type ? ` USING ${idx.type}` : '';
-				sql += `CREATE ${idx.unique ? 'UNIQUE ' : ''}INDEX IF NOT EXISTS "${idx.name}" ON "${tableDef.name}"${indexType} (${idx.columns.map((col) => `"${col}"`).join(', ')});\n`;
+				if (idx.columns && idx.columns.length > 0) {
+					const indexType = (idx as any).type
+						? ` USING ${(idx as any).type}`
+						: '';
+					sql += `CREATE ${idx.unique ? 'UNIQUE ' : ''}INDEX IF NOT EXISTS "${idx.name}" ON "${tableDef.name}"${indexType} (${idx.columns.map((col) => `"${col}"`).join(', ')});\n`;
+				}
 			});
 		}
 
@@ -130,77 +205,76 @@ export class PostgresAdapter extends BaseAdapter {
 	}
 
 	/**
-	 * Map field types to PostgreSQL column types
+	 * Maps a schema field type to a PostgreSQL data type
 	 */
-	private mapFieldTypeToPostgresType(
-		field: SchemaField,
-		hints?: DatabaseHints
-	): string {
+	mapFieldTypeToPostgresType(field: SchemaField): string {
 		switch (field.type) {
 			case 'string':
-				if (hints?.maxSize && hints.maxSize <= 255) {
-					return `VARCHAR(${hints.maxSize})`;
-				}
 				return 'TEXT';
-
 			case 'number':
-				// Handle integers vs. decimals
-				if (hints?.precision !== undefined && hints?.scale !== undefined) {
-					return `NUMERIC(${hints.precision}, ${hints.scale})`;
-				}
-				if (hints?.precision === 0 || (field as any).integer) {
-					return 'INTEGER';
-				}
-				return 'DOUBLE PRECISION';
-
+				return field.databaseHints?.integer ? 'INTEGER' : 'REAL';
 			case 'boolean':
 				return 'BOOLEAN';
-
 			case 'date':
-				// Use appropriate timestamp type based on format
-				const format = (field as any).format;
-				const hasTimezone =
-					(field as any).includeTimezone || hints?.hasTimezone;
-
-				if (format === 'unix' || format === 'unix_ms') {
-					return 'BIGINT';
-				}
-				return hasTimezone ? 'TIMESTAMPTZ' : 'TIMESTAMP';
-
-			case 'uuid':
-				return 'UUID';
-
+				return 'TIMESTAMP WITH TIME ZONE';
 			case 'json':
-			case 'array':
-				return 'JSONB'; // More efficient than JSON for most operations
-
+				return 'JSONB';
 			default:
-				return 'TEXT'; // Default fallback
+				return 'TEXT'; // Default to TEXT for unknown types
 		}
 	}
 
 	/**
 	 * Get default value appropriate for PostgreSQL
 	 */
-	private getDefaultValue(field: SchemaField): any {
-		if (field.defaultValue === undefined) {
-			return undefined;
+	protected getDefaultValue(field: SchemaField): any {
+		if (field.defaultValue === undefined || field.defaultValue === null) {
+			return null;
 		}
 
-		// If it's a function, we can't represent it directly in PostgreSQL
+		// Handle special cases for default values (like functions)
 		if (typeof field.defaultValue === 'function') {
-			// Special case for timestamp/date defaults
+			// Special handling for function defaults
 			if (field.type === 'date') {
-				return 'NOW()';
+				return 'CURRENT_TIMESTAMP';
 			}
-			// Special case for UUID defaults
-			if (field.type === 'uuid') {
+
+			// Handle UUID generation for string fields
+			const pgHints = field.databaseHints?.postgres as
+				| PostgresExtendedHints
+				| undefined;
+			if (field.type === 'string' && pgHints?.uuid) {
 				return 'gen_random_uuid()';
 			}
-			return undefined; // Will be handled at application level
+
+			// Other function defaults may need special treatment
+			return null;
 		}
 
-		return field.defaultValue;
+		// For primitive values, handle them directly
+		if (typeof field.defaultValue === 'string') {
+			return `'${this.escapeString(field.defaultValue)}'`;
+		}
+
+		if (typeof field.defaultValue === 'number') {
+			return field.defaultValue.toString();
+		}
+
+		if (typeof field.defaultValue === 'boolean') {
+			return field.defaultValue ? 'TRUE' : 'FALSE';
+		}
+
+		if (field.defaultValue instanceof Date) {
+			return `'${field.defaultValue.toISOString()}'::timestamp`;
+		}
+
+		if (typeof field.defaultValue === 'object') {
+			// For objects, convert to JSON
+			return `'${this.escapeString(JSON.stringify(field.defaultValue))}'::jsonb`;
+		}
+
+		// For any other types, convert to string
+		return `'${this.escapeString(String(field.defaultValue))}'`;
 	}
 
 	/**
@@ -252,9 +326,9 @@ export class PostgresAdapter extends BaseAdapter {
 	}
 
 	/**
-	 * Transform a value from application format to PostgreSQL format
+	 * Transform a value for the database
 	 */
-	override toDatabase(field: SchemaField, value: any): any {
+	override toDatabase(value: any, field: SchemaField): any {
 		if (value === undefined || value === null) {
 			return value;
 		}
@@ -266,13 +340,13 @@ export class PostgresAdapter extends BaseAdapter {
 			}
 		}
 
-		return super.toDatabase(field, value);
+		return super.toDatabase(value, field);
 	}
 
 	/**
-	 * Transform a value from PostgreSQL format to application format
+	 * Transform a value from the database
 	 */
-	override fromDatabase(field: SchemaField, dbValue: any): any {
+	override fromDatabase(dbValue: any, field: SchemaField): any {
 		if (dbValue === undefined || dbValue === null) {
 			return dbValue;
 		}
@@ -289,6 +363,6 @@ export class PostgresAdapter extends BaseAdapter {
 			}
 		}
 
-		return super.fromDatabase(field, dbValue);
+		return super.fromDatabase(dbValue, field);
 	}
 }

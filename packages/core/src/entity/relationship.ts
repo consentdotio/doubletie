@@ -1,9 +1,10 @@
-import type { EntityFields, EntityStructure } from './entity.types';
+import type { EntityStructure } from './entity.types';
 import type {
-	JoinTableConfig,
+	BasicRelationshipOptions,
+	EntityFieldReference,
+	ManyToManyOptions,
 	RelationshipConfig,
 	RelationshipHelpers,
-	ValidatedRelationship,
 } from './relationship.types';
 
 /**
@@ -12,140 +13,127 @@ import type {
  * @returns Relationship helper methods
  */
 export function createRelationshipHelpers<
-	ThisEntityStructure extends EntityStructure,
->(entityStructure: ThisEntityStructure): RelationshipHelpers {
+	TSourceEntity extends EntityStructure,
+>(entityStructure: TSourceEntity): RelationshipHelpers<TSourceEntity> {
 	return {
-		manyToOne<
-			TargetE extends any,
-			F extends EntityFields<TargetE> & string,
-			Config extends RelationshipConfig<
-				ThisEntityStructure,
-				TargetE
-			> = RelationshipConfig<ThisEntityStructure, TargetE>,
+		/**
+		 * Create a reference to a field in another entity
+		 */
+		ref<
+			TTargetEntity extends EntityStructure,
+			TTargetField extends keyof TTargetEntity['fields'] & string,
 		>(
-			targetEntity: TargetE,
-			fieldName: F,
-			options?: Omit<Config, 'type' | 'foreignKey' | 'joinTable'>
-		): ValidatedRelationship<TargetE, F> {
+			entity: TTargetEntity,
+			field: TTargetField
+		): EntityFieldReference<TSourceEntity, TTargetEntity, TTargetField> {
 			return {
-				model: targetEntity.name,
-				field: fieldName,
-				relationship: {
-					...options,
-					type: 'manyToOne',
-				},
-			} as ValidatedRelationship<TargetE, F>;
+				entity: entity.name,
+				field,
+			};
 		},
 
-		oneToOne<
-			TargetE extends any,
-			F extends EntityFields<TargetE> & string,
-			Config extends RelationshipConfig<
-				ThisEntityStructure,
-				TargetE
-			> = RelationshipConfig<ThisEntityStructure, TargetE>,
-		>(
-			targetEntity: TargetE,
-			fieldName: F,
-			options?: Omit<Config, 'type' | 'joinTable'> & {
-				foreignKey?: keyof TargetE['fields'] & string;
-			}
-		): ValidatedRelationship<TargetE, F> {
-			// If foreignKey is specified, validate it exists in the target entity
+		/**
+		 * Create a many-to-one relationship to another entity
+		 */
+		manyToOne<TTargetEntity extends EntityStructure>(
+			entity: TTargetEntity,
+			options?: BasicRelationshipOptions
+		): EntityFieldReference<TSourceEntity, TTargetEntity> {
+			const foreignKey = options?.foreignKey || `${entity.name}Id`;
+
+			return {
+				entity: entity.name,
+				field: 'id' as keyof TTargetEntity['fields'] & string, // Assuming 'id' exists in target entity
+				relationship: {
+					type: 'manyToOne',
+					foreignKey,
+				},
+			};
+		},
+
+		/**
+		 * Create a one-to-one relationship to another entity
+		 */
+		oneToOne<TTargetEntity extends EntityStructure>(
+			entity: TTargetEntity,
+			options?: BasicRelationshipOptions
+		): EntityFieldReference<TSourceEntity, TTargetEntity> {
+			const foreignKey = options?.foreignKey || `${entity.name}Id`;
+
+			// Validate that the foreign key exists in the target entity if it's referencing a field
+			// This is a runtime check - TypeScript can't validate this at compile time
 			if (
 				options?.foreignKey &&
-				!targetEntity.fields[options.foreignKey as string]
+				entity.fields[options.foreignKey] &&
+				entity.fields[options.foreignKey]?.type !== 'uuid' &&
+				entity.fields[options.foreignKey]?.type !== 'integer'
 			) {
-				throw new Error(
-					`Relationship Error: Foreign key '${options.foreignKey}' does not exist in entity '${targetEntity.name}'.` +
-						` Available fields: ${Object.keys(targetEntity.fields).join(', ')}`
+				console.warn(
+					`Warning: Foreign key ${options.foreignKey} in entity ${entity.name} is not an ID field type`
 				);
 			}
 
 			return {
-				model: targetEntity.name,
-				field: fieldName,
+				entity: entity.name,
+				field: 'id' as keyof TTargetEntity['fields'] & string, // Assuming 'id' exists in target entity
 				relationship: {
-					...options,
 					type: 'oneToOne',
+					foreignKey,
 				},
-			} as ValidatedRelationship<TargetE, F>;
-		},
-
-		oneToMany<
-			TargetE extends any,
-			F extends EntityFields<TargetE> & string,
-			Config extends RelationshipConfig<
-				ThisEntityStructure,
-				TargetE
-			> = RelationshipConfig<ThisEntityStructure, TargetE>,
-		>(
-			targetEntity: TargetE,
-			fieldName: F,
-			options: Omit<Config, 'type' | 'joinTable'> & {
-				foreignKey: keyof TargetE['fields'] & string;
-			}
-		): ValidatedRelationship<TargetE, F> {
-			// Validate the foreignKey exists in the target entity
-			if (!targetEntity.fields[options.foreignKey as string]) {
-				throw new Error(
-					`Relationship Error: Foreign key '${options.foreignKey}' does not exist in entity '${targetEntity.name}'.` +
-						` Available fields: ${Object.keys(targetEntity.fields).join(', ')}`
-				);
-			}
-
-			return {
-				model: targetEntity.name,
-				field: fieldName,
-				relationship: {
-					...options,
-					type: 'oneToMany',
-				},
-			} as ValidatedRelationship<TargetE, F>;
-		},
-
-		manyToMany<
-			TargetE extends any,
-			Config extends RelationshipConfig<
-				ThisEntityStructure,
-				TargetE
-			> = RelationshipConfig<ThisEntityStructure, TargetE>,
-		>(
-			targetEntity: TargetE,
-			joinTableConfig: JoinTableConfig<ThisEntityStructure, TargetE> & {
-				cascade?: boolean;
-				fetch?: 'lazy' | 'eager';
-			}
-		): {
-			model: TargetE['name'];
-			field: 'id';
-			relationship: RelationshipConfig<ThisEntityStructure, TargetE>;
-		} {
-			// Validate join table config
-			if (!joinTableConfig.tableName) {
-				throw new Error(
-					'Join table name is required for many-to-many relationships'
-				);
-			}
-
-			const { cascade, fetch, ...joinTableDetails } = joinTableConfig;
-
-			// Create a relationship configuration with many-to-many type and the join table config
-			const relationshipConfig: RelationshipConfig<
-				ThisEntityStructure,
-				TargetE
-			> = {
-				type: 'manyToMany',
-				joinTable: joinTableDetails,
-				cascade,
-				fetch,
 			};
+		},
 
-			// Return the relationship object
+		/**
+		 * Create a one-to-many relationship to another entity
+		 */
+		oneToMany<TTargetEntity extends EntityStructure>(
+			entity: TTargetEntity,
+			options: BasicRelationshipOptions = {}
+		): EntityFieldReference<TSourceEntity, TTargetEntity> {
+			const foreignKey = options.foreignKey || 'id';
+
+			// Validate that the foreign key exists in the target entity if it's a field reference
+			// This is a runtime check - TypeScript can't validate this at compile time
+			if (
+				entity.fields[foreignKey] &&
+				entity.fields[foreignKey].type !== 'uuid' &&
+				entity.fields[foreignKey].type !== 'integer'
+			) {
+				console.warn(
+					`Warning: Foreign key ${foreignKey} in entity ${entity.name} is not an ID field type`
+				);
+			}
+
 			return {
-				model: targetEntity.name,
-				field: 'id' as const, // We use 'id' by convention for collections
-				relationship: relationshipConfig,
+				entity: entity.name,
+				field: 'id' as keyof TTargetEntity['fields'] & string, // Assuming 'id' exists in target entity
+				relationship: {
+					type: 'oneToMany',
+					foreignKey,
+				},
+			};
+		},
+
+		/**
+		 * Create a many-to-many relationship with another entity via a join table
+		 */
+		manyToMany<TTargetEntity extends EntityStructure>(
+			entity: TTargetEntity,
+			options: ManyToManyOptions
+		): EntityFieldReference<TSourceEntity, TTargetEntity> {
+			// Validate that a table name is provided
+			if (!options.joinTable.tableName) {
+				throw new Error('A table name must be provided for the join table');
+			}
+
+			return {
+				entity: entity.name,
+				field: 'id' as keyof TTargetEntity['fields'] & string, // Assuming 'id' exists in target entity
+				relationship: {
+					type: 'manyToMany',
+					foreignKey: 'id', // This is not used directly in many-to-many but required by the type
+					joinTable: options.joinTable,
+				},
 			};
 		},
 	};

@@ -4,7 +4,6 @@ import { DatabaseHints } from '../../schema/fields/field-hints';
  */
 import type {
 	EntitySchemaDefinition,
-	ResolvedField,
 	SchemaField,
 } from '../../schema/schema.types';
 import type {
@@ -18,7 +17,7 @@ import type {
 /**
  * Abstract base adapter that implements common functionality for database adapters
  */
-export abstract class BaseAdapter implements DatabaseAdapter {
+export abstract class BaseAdapter implements DatabaseAdapter<string> {
 	/**
 	 * Database type identifier
 	 */
@@ -32,145 +31,153 @@ export abstract class BaseAdapter implements DatabaseAdapter {
 	/**
 	 * Map a schema field to a database column definition
 	 */
-	abstract mapFieldToColumn(
-		field: SchemaField,
+	abstract mapFieldToColumn<
+		TFieldType extends string = string,
+		TColumnType extends string = string,
+	>(
+		field: SchemaField<TFieldType>,
 		fieldName: string,
 		entity: EntitySchemaDefinition
-	): ColumnDefinition;
+	): ColumnDefinition<TColumnType>;
 
 	/**
 	 * Generate a SQL statement to create a table
 	 */
-	abstract generateCreateTableSQL(tableDef: TableDefinition): string;
+	abstract generateCreateTableSQL<
+		TTableOptions extends Record<string, any> = {},
+	>(tableDef: TableDefinition<TTableOptions>): string;
 
 	/**
 	 * Transform a value from application format to database format for storage
 	 */
-	toDatabase(field: SchemaField, value: any): any {
+	toDatabase(value: any, field: SchemaField): any {
 		if (value === undefined || value === null) {
 			return value;
 		}
 
-		// Handle date conversions based on format
-		if (field.type === 'date') {
-			// Special handling for date fields with format
-			const format = (field as any).format;
-			if (format === 'unix' && value instanceof Date) {
-				return Math.floor(value.getTime() / 1000);
-			}
-			if (format === 'unix_ms' && value instanceof Date) {
-				return value.getTime();
-			}
-			if (format === 'iso' && value instanceof Date) {
-				return value.toISOString();
-			}
-			if (value instanceof Date) {
-				return value.toISOString();
-			}
+		// Apply field-specific transforms if defined
+		if (field.transform?.input && typeof field.transform.input === 'function') {
+			// Call with only the value parameter, not the additional params
+			return field.transform.input(value);
 		}
 
-		// Handle JSON conversions
-		if (field.type === 'json' && typeof value === 'object') {
-			return JSON.stringify(value);
+		// Basic type conversion based on field type
+		switch (field.type) {
+			case 'boolean':
+				return typeof value === 'boolean'
+					? value
+					: value === 'true' || value === 1;
+			case 'number':
+				return typeof value === 'number' ? value : Number(value);
+			case 'date':
+				return value instanceof Date
+					? value
+					: typeof value === 'number'
+						? new Date(value)
+						: new Date(value as string);
+			case 'json':
+				return typeof value === 'string' ? value : JSON.stringify(value);
+			default:
+				return value;
 		}
-
-		// Handle array conversions
-		if (field.type === 'array' && Array.isArray(value)) {
-			return JSON.stringify(value);
-		}
-
-		// Use transform function if available
-		if (field.transform?.input) {
-			return field.transform.input(value, {}, {});
-		}
-
-		return value;
 	}
 
 	/**
 	 * Transform a value from database format to application format
 	 */
-	fromDatabase(field: SchemaField, dbValue: any): any {
-		if (dbValue === undefined || dbValue === null) {
+	fromDatabase(dbValue: any, field: SchemaField): any {
+		if (dbValue === null || dbValue === undefined) {
 			return dbValue;
 		}
 
-		// Handle date conversions based on format
-		if (field.type === 'date') {
-			const format = (field as any).format;
-			if (format === 'unix' && typeof dbValue === 'number') {
-				return new Date(dbValue * 1000);
-			}
-			if (format === 'unix_ms' && typeof dbValue === 'number') {
-				return new Date(dbValue);
-			}
-			if (format === 'iso' && typeof dbValue === 'string') {
-				return new Date(dbValue);
-			}
-			if (typeof dbValue === 'string') {
-				return new Date(dbValue);
-			}
+		// Apply field-specific transforms if defined
+		if (
+			field.transform?.output &&
+			typeof field.transform.output === 'function'
+		) {
+			// Call with only the dbValue parameter, not the additional params
+			return field.transform.output(dbValue);
 		}
 
-		// Handle JSON conversions
-		if (field.type === 'json' && typeof dbValue === 'string') {
-			try {
-				return JSON.parse(dbValue);
-			} catch (e) {
+		// Basic type conversion based on field type
+		switch (field.type) {
+			case 'boolean':
+				return Boolean(dbValue);
+			case 'number':
+				return Number(dbValue);
+			case 'date':
+				return dbValue instanceof Date
+					? dbValue
+					: typeof dbValue === 'number'
+						? new Date(dbValue)
+						: new Date(dbValue as string);
+			case 'json':
+				if (typeof dbValue === 'string') {
+					try {
+						return JSON.parse(dbValue);
+					} catch (e) {
+						return dbValue;
+					}
+				}
 				return dbValue;
-			}
-		}
-
-		// Handle array conversions
-		if (field.type === 'array' && typeof dbValue === 'string') {
-			try {
-				return JSON.parse(dbValue);
-			} catch (e) {
+			default:
 				return dbValue;
-			}
 		}
-
-		// Use transform function if available
-		if (field.transform?.output) {
-			return field.transform.output(dbValue, {});
-		}
-
-		return dbValue;
 	}
 
 	/**
-	 * Generate a complete table definition from an entity schema
+	 * Generate a table definition from an entity schema
 	 */
-	generateTableDefinition(entity: EntitySchemaDefinition): TableDefinition {
-		const tableName = entity.prefix
-			? `${entity.prefix}_${entity.name}`
-			: entity.name;
+	generateTableDefinition<
+		TTableOptions extends Record<string, any> = {},
+		TColumnType extends string = string,
+		TPrimaryKeyType extends string = string,
+		TOnAction extends string =
+			| 'CASCADE'
+			| 'SET NULL'
+			| 'RESTRICT'
+			| 'NO ACTION',
+	>(
+		entity: EntitySchemaDefinition
+	): TableDefinition<TTableOptions, TColumnType, TPrimaryKeyType, TOnAction> {
+		// Map entity fields to columns
+		const columns: ColumnDefinition<TColumnType>[] = [];
 
-		// Create columns from fields
-		const columns: ColumnDefinition[] = Object.entries(entity.fields).map(
-			([fieldName, field]) => this.mapFieldToColumn(field, fieldName, entity)
-		);
+		for (const [fieldName, field] of Object.entries(entity.fields)) {
+			const column = this.mapFieldToColumn<string, TColumnType>(
+				field,
+				fieldName,
+				entity
+			);
+			columns.push(column);
+		}
 
-		// Find primary key
-		const primaryKey = Object.entries(entity.fields)
-			.filter(([, field]) => field.primaryKey === true)
-			.map(([fieldName]) => fieldName);
+		// Get entity name - use tableName from config if available, otherwise use entity name
+		const tableName = (entity.config?.tableName as string) || entity.name;
 
-		// Generate indexes
-		const indexes: IndexDefinition[] = this.generateIndexes(entity);
-
-		// Generate foreign keys
-		const foreignKeys: ForeignKeyDefinition[] =
-			this.generateForeignKeys(entity);
-
-		return {
+		// Create the table definition
+		const tableDef: TableDefinition<
+			TTableOptions,
+			TColumnType,
+			TPrimaryKeyType,
+			TOnAction
+		> = {
 			name: tableName,
 			columns,
-			primaryKey: primaryKey.length > 0 ? primaryKey : undefined,
-			indexes: indexes.length > 0 ? indexes : undefined,
-			foreignKeys: foreignKeys.length > 0 ? foreignKeys : undefined,
-			comment: entity.description,
+			primaryKey: {
+				name: `pk_${entity.name}`,
+				columns: columns.filter((col) => col.primaryKey).map((col) => col.name),
+			},
+			foreignKeys: [],
+			indexes: [],
+			options: {} as TTableOptions,
 		};
+
+		// Generate foreign keys for relationship fields
+		const foreignKeys = this.generateForeignKeyConstraints<TOnAction>(tableDef);
+		tableDef.foreignKeys = foreignKeys as ForeignKeyDefinition<TOnAction>[];
+
+		return tableDef;
 	}
 
 	/**
@@ -182,7 +189,7 @@ export abstract class BaseAdapter implements DatabaseAdapter {
 		// Extract individual field indexes
 		Object.entries(entity.fields).forEach(([fieldName, field]) => {
 			// Get database hints
-			const hints = (field as any).databaseHints as DatabaseHints;
+			const hints = field.databaseHints as DatabaseHints | undefined;
 			if (hints?.indexed || hints?.unique) {
 				indexes.push({
 					name: `idx_${entity.name}_${fieldName}`,
@@ -210,27 +217,96 @@ export abstract class BaseAdapter implements DatabaseAdapter {
 	}
 
 	/**
-	 * Helper method to generate foreign keys from entity definition
+	 * Generates foreign keys from relationship fields in an entity
 	 */
 	protected generateForeignKeys(
 		entity: EntitySchemaDefinition
-	): ForeignKeyDefinition[] {
-		const foreignKeys: ForeignKeyDefinition[] = [];
+	): ForeignKeyDefinition<string>[] {
+		const foreignKeys: ForeignKeyDefinition<string>[] = [];
 
 		// Extract foreign keys from relationship fields
-		Object.entries(entity.fields).forEach(([fieldName, field]) => {
+		for (const [fieldName, field] of Object.entries(entity.fields)) {
 			if (field.relationship) {
 				foreignKeys.push({
 					name: `fk_${entity.name}_${fieldName}`,
 					columns: [fieldName],
-					referencedTable: field.relationship.model,
-					referencedColumns: [field.relationship.field],
-					onDelete: field.relationship.onDelete,
-					onUpdate: field.relationship.onUpdate,
+					referencedTable: field.relationship.entity || '',
+					referencedColumns: [field.relationship.field || ''],
+					onDelete: field.relationship.relationship?.onDelete as string,
+					onUpdate: field.relationship.relationship?.onUpdate as string,
 				});
 			}
-		});
+		}
 
 		return foreignKeys;
+	}
+
+	/**
+	 * Generates table constraints for foreign keys
+	 */
+	protected generateForeignKeyConstraints<TOnAction extends string = string>(
+		tableDef: TableDefinition<Record<string, any>, string, string, TOnAction>
+	): ForeignKeyDefinition<TOnAction>[] {
+		const foreignKeys: ForeignKeyDefinition<TOnAction>[] = [];
+
+		// Process each column for relationship references
+		for (const column of tableDef.columns) {
+			// Use type assertion to access _references property on extended column definitions
+			const columnExt = column as any;
+			if (columnExt._references) {
+				const ref = columnExt._references;
+				foreignKeys.push({
+					name: `fk_${tableDef.name}_${column.name}`,
+					columns: [column.name],
+					referencedTable: ref.table,
+					referencedColumns: [ref.column],
+					onDelete: columnExt._onDelete as TOnAction,
+					onUpdate: columnExt._onUpdate as TOnAction,
+				});
+			}
+		}
+
+		return foreignKeys;
+	}
+
+	/**
+	 * Get default value appropriate for the database
+	 * This method safely handles the defaultValue which may be a function
+	 */
+	protected getDefaultValueSQL(field: SchemaField): any {
+		if (field.defaultValue === undefined || field.defaultValue === null) {
+			return null;
+		}
+
+		// Handle function defaults separately
+		if (typeof field.defaultValue === 'function') {
+			// Let subclasses handle this case
+			return null;
+		}
+
+		// Handle primitive types directly
+		if (typeof field.defaultValue === 'string') {
+			return `'${field.defaultValue.replace(/'/g, "''")}'`;
+		}
+
+		if (typeof field.defaultValue === 'number') {
+			return field.defaultValue.toString();
+		}
+
+		if (typeof field.defaultValue === 'boolean') {
+			return field.defaultValue ? '1' : '0';
+		}
+
+		if (field.defaultValue instanceof Date) {
+			return `'${field.defaultValue.toISOString()}'`;
+		}
+
+		if (typeof field.defaultValue === 'object') {
+			// For objects, convert to JSON string
+			return `'${JSON.stringify(field.defaultValue).replace(/'/g, "''")}'`;
+		}
+
+		// For any other types, convert to string
+		return `'${String(field.defaultValue).replace(/'/g, "''")}'`;
 	}
 }

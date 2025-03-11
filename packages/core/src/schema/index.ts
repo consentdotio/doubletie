@@ -4,7 +4,7 @@
  */
 
 // Basic schema exports
-export { field, createField } from './schema';
+export { field, createField } from './fields/basic-fields';
 export type {
 	SchemaField,
 	EntitySchemaDefinition,

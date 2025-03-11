@@ -2,8 +2,9 @@
  * Array field utilities for entity schema definitions
  */
 import { z } from 'zod';
-import { createField } from '../schema';
-import type { SchemaField } from '../schema.types';
+import type { ZodArray, ZodTypeAny } from 'zod';
+import { SchemaField } from '../schema.types';
+import { createField } from './basic-fields';
 
 export interface ArrayFieldOptions extends Partial<Omit<SchemaField, 'type'>> {
 	/**
@@ -54,28 +55,48 @@ export function arrayField(options?: ArrayFieldOptions): SchemaField {
 		...rest
 	} = options || {};
 
-	// Build the array validator
-	let validator = z.array(itemSchema);
+	// First we'll create our validator steps individually
+	const baseValidator = z.array(itemSchema);
 
+	// Create a validation chain
+	let sizeConstrainedValidator = baseValidator;
 	if (minItems !== undefined) {
-		validator = validator.min(minItems);
+		sizeConstrainedValidator = sizeConstrainedValidator.min(minItems);
 	}
-
 	if (maxItems !== undefined) {
-		validator = validator.max(maxItems);
+		sizeConstrainedValidator = sizeConstrainedValidator.max(maxItems);
 	}
 
-	if (uniqueItems) {
-		validator = validator.refine(
-			(items) => {
-				const set = new Set(items.map((item) => JSON.stringify(item)));
-				return set.size === items.length;
+	// For the uniqueness check, we'll use a separate validation step
+	// This approach avoids the ZodEffects type issue
+	const checkUniqueness = (items: any[]): boolean => {
+		if (!uniqueItems) return true;
+		const set = new Set(items.map((item) => JSON.stringify(item)));
+		return set.size === items.length;
+	};
+
+	// The final validator with safeParse and custom validation
+	// This uses type casting to ensure TypeScript treats our output as a ZodArray
+	const validator = z.preprocess(
+		(val) => val, // identity preprocessor
+		z.custom<any[]>(
+			(val) => {
+				// First validate with the size-constrained validator
+				const result = sizeConstrainedValidator.safeParse(val);
+				if (!result.success) {
+					return false;
+				}
+
+				// Then check uniqueness
+				return checkUniqueness(result.data);
 			},
 			{
-				message: 'Array must contain unique items',
+				message: uniqueItems
+					? 'Array must be valid and contain unique items'
+					: 'Array must be valid',
 			}
-		);
-	}
+		)
+	) as unknown as ZodArray<ZodTypeAny>;
 
 	// Transform functions for handling array-like inputs
 	const inputTransform = (value: unknown) => {

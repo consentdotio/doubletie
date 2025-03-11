@@ -1,0 +1,172 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Database Adapters > Adapters can generate SQL for tables > mysql-product-sql 1`] = `
+"CREATE TABLE IF NOT EXISTS \`product\` (
+  \`id\` DOUBLE PRIMARY KEY NOT NULL UNSIGNED UNIQUE DEFAULT null,
+  \`name\` TEXT NOT NULL DEFAULT null,
+  \`price\` DECIMAL(10, 2) NOT NULL DEFAULT null,
+  \`sku\` TEXT NOT NULL UNIQUE DEFAULT null,
+  \`inStock\` TINYINT(1) NULL DEFAULT 1,
+  \`categories\` TEXT NULL DEFAULT '[]',
+  \`createdAt\` TEXT NOT NULL DEFAULT null,
+  PRIMARY KEY (\`id\`)
+);"
+`;
+
+exports[`Database Adapters > Adapters can generate SQL for tables > mysql-user-sql 1`] = `
+"CREATE TABLE IF NOT EXISTS \`user\` (
+  \`id\` TEXT PRIMARY KEY NOT NULL UNIQUE DEFAULT null,
+  \`username\` TEXT NOT NULL UNIQUE DEFAULT null,
+  \`email\` TEXT NOT NULL UNIQUE DEFAULT null,
+  \`active\` TINYINT(1) NULL DEFAULT 1,
+  \`preferences\` JSON NULL DEFAULT '{"theme":"light","notifications":true}',
+  \`tags\` TEXT NULL DEFAULT '[]',
+  \`createdAt\` TEXT NOT NULL DEFAULT null,
+  \`updatedAt\` TEXT NOT NULL DEFAULT null,
+  \`deletedAt\` TEXT NULL DEFAULT null,
+  PRIMARY KEY (\`id\`)
+);"
+`;
+
+exports[`Database Adapters > Adapters can generate SQL for tables > postgres-product-sql 1`] = `
+"CREATE TABLE IF NOT EXISTS "product" (
+  "id" REAL NOT NULL PRIMARY KEY UNIQUE DEFAULT NULL,
+  "name" TEXT NOT NULL DEFAULT NULL,
+  "price" REAL NOT NULL DEFAULT NULL,
+  "sku" TEXT NOT NULL UNIQUE DEFAULT NULL,
+  "inStock" BOOLEAN DEFAULT 'TRUE',
+  "categories" TEXT DEFAULT '''[]''::jsonb',
+  "createdAt" TEXT NOT NULL DEFAULT NULL
+);
+"
+`;
+
+exports[`Database Adapters > Adapters can generate SQL for tables > postgres-user-sql 1`] = `
+"CREATE TABLE IF NOT EXISTS "user" (
+  "id" TEXT NOT NULL PRIMARY KEY UNIQUE DEFAULT NULL,
+  "username" TEXT NOT NULL UNIQUE DEFAULT NULL,
+  "email" TEXT NOT NULL UNIQUE DEFAULT NULL,
+  "active" BOOLEAN DEFAULT 'TRUE',
+  "preferences" JSONB DEFAULT '''{"theme":"light","notifications":true}''::jsonb',
+  "tags" TEXT DEFAULT '''[]''::jsonb',
+  "createdAt" TEXT NOT NULL DEFAULT NULL,
+  "updatedAt" TEXT NOT NULL DEFAULT NULL,
+  "deletedAt" TEXT DEFAULT NULL
+);
+"
+`;
+
+exports[`Database Adapters > Adapters can generate SQL for tables > sqlite-product-sql 1`] = `
+"CREATE TABLE IF NOT EXISTS "product" (
+  "id" REAL PRIMARY KEY NOT NULL UNIQUE DEFAULT NULL,
+  "name" TEXT NOT NULL DEFAULT NULL,
+  "price" REAL NOT NULL DEFAULT NULL,
+  "sku" TEXT NOT NULL UNIQUE DEFAULT NULL,
+  "inStock" INTEGER DEFAULT '1',
+  "categories" TEXT DEFAULT '''[]''',
+  "createdAt" TEXT NOT NULL DEFAULT NULL
+);"
+`;
+
+exports[`Database Adapters > Adapters can generate SQL for tables > sqlite-user-sql 1`] = `
+"CREATE TABLE IF NOT EXISTS "user" (
+  "id" TEXT PRIMARY KEY NOT NULL UNIQUE DEFAULT NULL,
+  "username" TEXT NOT NULL UNIQUE DEFAULT NULL,
+  "email" TEXT NOT NULL UNIQUE DEFAULT NULL,
+  "active" INTEGER DEFAULT '1',
+  "preferences" TEXT DEFAULT '''{"theme":"light","notifications":true}''',
+  "tags" TEXT DEFAULT '''[]''',
+  "createdAt" TEXT NOT NULL DEFAULT NULL,
+  "updatedAt" TEXT NOT NULL DEFAULT NULL,
+  "deletedAt" TEXT DEFAULT NULL
+);"
+`;
+
+exports[`Database Adapters > SQLite adapter generates correct table definitions > sqlite-user-table-def 1`] = `
+{
+  "columns": [
+    {
+      "defaultValue": null,
+      "name": "id",
+      "nullable": false,
+      "primaryKey": true,
+      "type": "TEXT",
+      "unique": true,
+    },
+    {
+      "defaultValue": null,
+      "name": "username",
+      "nullable": false,
+      "primaryKey": false,
+      "type": "TEXT",
+      "unique": true,
+    },
+    {
+      "defaultValue": null,
+      "name": "email",
+      "nullable": false,
+      "primaryKey": false,
+      "type": "TEXT",
+      "unique": true,
+    },
+    {
+      "defaultValue": "1",
+      "name": "active",
+      "nullable": true,
+      "primaryKey": false,
+      "type": "INTEGER",
+      "unique": false,
+    },
+    {
+      "defaultValue": "'{"theme":"light","notifications":true}'",
+      "name": "preferences",
+      "nullable": true,
+      "primaryKey": false,
+      "type": "TEXT",
+      "unique": false,
+    },
+    {
+      "defaultValue": "'[]'",
+      "name": "tags",
+      "nullable": true,
+      "primaryKey": false,
+      "type": "TEXT",
+      "unique": false,
+    },
+    {
+      "defaultValue": null,
+      "name": "createdAt",
+      "nullable": false,
+      "primaryKey": false,
+      "type": "TEXT",
+      "unique": false,
+    },
+    {
+      "defaultValue": null,
+      "name": "updatedAt",
+      "nullable": false,
+      "primaryKey": false,
+      "type": "TEXT",
+      "unique": false,
+    },
+    {
+      "defaultValue": null,
+      "name": "deletedAt",
+      "nullable": true,
+      "primaryKey": false,
+      "type": "TEXT",
+      "unique": false,
+    },
+  ],
+  "foreignKeys": [],
+  "indexes": [],
+  "name": "user",
+  "options": {},
+  "primaryKey": {
+    "columns": [
+      "id",
+    ],
+    "name": "pk_user",
+  },
+}
+`;

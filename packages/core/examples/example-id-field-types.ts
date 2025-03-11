@@ -1,15 +1,14 @@
 /**
  * Example of enhanced ID field types with multiple generation strategies
  */
-import { z } from 'zod';
+import { defineEntity } from '../src/index';
 import {
-	defineEntity,
-	createField as field,
+	createField,
 	idField,
 	incrementalIdField,
 	prefixedIdField,
 	uuidField,
-} from '../src/index';
+} from '../src/schema/fields';
 
 // For development purposes, we need to install these packages
 // Run: npm install uuid nanoid
@@ -20,8 +19,8 @@ const userEntity = defineEntity({
 	fields: {
 		// UUID: "123e4567-e89b-12d3-a456-426614174000"
 		id: uuidField(),
-		name: field('string', { required: true }),
-		email: field('string', { required: true }),
+		name: createField('string', { required: true }),
+		email: createField('string', { required: true }),
 	},
 });
 
@@ -30,8 +29,8 @@ const productEntity = defineEntity({
 	fields: {
 		// Prefixed nanoid: "prod_Xc9aEb3Z1f"
 		id: prefixedIdField('prod_', { length: 8 }),
-		name: field('string', { required: true }),
-		price: field('number', { required: true }),
+		name: createField('string', { required: true }),
+		price: createField('number', { required: true }),
 	},
 });
 
@@ -40,7 +39,7 @@ const orderEntity = defineEntity({
 	fields: {
 		// Incremental ID: 1000, 1001, 1002...
 		id: incrementalIdField(1000),
-		items: field('array', { required: true }),
+		items: createField('array', { required: true }),
 	},
 });
 
@@ -60,7 +59,7 @@ const ticketEntity = defineEntity({
 				return `TKT-${year}-${num.toString().padStart(5, '0')}`;
 			},
 		}),
-		subject: field('string', { required: true }),
+		subject: createField('string', { required: true }),
 	},
 });
 

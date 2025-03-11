@@ -6,7 +6,7 @@
  */
 
 // Import only entity-related functionality
-import { defineEntity } from '@doubletie/core/entity';
+import { defineEntity } from '../src/entity';
 
 // Import only schema field utilities
 import {
@@ -14,16 +14,13 @@ import {
 	emailField,
 	stringField,
 	uuidField,
-} from '@doubletie/core/schema';
+} from '../src/schema/fields';
 
 // Import only database-related functionality
-import {
-	generateSQLForEntity,
-	generateTableDefinition,
-} from '@doubletie/core/db';
+import { generateSQLForEntity, generateTableDefinition } from '../src/db';
 
 // Import only validation functionality
-import { validateEntity } from '@doubletie/core/validation';
+import { validateEntity } from '../src/validation';
 
 // Create a simple user entity using imports from different modules
 const userEntity = defineEntity({

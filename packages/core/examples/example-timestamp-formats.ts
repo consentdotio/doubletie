@@ -1,14 +1,14 @@
 /**
  * Example demonstrating the different timestamp format options
  */
+
+import { defineEntity } from '../src/index';
 import {
 	TimestampFormat,
 	createdAtField,
-	defineEntity,
-	expiresAtField,
 	stringField,
 	updatedAtField,
-} from '../src/index';
+} from '../src/schema/fields';
 
 // Sample formats to demonstrate
 const timestampFormats: TimestampFormat[] = [

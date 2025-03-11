@@ -2,8 +2,9 @@
  * String field utilities for entity schema definitions
  */
 import { z } from 'zod';
-import { createField } from '../schema';
-import type { SchemaField } from '../schema.types';
+import { SchemaField } from '../schema.types';
+import { createField } from './basic-fields';
+import { DatabaseHints } from './field-hints';
 
 export interface StringFieldOptions extends Partial<Omit<SchemaField, 'type'>> {
 	/**

@@ -9,7 +9,7 @@ export { generateTable } from './table';
 
 // Database adapter exports
 export {
-	DatabaseAdapter,
+	type DatabaseAdapter,
 	BaseAdapter,
 	SQLiteAdapter,
 	PostgresAdapter,

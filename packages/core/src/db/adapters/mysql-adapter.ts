@@ -1,12 +1,32 @@
-import { SchemaField } from '../../schema/types';
-import { MySQLHints } from '../field-hints';
+import { MySQLHints } from '../../schema/fields/field-hints';
+import { SchemaField } from '../../schema/schema.types';
+import type { EntitySchemaDefinition } from '../../schema/schema.types';
 import {
-	BaseAdapter,
 	ColumnDefinition,
 	ForeignKeyDefinition,
-	IndexDefinition,
 	TableDefinition,
-} from './base-adapter';
+} from './adapter';
+import { BaseAdapter } from './base-adapter';
+
+// Define interface to extend ColumnDefinition with MySQL-specific properties
+interface MySQLColumnDefinition<T extends string = string>
+	extends ColumnDefinition<T> {
+	_unsigned?: boolean;
+	_zerofill?: boolean;
+	_charset?: string;
+	_collation?: string;
+	_references?: { table: string; column: string };
+	_onDelete?: string;
+	_onUpdate?: string;
+}
+
+// Define interface to extend TableDefinition with MySQL-specific options
+interface MySQLTableOptions {
+	charset?: string;
+	collation?: string;
+	engine?: string;
+	description?: string;
+}
 
 /**
  * MySQL database adapter implementation
@@ -21,239 +41,284 @@ export class MySQLAdapter extends BaseAdapter {
 	/**
 	 * Maps a schema field to a MySQL column definition
 	 */
-	mapFieldToColumn(
+	mapFieldToColumn<
+		TFieldType extends string = string,
+		TColumnType extends string = string,
+	>(
+		field: SchemaField<TFieldType>,
 		fieldName: string,
-		field: SchemaField,
-		entityName: string
-	): ColumnDefinition {
-		const columnDef: ColumnDefinition = {
+		entity: EntitySchemaDefinition
+	): ColumnDefinition<TColumnType> {
+		// Create the basic column definition
+		const columnDef: MySQLColumnDefinition<TColumnType> = {
 			name: fieldName,
 			type: this.mapFieldTypeToMySQLType(field),
 			nullable: !field.required,
 			primaryKey: field.primaryKey === true,
 			unique: field.databaseHints?.unique === true,
-			autoIncrement:
-				field.type === 'number' && field.databaseHints?.autoIncrement === true,
-			references: field.relationship
-				? {
-						table: field.relationship.model,
-						column: field.relationship.field,
-						onDelete: field.relationship.onDelete,
-						onUpdate: field.relationship.onUpdate,
-					}
-				: undefined,
-			defaultValue: this.getDefaultValueSQL(field),
-			comment: field.description,
 		};
 
-		// Add MySQL-specific hints if available
-		const mysqlHints = field.databaseHints as MySQLHints;
+		// Add MySQL-specific properties
+		const mysqlHints = field.databaseHints?.mysql;
 
-		if (mysqlHints) {
-			if (mysqlHints.charset) {
-				columnDef.charset = mysqlHints.charset;
-			}
+		// Handle autoincrement separately since it's not in DatabaseHints but might be in MySQL hints
+		if (
+			field.type === 'number' &&
+			(field.databaseHints as any)?.autoIncrement === true
+		) {
+			columnDef.autoIncrement = true;
+		}
 
-			if (mysqlHints.collation) {
-				columnDef.collation = mysqlHints.collation;
-			}
+		// Add relationship reference
+		if (field.relationship) {
+			// Add reference information but not directly on the column definition
+			const reference = {
+				table: field.relationship.entity, // Use entity instead of model
+				column: field.relationship.field,
+			};
 
-			if (field.type === 'number' && mysqlHints.unsigned) {
-				columnDef.unsigned = true;
-			}
+			// Store reference in a custom property
+			columnDef._references = reference;
 
-			if (field.type === 'number' && mysqlHints.zerofill) {
-				columnDef.zerofill = true;
+			// Handle relationship options if present
+			if (field.relationship.relationship) {
+				const relConfig = field.relationship.relationship;
+				if (relConfig.onDelete) {
+					columnDef._onDelete = relConfig.onDelete;
+				}
+				if (relConfig.onUpdate) {
+					columnDef._onUpdate = relConfig.onUpdate;
+				}
 			}
 		}
+
+		// Add MySQL-specific hints if available
+		if (mysqlHints) {
+			// Add character set if specified
+			if (mysqlHints.charset) {
+				columnDef._charset = mysqlHints.charset;
+			}
+
+			// Add collation if specified
+			if (mysqlHints.collation) {
+				columnDef._collation = mysqlHints.collation;
+			}
+
+			// Add unsigned flag if specified
+			if (mysqlHints.unsigned) {
+				columnDef._unsigned = true;
+			}
+
+			// Add zerofill flag if specified
+			if (mysqlHints.zerofill) {
+				columnDef._zerofill = true;
+			}
+		}
+
+		columnDef.defaultValue = this.getDefaultValue(field);
 
 		return columnDef;
 	}
 
 	/**
-	 * Generates SQL for creating a table from a table definition
+	 * Generate SQL for creating a column
 	 */
-	generateCreateTableSQL(tableDef: TableDefinition): string {
-		let sql = `CREATE TABLE ${this.escapeIdentifier(tableDef.name)} (\n`;
+	protected generateColumnSQL(column: MySQLColumnDefinition): string {
+		let columnSQL = `${this.escapeIdentifier(column.name)} ${column.type}`;
 
-		// Add column definitions
-		const columnSQLs = tableDef.columns.map((column) => {
-			let columnSQL = `  ${this.escapeIdentifier(column.name)} ${column.type}`;
+		if (column.primaryKey) {
+			columnSQL += ' PRIMARY KEY';
+		}
 
-			if (column.unsigned) {
-				columnSQL += ' UNSIGNED';
+		if (column.autoIncrement) {
+			columnSQL += ' AUTO_INCREMENT';
+		}
+
+		if (!column.nullable) {
+			columnSQL += ' NOT NULL';
+		} else {
+			columnSQL += ' NULL';
+		}
+
+		if (column._unsigned) {
+			columnSQL += ' UNSIGNED';
+		}
+
+		if (column._zerofill) {
+			columnSQL += ' ZEROFILL';
+		}
+
+		if (column._charset) {
+			columnSQL += ` CHARACTER SET ${column._charset}`;
+		}
+
+		if (column._collation) {
+			columnSQL += ` COLLATE ${column._collation}`;
+		}
+
+		if (column.unique) {
+			columnSQL += ' UNIQUE';
+		}
+
+		if (column.defaultValue !== undefined) {
+			columnSQL += ` DEFAULT ${column.defaultValue}`;
+		}
+
+		return columnSQL;
+	}
+
+	/**
+	 * Generate the SQL for creating a table
+	 */
+	generateCreateTableSQL<
+		TTableOptions extends MySQLTableOptions = MySQLTableOptions,
+		TColumnType extends string = string,
+		TPrimaryKeyType extends string = string,
+		TOnAction extends string = string,
+	>(
+		tableDef: TableDefinition<
+			TTableOptions,
+			TColumnType,
+			TPrimaryKeyType,
+			TOnAction
+		>
+	): string {
+		let sql = `CREATE TABLE IF NOT EXISTS ${this.escapeIdentifier(tableDef.name)} (\n`;
+
+		// Add columns
+		const columnSQLs: string[] = [];
+		for (const column of tableDef.columns) {
+			columnSQLs.push(
+				`  ${this.generateColumnSQL(column as MySQLColumnDefinition)}`
+			);
+		}
+
+		// Add primary key constraint if specified
+		if (
+			tableDef.primaryKey &&
+			typeof tableDef.primaryKey === 'object' &&
+			Array.isArray(tableDef.primaryKey.columns) &&
+			tableDef.primaryKey.columns.length > 0
+		) {
+			const pkColumns = tableDef.primaryKey.columns
+				.map((col) => this.escapeIdentifier(col))
+				.join(', ');
+			columnSQLs.push(`  PRIMARY KEY (${pkColumns})`);
+		}
+
+		// Add foreign keys
+		if (tableDef.foreignKeys && tableDef.foreignKeys.length > 0) {
+			for (const fk of tableDef.foreignKeys) {
+				if (
+					fk.columns &&
+					fk.columns.length > 0 &&
+					fk.referencedTable &&
+					fk.referencedColumns &&
+					fk.referencedColumns.length > 0
+				) {
+					let fkSQL = `  FOREIGN KEY ${this.escapeIdentifier(fk.name || '')} (${this.escapeIdentifier(fk.columns[0] || '')})`;
+					fkSQL += ` REFERENCES ${this.escapeIdentifier(fk.referencedTable)} (${this.escapeIdentifier(fk.referencedColumns[0] || '')})`;
+
+					if (fk.onDelete) {
+						fkSQL += ` ON DELETE ${fk.onDelete}`;
+					}
+
+					if (fk.onUpdate) {
+						fkSQL += ` ON UPDATE ${fk.onUpdate}`;
+					}
+
+					columnSQLs.push(fkSQL);
+				}
 			}
-
-			if (column.zerofill) {
-				columnSQL += ' ZEROFILL';
-			}
-
-			if (column.charset) {
-				columnSQL += ` CHARACTER SET ${column.charset}`;
-			}
-
-			if (column.collation) {
-				columnSQL += ` COLLATE ${column.collation}`;
-			}
-
-			if (!column.nullable) {
-				columnSQL += ' NOT NULL';
-			}
-
-			if (column.autoIncrement) {
-				columnSQL += ' AUTO_INCREMENT';
-			}
-
-			if (column.defaultValue !== undefined) {
-				columnSQL += ` DEFAULT ${column.defaultValue}`;
-			}
-
-			if (column.comment) {
-				columnSQL += ` COMMENT ${this.escapeString(column.comment)}`;
-			}
-
-			return columnSQL;
-		});
+		}
 
 		sql += columnSQLs.join(',\n');
-
-		// Add primary key
-		const primaryKeyColumns = tableDef.columns
-			.filter((col) => col.primaryKey)
-			.map((col) => this.escapeIdentifier(col.name));
-
-		if (primaryKeyColumns.length > 0) {
-			sql += `,\n  PRIMARY KEY (${primaryKeyColumns.join(', ')})`;
-		}
-
-		// Add unique constraints
-		if (tableDef.indexes) {
-			const uniqueIndexes = tableDef.indexes.filter((idx) => idx.unique);
-
-			uniqueIndexes.forEach((idx) => {
-				const columns = idx.columns
-					.map((col) => this.escapeIdentifier(col))
-					.join(', ');
-				sql += `,\n  UNIQUE KEY ${this.escapeIdentifier(idx.name)} (${columns})`;
-			});
-
-			// Add regular indexes
-			const regularIndexes = tableDef.indexes.filter((idx) => !idx.unique);
-
-			regularIndexes.forEach((idx) => {
-				const columns = idx.columns
-					.map((col) => this.escapeIdentifier(col))
-					.join(', ');
-				sql += `,\n  INDEX ${this.escapeIdentifier(idx.name)} (${columns})`;
-			});
-		}
-
-		// Add foreign key constraints
-		if (tableDef.foreignKeys) {
-			tableDef.foreignKeys.forEach((fk) => {
-				sql += `,\n  FOREIGN KEY ${this.escapeIdentifier(fk.name)} (${this.escapeIdentifier(fk.column)})`;
-				sql += ` REFERENCES ${this.escapeIdentifier(fk.referenceTable)} (${this.escapeIdentifier(fk.referenceColumn)})`;
-
-				if (fk.onDelete) {
-					sql += ` ON DELETE ${fk.onDelete}`;
-				}
-
-				if (fk.onUpdate) {
-					sql += ` ON UPDATE ${fk.onUpdate}`;
-				}
-			});
-		}
-
-		// Close the table definition
 		sql += '\n)';
 
-		// Add table options
-		if (tableDef.options?.charset) {
-			sql += ` CHARACTER SET=${tableDef.options.charset}`;
+		// Add MySQL-specific table options
+		const options = tableDef.options as MySQLTableOptions | undefined;
+
+		if (options && options.charset) {
+			sql += ` CHARACTER SET=${options.charset}`;
 		}
 
-		if (tableDef.options?.collation) {
-			sql += ` COLLATE=${tableDef.options.collation}`;
+		if (options && options.collation) {
+			sql += ` COLLATE=${options.collation}`;
 		}
 
-		if (tableDef.options?.engine) {
-			sql += ` ENGINE=${tableDef.options.engine}`;
+		if (options && options.engine) {
+			sql += ` ENGINE=${options.engine}`;
 		}
 
-		if (tableDef.description) {
-			sql += ` COMMENT=${this.escapeString(tableDef.description)}`;
+		const tableDesc = (tableDef as any).description;
+		if (tableDesc) {
+			sql += ` COMMENT=${this.escapeString(tableDesc)}`;
 		}
 
 		sql += ';';
-
 		return sql;
 	}
 
 	/**
-	 * Maps schema field types to MySQL data types
+	 * Map field type to a MySQL data type
 	 */
-	private mapFieldTypeToMySQLType(field: SchemaField): string {
+	mapFieldTypeToMySQLType(field: SchemaField): string {
 		const hints = field.databaseHints;
+		const mysqlHints = hints?.mysql;
 
 		switch (field.type) {
 			case 'string':
-				if (hints?.maxSize === undefined || hints.maxSize > 65535) {
-					return 'TEXT';
-				} else if (hints.maxSize > 16383) {
-					return 'MEDIUMTEXT';
-				} else if (hints.maxSize > 255) {
-					return `TEXT`;
-				} else {
-					return `VARCHAR(${hints.maxSize || 255})`;
+				if (hints && (hints as any).maxLength) {
+					const maxLength = (hints as any).maxLength;
+					return `VARCHAR(${maxLength})`;
 				}
+				return 'TEXT';
 
 			case 'number':
-				if (hints?.integer) {
-					if (hints?.bits === 64) {
-						return 'BIGINT';
-					} else if (hints?.bits === 16) {
-						return 'SMALLINT';
-					} else if (hints?.bits === 8) {
-						return 'TINYINT';
-					} else {
-						return 'INT';
-					}
-				} else if (
-					hints?.precision !== undefined &&
-					hints?.scale !== undefined
-				) {
-					return `DECIMAL(${hints.precision}, ${hints.scale})`;
-				} else {
-					return 'DOUBLE';
+				// If it's an autoincrement ID, use INT
+				if ((hints as any)?.autoIncrement) {
+					return 'INT';
 				}
+
+				// Use type based on precision/scale hints
+				if ((hints as any)?.integer) {
+					// Integer types based on precision
+					if ((hints as any)?.precision) {
+						const precision = (hints as any).precision;
+						if (precision > 9) {
+							return 'BIGINT';
+						} else if (precision > 4) {
+							return 'INT';
+						} else if (precision > 2) {
+							return 'SMALLINT';
+						} else {
+							return 'TINYINT';
+						}
+					}
+					return 'INT';
+				}
+
+				// For decimal/floating point types
+				if ((hints as any)?.precision && (hints as any)?.scale) {
+					const precision = (hints as any).precision;
+					const scale = (hints as any).scale;
+					return `DECIMAL(${precision}, ${scale})`;
+				}
+
+				return 'DOUBLE';
 
 			case 'boolean':
 				return 'TINYINT(1)';
 
 			case 'date':
-				if (hints?.includeTime) {
-					if (hints?.precision !== undefined) {
-						return `DATETIME(${hints.precision})`;
-					}
+				// Determine date type based on hints
+				if ((hints as any)?.includeTime) {
 					return 'DATETIME';
-				} else {
-					return 'DATE';
 				}
+				return 'DATE';
 
-			case 'object':
-			case 'array':
+			case 'json':
 				return 'JSON';
-
-			case 'binary':
-				if (hints?.maxSize === undefined || hints.maxSize > 65535) {
-					return 'LONGBLOB';
-				} else if (hints.maxSize > 16383) {
-					return 'MEDIUMBLOB';
-				} else if (hints.maxSize > 255) {
-					return 'BLOB';
-				} else {
-					return `VARBINARY(${hints.maxSize || 255})`;
-				}
 
 			default:
 				return 'TEXT';
@@ -261,18 +326,22 @@ export class MySQLAdapter extends BaseAdapter {
 	}
 
 	/**
-	 * Returns the SQL representation of a default value for a field
+	 * Get default value appropriate for MySQL
 	 */
-	private getDefaultValueSQL(field: SchemaField): string | undefined {
-		if (field.defaultValue === undefined) {
-			return undefined;
+	protected getDefaultValue(field: SchemaField): any {
+		if (field.defaultValue === undefined || field.defaultValue === null) {
+			return null;
 		}
 
-		// Handle common default value patterns
-		if (field.type === 'date' && field.defaultValue === 'now') {
-			return 'CURRENT_TIMESTAMP';
+		// Handle function defaults separately
+		if (typeof field.defaultValue === 'function') {
+			if (field.type === 'date') {
+				return 'CURRENT_TIMESTAMP';
+			}
+			return null;
 		}
 
+		// Handle primitive types directly
 		if (typeof field.defaultValue === 'string') {
 			return this.escapeString(field.defaultValue);
 		}
@@ -285,15 +354,17 @@ export class MySQLAdapter extends BaseAdapter {
 			return field.defaultValue ? '1' : '0';
 		}
 
-		if (field.defaultValue === null) {
-			return 'NULL';
+		if (field.defaultValue instanceof Date) {
+			return `'${field.defaultValue.toISOString().slice(0, 19).replace('T', ' ')}'`;
 		}
 
 		if (typeof field.defaultValue === 'object') {
+			// For objects, convert to JSON string
 			return this.escapeString(JSON.stringify(field.defaultValue));
 		}
 
-		return undefined;
+		// For any other types, convert to string
+		return this.escapeString(String(field.defaultValue));
 	}
 
 	/**
@@ -313,7 +384,7 @@ export class MySQLAdapter extends BaseAdapter {
 	/**
 	 * Transforms a value to MySQL database format
 	 */
-	toDatabase(field: SchemaField, value: any): any {
+	override toDatabase(value: any, field: SchemaField): any {
 		if (value === undefined || value === null) {
 			return null;
 		}
@@ -347,38 +418,38 @@ export class MySQLAdapter extends BaseAdapter {
 	/**
 	 * Transforms a value from MySQL database format
 	 */
-	fromDatabase(field: SchemaField, value: any): any {
-		if (value === null || value === undefined) {
+	override fromDatabase(dbValue: any, field: SchemaField): any {
+		if (dbValue === null || dbValue === undefined) {
 			return null;
 		}
 
 		switch (field.type) {
 			case 'boolean':
-				return Boolean(value);
+				return Boolean(dbValue);
 
 			case 'number':
-				return typeof value === 'string' ? parseFloat(value) : value;
+				return typeof dbValue === 'string' ? parseFloat(dbValue) : dbValue;
 
 			case 'date':
 				// Convert MySQL datetime format to JS Date
-				if (typeof value === 'string') {
-					return new Date(value.replace(' ', 'T') + 'Z');
+				if (typeof dbValue === 'string') {
+					return new Date(dbValue.replace(' ', 'T') + 'Z');
 				}
-				return value;
+				return dbValue;
 
 			case 'array':
 			case 'object':
-				if (typeof value === 'string') {
+				if (typeof dbValue === 'string') {
 					try {
-						return JSON.parse(value);
+						return JSON.parse(dbValue);
 					} catch (e) {
-						return value;
+						return dbValue;
 					}
 				}
-				return value;
+				return dbValue;
 
 			default:
-				return value;
+				return dbValue;
 		}
 	}
 }

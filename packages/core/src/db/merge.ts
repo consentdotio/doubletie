@@ -74,9 +74,9 @@ function mergeFields(
 				fieldDef.relationship && fieldOverride?.relationship
 					? {
 							...fieldDef.relationship,
-							model:
+							entity:
 								fieldOverride.relationship?.model ||
-								fieldDef.relationship.model,
+								fieldDef.relationship.entity,
 							field:
 								fieldOverride.relationship?.field ||
 								fieldDef.relationship.field,
@@ -92,9 +92,10 @@ function mergeFields(
 		) {
 			result[fieldName].transform = {
 				...fieldDef.transform,
-				input: (val: unknown, data: Record<string, unknown>) => {
+				input: (val: unknown) => {
 					// Pass config values to transform functions
-					return fieldDef.transform!.input!(val, data, entityConfig);
+					const originalInput = fieldDef.transform!.input!;
+					return originalInput(val);
 				},
 			};
 		}
