@@ -7,6 +7,7 @@
  * - @doubletie/core/db
  * - @doubletie/core/validation
  * - @doubletie/core/config
+ * - @doubletie/core/utils
  */
 
 // Export all modules
@@ -15,6 +16,7 @@ export * from './entity';
 export * from './db';
 export * from './validation';
 export * from './config';
+export * from './utils/type-guards';
 
 /**
  * Core package version

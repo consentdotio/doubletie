@@ -1,6 +1,21 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
-import type { EntityFieldReference } from '../entity/relationship.types';
+import type {
+	EntityFieldReference,
+	RelationshipConfig,
+} from '../entity/relationship.types';
 import type { DatabaseHints } from './fields/field-hints';
+
+/**
+ * Base type for all supported field value types
+ */
+export type FieldValueType =
+	| string
+	| number
+	| boolean
+	| Date
+	| object
+	| null
+	| undefined;
 
 /**
  * Represents a field in an entity schema
@@ -10,7 +25,7 @@ import type { DatabaseHints } from './fields/field-hints';
  */
 export interface SchemaField<
 	TFieldType extends string = string,
-	TValueType = unknown,
+	TValueType = FieldValueType,
 	TValidatorType extends StandardSchemaV1 = StandardSchemaV1,
 > {
 	type: TFieldType;
@@ -23,14 +38,14 @@ export interface SchemaField<
 	relationship?: {
 		entity: string;
 		field: string;
-		relationship?: any;
+		relationship?: RelationshipConfig;
 	};
 	// Standard Schema validation
 	validator?: TValidatorType;
 	// Transform functions for input/output
 	transform?: {
-		input?: (value: unknown) => TValueType;
-		output?: <T extends TValueType>(value: T) => unknown;
+		input?: (value: FieldValueType) => TValueType;
+		output?: <T extends TValueType>(value: T) => FieldValueType;
 	};
 	// Whether this field is the primary key (or part of a composite primary key)
 	primaryKey?: boolean;
@@ -47,12 +62,12 @@ export interface EntitySchemaDefinition {
 	name: string;
 	prefix?: string;
 	fields: Record<string, SchemaField<string>>;
-	config?: Record<string, unknown>;
+	config?: Record<string, FieldValueType>;
 	order?: number;
 	// Add Standard Schema for the entire entity
 	validator?: StandardSchemaV1;
 	// Entity description
-	description?: string;
+	description?: string | undefined;
 }
 
 /**

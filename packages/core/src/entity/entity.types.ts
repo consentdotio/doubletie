@@ -1,14 +1,16 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { DatabaseConfig } from '../config/config.types';
-import type { TableDefinition, EntityFieldsMap } from '../db/adapters/adapter';
-import type { SchemaField } from '../schema/schema.types';
-import type { EntitySchemaDefinition } from '../schema/schema.types';
+import type { TableDefinition, TableOptions } from '../db/table';
+import type {
+	EntitySchemaDefinition,
+	FieldValueType,
+	SchemaField,
+} from '../schema/schema.types';
 import type {
 	EntityFieldReference,
-	RelationshipConfig,
 	RelationshipHelpers,
-	RelationshipType,
 } from './relationship.types';
+import { EntityInput } from '../utils/type-infer';
 
 /**
  * Extract all field names from an entity with their types
@@ -18,10 +20,9 @@ import type {
 export type EntityFields<
 	TEntity extends { fields: Record<string, SchemaField<any>> },
 	TFieldType extends string = string,
-> = {
-	[K in keyof TEntity['fields'] &
-		string]: TEntity['fields'][K]['type'] extends TFieldType ? K : never;
-}[keyof TEntity['fields'] & string];
+> = keyof {
+	[K in keyof TEntity['fields'] as TEntity['fields'][K]['type'] extends TFieldType ? K : never]: any
+};
 
 /**
  * Extract the value type for a given field
@@ -90,78 +91,49 @@ export type SchemaFields<TSchema extends EntitySchemaDefinition> =
 		: Record<string, SchemaField<any>>;
 
 /**
- * Get the full entity type from a schema definition
- * @template TSchema The schema definition type
- * @template TValidator Validator schema type
+ * Map of entity fields with proper typing
+ */
+export type EntityFieldsMap<T extends Record<string, SchemaField>> = {
+	[K in keyof T]: T[K] extends SchemaField<any, infer TValue>
+		? TValue
+		: FieldValueType;
+};
+
+/**
+ * Base entity with validation and relationship methods
  */
 export interface EntityFromDefinition<
 	TSchema extends EntitySchemaDefinition = EntitySchemaDefinition,
 	TValidator extends StandardSchemaV1 = StandardSchemaV1,
-> extends EntityStructure<SchemaName<TSchema>, SchemaFields<TSchema>> {
-	name: SchemaName<TSchema>;
-	prefix: string;
-	fields: SchemaFields<TSchema>;
-	config: Record<string, unknown>;
-	order: number;
+> extends EntityStructure<TSchema['name'], TSchema['fields']> {
+	// Inherited from EntityStructure
 	validator?: TValidator;
+	description?: TSchema['description'];
+	config: Record<string, FieldValueType>;
+	prefix: string;
+	order: number;
 
-	// Type-safe validation method that properly infers types from field definitions
-	validate: <TInput extends StandardSchemaV1.InferInput<TValidator>>(
+	// Type references for better developer experience
+	type: EntityInput<EntityFromDefinition<TSchema, TValidator>>;
+	outputType: EntityFieldsMap<SchemaFields<TSchema>>;
+
+	// Data validation
+	validate<TInput extends StandardSchemaV1.InferInput<TValidator>>(
 		data: TInput
-	) => Promise<
-		EntityFieldsMap<SchemaFields<TSchema>> 
-	>;
+	): Promise<EntityFieldsMap<SchemaFields<TSchema>>>;
 
-	// Type references for input/output
-	type: StandardSchemaV1.InferInput<TValidator>;
-	outputType: StandardSchemaV1.InferOutput<TValidator>;
+	// Table definition
+	getTable: GetTableMethod<TSchema>;
 
-	// Type-safe table generation
-	getTable: <TOptions extends Record<string, any> = {}>(
-		config?: DatabaseConfig
-	) => TableDefinition<TOptions>;
-
-	// Type-safe relationship builder
-	withRelationships: <
-		TRel extends Record<string, TypedRelationshipReference<any>>,
+	// Configure relationships
+	withRelationships<
+		TRel extends Record<string, TypedRelationshipReference<EntityStructure>>,
 	>(
-		relationshipFn: (
-			helpers: RelationshipHelpers<EntityFromDefinition<TSchema, TValidator>>
-		) => TRel
-	) => EntityWithRelationships<EntityFromDefinition<TSchema, TValidator>, TRel>;
+		relationshipFn: (helpers: any) => TRel
+	): EntityWithRelationships<EntityFromDefinition<TSchema, TValidator>, TRel>;
 }
 
-/**
- * Helper type to infer input type from an entity with improved type safety
- * @template TEntity Entity with validate method
- */
-export type EntityInput<
-	TEntity extends {
-		validate: (data: any) => any;
-		fields: Record<string, SchemaField<any>>;
-	},
-> = Parameters<TEntity['validate']>[0];
 
-/**
- * Helper type to infer output type from an entity with improved type safety
- * @template TEntity Entity with validate method
- */
-export type EntityOutput<
-	TEntity extends {
-		validate: (data: any) => Promise<any>;
-		fields: Record<string, SchemaField<any>>;
-	},
-> = Awaited<ReturnType<TEntity['validate']>>;
-
-/**
- * Type to get keys of an entity's fields that match a specific field type
- * @template TEntity The entity to extract fields from
- * @template TFieldType The field type to filter by
- */
-export type EntityFieldsByType<
-	TEntity extends EntityStructure,
-	TFieldType extends string,
-> = Extract<keyof TEntity['fields'], EntityFields<TEntity, TFieldType>>;
 
 /**
  * Helper type to infer an entity's relationship capabilities
@@ -177,34 +149,15 @@ export type WithRelationships<TEntity extends EntityStructure> = TEntity & {
 	) => EntityWithRelationships<TEntity, TRel>;
 };
 
-/**
- * Extract all the fields from an entity that have a specific property
- * @template TEntity The entity to extract fields from
- * @template TProp The property name to check for
- */
-export type EntityFieldsWithProperty<
-	TEntity extends EntityStructure,
-	TProp extends keyof SchemaField<any>,
-> = {
-	[K in keyof TEntity['fields'] &
-		string]: TProp extends keyof TEntity['fields'][K] ? K : never;
-}[keyof TEntity['fields'] & string];
 
-/**
- * Get primary key fields from an entity
- * @template TEntity The entity to extract primary key fields from
- */
-export type EntityPrimaryKeys<TEntity extends EntityStructure> =
-	EntityFieldsWithProperty<TEntity, 'primaryKey'>;
 
 /**
  * Get required fields from an entity
  * @template TEntity The entity to extract required fields from
  */
-export type EntityRequiredFields<TEntity extends EntityStructure> = {
-	[K in keyof TEntity['fields'] &
-		string]: TEntity['fields'][K]['required'] extends true ? K : never;
-}[keyof TEntity['fields'] & string];
+export type EntityRequiredFields<TEntity extends EntityStructure> = keyof {
+	[K in keyof TEntity['fields'] as TEntity['fields'][K]['required'] extends true ? K : never]: any
+};
 
 /**
  * Create a type-safe input object for an entity
@@ -218,3 +171,12 @@ export type TypedEntityInput<TEntity extends EntityStructure> = {
 		EntityRequiredFields<TEntity>
 	>]?: EntityFieldValue<TEntity, K>;
 };
+
+/**
+ * Method to generate a table definition for the entity
+ */
+export interface GetTableMethod<TSchema extends EntitySchemaDefinition> {
+	<TOptions extends TableOptions = TableOptions>(
+		config?: DatabaseConfig
+	): TableDefinition<TOptions>;
+}

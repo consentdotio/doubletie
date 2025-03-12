@@ -36,16 +36,31 @@ export function field<
  */
 export function createField<
 	TFieldType extends string,
-	TValueType = TFieldType extends 'string' ? string :
-		TFieldType extends 'number' ? number :
-		TFieldType extends 'boolean' ? boolean :
-		TFieldType extends 'date' | 'timestamp' | 'createdAt' | 'updatedAt' ? Date :
-		TFieldType extends 'array' ? unknown[] :
-		TFieldType extends 'object' | 'json' ? Record<string, unknown> :
-		TFieldType extends 'uuid' | 'id' | 'email' | 'url' | 'slug' | 'phone' ? string :
-		TFieldType extends `${string}_id` ? string :
-		TFieldType extends 'incremental_id' ? number :
-		unknown
+	TValueType = TFieldType extends 'string'
+		? string
+		: TFieldType extends 'number'
+			? number
+			: TFieldType extends 'boolean'
+				? boolean
+				: TFieldType extends 'date' | 'timestamp' | 'createdAt' | 'updatedAt'
+					? Date
+					: TFieldType extends 'array'
+						? unknown[]
+						: TFieldType extends 'object' | 'json'
+							? Record<string, unknown>
+							: TFieldType extends
+										| 'uuid'
+										| 'id'
+										| 'email'
+										| 'url'
+										| 'slug'
+										| 'phone'
+								? string
+								: TFieldType extends `${string}_id`
+									? string
+									: TFieldType extends 'incremental_id'
+										? number
+										: unknown,
 >(
 	type: TFieldType,
 	options?: Partial<Omit<SchemaField<TFieldType, TValueType>, 'type'>>

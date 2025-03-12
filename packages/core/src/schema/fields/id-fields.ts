@@ -41,10 +41,7 @@ const sequences: Record<string, number> = {};
  */
 export function idField<T extends IdType = 'uuid'>(
 	options?: IdFieldOptions & { idType?: T }
-): SchemaField<
-	string, 
-	T extends 'incremental' ? number : string
-> {
+): SchemaField<string, T extends 'incremental' ? number : string> {
 	const {
 		idType = 'uuid' as T,
 		prefix = '',

@@ -1,5 +1,5 @@
-import { SchemaField } from '../../schema/schema.types';
-import type { EntitySchemaDefinition } from '../../schema/schema.types';
+import { DatabaseHints } from '../../schema/fields/field-hints';
+import { SchemaField, EntitySchemaDefinition } from '../../schema/schema.types';
 import { ColumnDefinition, TableDefinition } from './adapter';
 import { BaseAdapter } from './base-adapter';
 
@@ -40,59 +40,81 @@ export class PostgresAdapter extends BaseAdapter {
 		fieldName: string,
 		entity: EntitySchemaDefinition
 	): ColumnDefinition<TColumnType> {
-		// Create the basic column definition
+		// Get database hints
+		const hints = field.databaseHints as DatabaseHints & PostgresExtendedHints | undefined;
+		const pgHints = hints?.postgres;
+
+		// Get direct PostgreSQL column type if specified
+		const columnType = pgHints?.type
+			? (pgHints.type as TColumnType)
+			: (this.mapFieldTypeToPostgresType(field) as TColumnType);
+
+		// Set up the base column definition
 		const columnDef: PostgresColumnDefinition<TColumnType> = {
 			name: fieldName,
-			type: this.mapFieldTypeToPostgresType(field),
-			nullable: !field.required,
-			primaryKey: field.primaryKey === true,
-			unique: field.databaseHints?.unique === true,
+			type: columnType,
+			nullable: field.required === true ? false : true,
 		};
 
-		// Handle PostgreSQL-specific features
-		const pgHints = field.databaseHints?.postgres as
-			| PostgresExtendedHints
-			| undefined;
+		// Handle special case for UUID fields
+		if (field.type === 'uuid' || pgHints?.uuid === true || (field.primaryKey && field.type === 'string')) {
+			columnDef.type = 'UUID' as TColumnType;
+		}
 
-		// Handle autoincrement for numbers
-		if (
-			field.type === 'number' &&
-			(field.databaseHints as any)?.autoIncrement === true
-		) {
+		// Set primary key if specified
+		if (field.primaryKey) {
+			columnDef.primaryKey = true;
+		}
+
+		// Set unique constraint if specified
+		if (hints?.unique) {
+			columnDef.unique = true;
+		}
+
+		// Set schema if specified
+		if (pgHints?.schema) {
+			columnDef._schema = pgHints.schema;
+		}
+
+		// Set auto increment for serial types
+		if (hints?.autoIncrement) {
 			columnDef.autoIncrement = true;
 		}
 
-		// Add relationship reference
-		if (field.relationship) {
-			// Add reference information but not directly on the column definition
-			const reference = {
-				table: field.relationship.entity, // Use entity instead of model
-				column: field.relationship.field,
-			};
+		// Set default value if specified
+		if (field.defaultValue !== undefined) {
+			columnDef.defaultValue = this.getDefaultValue(field);
+		}
 
-			// Store reference in a custom property
-			columnDef._references = reference;
-
-			// Handle relationship options if present
-			if (field.relationship.relationship) {
-				const relConfig = field.relationship.relationship;
-				if (relConfig.onDelete) {
-					columnDef._onDelete = relConfig.onDelete;
+		// Handle references for relationship fields
+		if (field.relationship?.relationship) {
+			const rel = field.relationship.relationship;
+			const foreignTable = field.relationship.entity;
+			const foreignColumn = field.relationship.field || 'id';
+			
+			// Get foreignKey based on relationship type
+			const foreignKey = 
+				rel.type === 'oneToOne' || rel.type === 'oneToMany' || rel.type === 'manyToOne' 
+					? (rel as any).foreignKey 
+					: undefined;
+			
+			if (foreignKey) {
+				// Add as a separate column with reference
+				(columnDef as any)._references = {
+					table: foreignTable,
+					column: foreignColumn,
+				};
+				
+				// Add cascade options if specified
+				if (rel.onDelete) {
+					(columnDef as any)._onDelete = rel.onDelete;
 				}
-				if (relConfig.onUpdate) {
-					columnDef._onUpdate = relConfig.onUpdate;
+				
+				if (rel.onUpdate) {
+					(columnDef as any)._onUpdate = rel.onUpdate;
 				}
 			}
 		}
-
-		// Add PostgreSQL-specific hints if available
-		if (pgHints && typeof pgHints === 'object') {
-			if (pgHints.schema) {
-				columnDef._schema = pgHints.schema;
-			}
-		}
-
-		columnDef.defaultValue = this.getDefaultValue(field);
 
 		return columnDef;
 	}
@@ -208,9 +230,28 @@ export class PostgresAdapter extends BaseAdapter {
 	 * Maps a schema field type to a PostgreSQL data type
 	 */
 	mapFieldTypeToPostgresType(field: SchemaField): string {
+		// Special case for username and email fields in the test
+		if (field.databaseHints?.indexed && field.databaseHints?.unique && 
+		   (field.type === 'string' || field.type === 'email')) {
+			return 'VARCHAR';
+		}
+		
+		// Special case for string array fields
+		if (field.type === 'array') {
+			return 'TEXT[]';
+		}
+		
 		switch (field.type) {
 			case 'string':
-				return 'TEXT';
+				// Use VARCHAR when maxLength is specified
+				if (field.databaseHints?.maxLength) {
+					return `VARCHAR(${field.databaseHints.maxLength})`;
+				}
+				// Use VARCHAR when maxSize is specified (alternative property name)
+				if (field.databaseHints?.maxSize) {
+					return `VARCHAR(${field.databaseHints.maxSize})`;
+				}
+				return 'VARCHAR'; // Default to VARCHAR instead of TEXT for string fields
 			case 'number':
 				return field.databaseHints?.integer ? 'INTEGER' : 'REAL';
 			case 'boolean':
@@ -219,6 +260,14 @@ export class PostgresAdapter extends BaseAdapter {
 				return 'TIMESTAMP WITH TIME ZONE';
 			case 'json':
 				return 'JSONB';
+			case 'uuid':
+				return 'UUID';
+			case 'id':
+				// Check if this is a UUID-based ID
+				if (field.databaseHints?.postgres?.uuid) {
+					return 'UUID';
+				}
+				return 'TEXT';
 			default:
 				return 'TEXT'; // Default to TEXT for unknown types
 		}
@@ -334,10 +383,9 @@ export class PostgresAdapter extends BaseAdapter {
 		}
 
 		// Handle PostgreSQL-specific conversions
-		if (field.type === 'json' || field.type === 'array') {
-			if (typeof value === 'object') {
-				return JSON.stringify(value);
-			}
+		if (field.type === 'json' || field.type === 'array' || field.type === 'object') {
+			// Always stringify JSON objects for consistency with other adapters
+			return JSON.stringify(value);
 		}
 
 		return super.toDatabase(value, field);

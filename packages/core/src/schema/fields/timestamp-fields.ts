@@ -2,9 +2,13 @@
  * Timestamp field utilities for entity schema definitions
  */
 import { z } from 'zod';
-import { SchemaField } from '../schema.types';
+import { FieldValueType, SchemaField } from '../schema.types';
 import { createField } from './basic-fields';
-import type { DatabaseHints, SQLiteTypeOption, StorageTypeCategory } from './field-hints';
+import type {
+	DatabaseHints,
+	SQLiteTypeOption,
+	StorageTypeCategory,
+} from './field-hints';
 
 /**
  * Format for storing timestamp data
@@ -75,7 +79,9 @@ export interface TimestampFieldOptions
  * @param options Configuration options for the timestamp field
  * @returns A schema field configured for timestamps
  */
-export function timestampField(options?: TimestampFieldOptions): SchemaField<string, Date> {
+export function timestampField(
+	options?: TimestampFieldOptions
+): SchemaField<string, Date> {
 	const {
 		autoCreate = true,
 		autoUpdate = false,
@@ -111,7 +117,7 @@ export function timestampField(options?: TimestampFieldOptions): SchemaField<str
 	}
 
 	// Input transform to handle auto-creation/update and format conversion
-	const inputTransform = (value: unknown) => {
+	const inputTransform = (value: unknown): FieldValueType => {
 		// If value is explicitly provided, convert it to the desired format
 		if (value !== undefined) {
 			return formatTimestamp(value, {
@@ -119,7 +125,7 @@ export function timestampField(options?: TimestampFieldOptions): SchemaField<str
 				formatFn,
 				timezone,
 				includeTimezone,
-			});
+			}) as FieldValueType;
 		}
 
 		// For auto-create/update fields, generate a current timestamp
@@ -129,24 +135,31 @@ export function timestampField(options?: TimestampFieldOptions): SchemaField<str
 				formatFn,
 				timezone,
 				includeTimezone,
-			});
+			}) as FieldValueType;
 		}
 
 		// No auto-create/update and no explicit value
 		return undefined;
 	};
 
-	// Output transform to convert from stored format to desired format
-	const outputTransform = (value: unknown) => {
-		if (value === undefined || value === null) {
-			return null;
+	// Output transform to parse the stored format back to a Date
+	const outputTransform = (value: unknown): FieldValueType => {
+		// Skip null/undefined values
+		if (value === null || value === undefined) {
+			return value as FieldValueType;
 		}
 
-		return parseTimestamp(value, {
-			format,
-			parseFn,
-			timezone,
-		});
+		try {
+			// Parse the timestamp value
+			return parseTimestamp(value, {
+				format,
+				parseFn,
+				timezone,
+			}) as FieldValueType;
+		} catch (error) {
+			// If parsing fails, return the original value
+			return value as FieldValueType;
+		}
 	};
 
 	// Generate appropriate database hints

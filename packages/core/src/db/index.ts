@@ -36,8 +36,16 @@ export type {
 	ForeignKeyDefinition,
 } from './adapters/adapter';
 
+// Import EntityFieldsMap from entity.types
+export type { EntityFieldsMap } from '../entity/entity.types';
+
 // Schema merging types
 export type { ResolvedEntitySchema } from './merge';
+
+/**
+ * Database adapter type for type-safe adapter selection
+ */
+export type AdapterType = 'sqlite' | 'postgres' | 'mysql' | string;
 
 /**
  * Helper function to generate a table definition for an entity
@@ -45,7 +53,9 @@ export type { ResolvedEntitySchema } from './merge';
  * @param adapterType The database adapter type to use
  * @returns A table definition
  */
-function generateTableDefinition(entity: any, adapterType = 'sqlite') {
+function generateTableDefinition<
+	TEntity extends { name: string; fields: Record<string, any> },
+>(entity: TEntity, adapterType: AdapterType = 'sqlite') {
 	const { getAdapter } = require('./adapters');
 	const adapter = getAdapter(adapterType);
 	return adapter.generateTableDefinition(entity);
@@ -57,7 +67,9 @@ function generateTableDefinition(entity: any, adapterType = 'sqlite') {
  * @param adapterType The database adapter type to use
  * @returns SQL string for creating the table
  */
-function generateSQLForEntity(entity: any, adapterType = 'sqlite') {
+function generateSQLForEntity<
+	TEntity extends { name: string; fields: Record<string, any> },
+>(entity: TEntity, adapterType: AdapterType = 'sqlite'): string {
 	const { getAdapter } = require('./adapters');
 	const adapter = getAdapter(adapterType);
 	const tableDef = adapter.generateTableDefinition(entity);

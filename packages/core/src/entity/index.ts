@@ -13,9 +13,6 @@ export type {
 	EntityStructure,
 	EntityFromDefinition,
 	EntityWithRelationships,
-	EntityInput,
-	EntityOutput,
-	EntityFieldsByType,
 	WithRelationships,
 } from './entity.types';
 

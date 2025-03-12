@@ -76,7 +76,10 @@ export abstract class BaseAdapter implements DatabaseAdapter<string> {
 						? new Date(value)
 						: new Date(value as string);
 			case 'json':
-				return typeof value === 'string' ? value : JSON.stringify(value);
+			case 'array':
+			case 'object':
+				// Always stringify JSON objects for consistency across adapters
+				return JSON.stringify(value);
 			default:
 				return value;
 		}
@@ -102,9 +105,11 @@ export abstract class BaseAdapter implements DatabaseAdapter<string> {
 		// Basic type conversion based on field type
 		switch (field.type) {
 			case 'boolean':
-				return Boolean(dbValue);
+				return typeof dbValue === 'boolean'
+					? dbValue
+					: dbValue === 'true' || dbValue === 1 || dbValue === '1';
 			case 'number':
-				return Number(dbValue);
+				return typeof dbValue === 'number' ? dbValue : Number(dbValue);
 			case 'date':
 				return dbValue instanceof Date
 					? dbValue
@@ -112,10 +117,14 @@ export abstract class BaseAdapter implements DatabaseAdapter<string> {
 						? new Date(dbValue)
 						: new Date(dbValue as string);
 			case 'json':
+			case 'array':
+			case 'object':
+				// Parse JSON strings back to objects
 				if (typeof dbValue === 'string') {
 					try {
 						return JSON.parse(dbValue);
 					} catch (e) {
+						// If parsing fails, return as is
 						return dbValue;
 					}
 				}

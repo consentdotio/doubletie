@@ -3,7 +3,12 @@ import type {
 	EntityOverrideConfig,
 } from '../config/config.types';
 import type { EntitySchemaDefinition } from '../schema/schema.types';
-import type { ResolvedField, SchemaField } from '../schema/schema.types';
+import type {
+	FieldValueType,
+	ResolvedField,
+	SchemaField,
+} from '../schema/schema.types';
+import { isBoolean, isNumber, isObject, isString } from '../utils/type-guards';
 
 /**
  * Resolved entity schema with merged config
@@ -92,7 +97,7 @@ function mergeFields(
 		) {
 			result[fieldName].transform = {
 				...fieldDef.transform,
-				input: (val: unknown) => {
+				input: (val: FieldValueType): FieldValueType => {
 					// Pass config values to transform functions
 					const originalInput = fieldDef.transform!.input!;
 					return originalInput(val);

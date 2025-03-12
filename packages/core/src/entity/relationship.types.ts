@@ -1,7 +1,8 @@
+import type { FieldValueType } from '../schema/schema.types';
 import type { EntityFields, EntityStructure } from './entity.types';
 
 /**
- * Relationship type identifiers
+ * Types of relationships between entities
  */
 export type RelationshipType =
 	| 'oneToOne'
@@ -10,134 +11,73 @@ export type RelationshipType =
 	| 'manyToMany';
 
 /**
- * Configuration for a relationship between entities
- * @template TSourceEntity Source entity in the relationship
- * @template TTargetEntity Target entity in the relationship
+ * Cascade options for deletes and updates
  */
-export interface RelationshipConfig<
-	TSourceEntity extends EntityStructure = EntityStructure,
-	TTargetEntity extends EntityStructure = EntityStructure,
-	TSourceField extends string = string,
-	TTargetField extends keyof TTargetEntity['fields'] &
-		string = keyof TTargetEntity['fields'] & string,
-> {
-	/**
-	 * Foreign key field to use for the relationship. This can be a field name from either
-	 * the source or target entity, or a custom string if the field hasn't been created yet.
-	 */
-	foreignKey: string;
-
-	/**
-	 * Type of relationship
-	 */
-	type: RelationshipType;
-
-	/**
-	 * Configuration for a join table in many-to-many relationships
-	 */
-	joinTable?: {
-		/**
-		 * Name of the join table
-		 */
-		tableName: string;
-
-		/**
-		 * Source column name (defaults to `${source.name}Id`)
-		 */
-		sourceColumn?: string;
-
-		/**
-		 * Target column name (defaults to `${target.name}Id`)
-		 */
-		targetColumn?: string;
-
-		/**
-		 * Additional fields to add to the join table
-		 */
-		fields?: Record<string, any>;
-	};
-}
+export type CascadeOption =
+	| 'CASCADE'
+	| 'RESTRICT'
+	| 'SET NULL'
+	| 'SET DEFAULT'
+	| 'NO ACTION';
 
 /**
- * Reference to a field in another entity
- * @template TSourceEntity Source entity in the relationship
- * @template TTargetEntity Target entity in the relationship
- * @template TTargetField Field in the target entity being referenced
+ * Fetch strategy for relationships
  */
-export interface EntityFieldReference<
-	TSourceEntity extends EntityStructure = EntityStructure,
-	TTargetEntity extends EntityStructure = EntityStructure,
-	TTargetField extends keyof TTargetEntity['fields'] &
-		string = keyof TTargetEntity['fields'] & string,
-> {
-	/**
-	 * The name of the target entity
-	 */
-	entity: TTargetEntity['name'];
-
-	/**
-	 * The field in the target entity
-	 */
-	field: TTargetField;
-
-	/**
-	 * Configuration for the relationship
-	 */
-	relationship?: RelationshipConfig<TSourceEntity, TTargetEntity>;
-}
+export type FetchStrategy = 'lazy' | 'eager';
 
 /**
- * Helper to create an entity field reference
- */
-export interface EntityFieldReferenceCreator {
-	<
-		TTargetEntity extends EntityStructure,
-		TTargetField extends keyof TTargetEntity['fields'] &
-			string = keyof TTargetEntity['fields'] & string,
-	>(
-		entity: TTargetEntity,
-		field: TTargetField
-	): EntityFieldReference<EntityStructure, TTargetEntity, TTargetField>;
-}
-
-/**
- * Options for one-to-one and many-to-one relationships
+ * Basic options for one-to-one and many-to-one relationships
  */
 export interface BasicRelationshipOptions {
 	/**
-	 * Foreign key field to use for the relationship
+	 * Foreign key field name in the source entity
 	 */
 	foreignKey?: string;
+
+	/**
+	 * Whether to cascade deletes
+	 */
+	cascade?: boolean;
+
+	/**
+	 * Whether to fetch the relationship eagerly or lazily
+	 */
+	fetch?: FetchStrategy;
+
+	/**
+	 * On delete action
+	 */
+	onDelete?: CascadeOption;
+
+	/**
+	 * On update action
+	 */
+	onUpdate?: CascadeOption;
 }
 
 /**
- * Helper to create a many-to-one relationship
+ * Join table configuration for many-to-many relationships
  */
-export interface ManyToOneHelper {
-	<TTargetEntity extends EntityStructure>(
-		entity: TTargetEntity,
-		options?: BasicRelationshipOptions
-	): EntityFieldReference<EntityStructure, TTargetEntity>;
-}
+export interface JoinTableConfig {
+	/**
+	 * Name of the join table
+	 */
+	name: string;
 
-/**
- * Helper to create a one-to-one relationship
- */
-export interface OneToOneHelper {
-	<TTargetEntity extends EntityStructure>(
-		entity: TTargetEntity,
-		options?: BasicRelationshipOptions
-	): EntityFieldReference<EntityStructure, TTargetEntity>;
-}
+	/**
+	 * Source column name in the join table
+	 */
+	sourceColumn: string;
 
-/**
- * Helper to create a one-to-many relationship
- */
-export interface OneToManyHelper {
-	<TTargetEntity extends EntityStructure>(
-		entity: TTargetEntity,
-		options?: BasicRelationshipOptions
-	): EntityFieldReference<EntityStructure, TTargetEntity>;
+	/**
+	 * Target column name in the join table
+	 */
+	targetColumn: string;
+
+	/**
+	 * Additional columns in the join table
+	 */
+	additionalColumns?: Record<string, FieldValueType>;
 }
 
 /**
@@ -145,70 +85,192 @@ export interface OneToManyHelper {
  */
 export interface ManyToManyOptions {
 	/**
+	 * Target field name (defaults to 'id')
+	 */
+	targetField?: string;
+
+	/**
 	 * Join table configuration
 	 */
-	joinTable: {
-		/**
-		 * Name of the join table
-		 */
-		tableName: string;
+	joinTable?: string | JoinTableConfig;
 
-		/**
-		 * Source column name (defaults to `${source.name}Id`)
-		 */
-		sourceColumn?: string;
+	/**
+	 * Whether to cascade deletes
+	 */
+	cascade?: boolean;
 
-		/**
-		 * Target column name (defaults to `${target.name}Id`)
-		 */
-		targetColumn?: string;
+	/**
+	 * Whether to fetch the relationship eagerly or lazily
+	 */
+	fetch?: FetchStrategy;
 
-		/**
-		 * Additional fields to add to the join table
-		 */
-		fields?: Record<string, any>;
-	};
+	/**
+	 * On delete action
+	 */
+	onDelete?: CascadeOption;
+
+	/**
+	 * On update action
+	 */
+	onUpdate?: CascadeOption;
 }
 
 /**
- * Helper to create a many-to-many relationship
+ * Common base for all relationship configurations
  */
-export interface ManyToManyHelper {
-	<TTargetEntity extends EntityStructure>(
-		entity: TTargetEntity,
-		options: ManyToManyOptions
-	): EntityFieldReference<EntityStructure, TTargetEntity>;
+interface BaseRelationshipConfig {
+	/**
+	 * Type of relationship
+	 */
+	type: RelationshipType;
+
+	/**
+	 * Whether to cascade deletes
+	 */
+	cascade?: boolean;
+
+	/**
+	 * Whether to fetch the relationship eagerly or lazily
+	 */
+	fetch?: FetchStrategy;
+
+	/**
+	 * On delete action
+	 */
+	onDelete?: CascadeOption;
+
+	/**
+	 * On update action
+	 */
+	onUpdate?: CascadeOption;
 }
 
 /**
- * Helpers for creating entity relationships
- * @template TSourceEntity The source entity these helpers will be used with
+ * Configuration for a one-to-one relationship
  */
-export interface RelationshipHelpers<
+export interface OneToOneConfig extends BaseRelationshipConfig {
+	type: 'oneToOne';
+	foreignKey: string;
+	inverseForeignKey?: string;
+}
+
+/**
+ * Configuration for a one-to-many relationship
+ */
+export interface OneToManyConfig extends BaseRelationshipConfig {
+	type: 'oneToMany';
+	foreignKey: string;
+}
+
+/**
+ * Configuration for a many-to-one relationship
+ */
+export interface ManyToOneConfig extends BaseRelationshipConfig {
+	type: 'manyToOne';
+	foreignKey: string;
+}
+
+/**
+ * Configuration for a many-to-many relationship
+ */
+export interface ManyToManyConfig extends BaseRelationshipConfig {
+	type: 'manyToMany';
+	joinTable: string | JoinTableConfig;
+}
+
+/**
+ * Union type for all relationship configurations
+ */
+export type RelationshipConfig =
+	| OneToOneConfig
+	| OneToManyConfig
+	| ManyToOneConfig
+	| ManyToManyConfig;
+
+/**
+ * Reference to an entity field
+ */
+export interface EntityFieldReference<
 	TSourceEntity extends EntityStructure = EntityStructure,
+	TTargetEntity extends EntityStructure = EntityStructure,
+	TTargetField extends keyof TTargetEntity['fields'] & string = string,
 > {
+	/**
+	 * Target entity name
+	 */
+	entity: string;
+	/**
+	 * Target entity field
+	 */
+	field: TTargetField;
+	/**
+	 * Relationship configuration
+	 */
+	relationship?: RelationshipConfig;
+}
+
+/**
+ * Relationship helper methods to create type-safe relationships
+ */
+export interface RelationshipHelpers<TSourceEntity extends EntityStructure> {
 	/**
 	 * Create a reference to a field in another entity
 	 */
-	ref: EntityFieldReferenceCreator;
+	ref<
+		TTargetEntity extends EntityStructure,
+		TTargetField extends keyof TTargetEntity['fields'] & string,
+	>(
+		entity: TTargetEntity,
+		field: TTargetField
+	): EntityFieldReference<TSourceEntity, TTargetEntity, TTargetField>;
 
 	/**
-	 * Create a many-to-one relationship
+	 * Create a many-to-one relationship to another entity
 	 */
-	manyToOne: ManyToOneHelper;
+	manyToOne<
+		TTargetEntity extends EntityStructure,
+		TTargetField extends keyof TTargetEntity['fields'] &
+			string = keyof TTargetEntity['fields'] & string,
+	>(
+		entity: TTargetEntity,
+		field?: TTargetField,
+		options?: BasicRelationshipOptions
+	): EntityFieldReference<TSourceEntity, TTargetEntity, TTargetField>;
 
 	/**
-	 * Create a one-to-one relationship
+	 * Create a one-to-one relationship to another entity
 	 */
-	oneToOne: OneToOneHelper;
+	oneToOne<
+		TTargetEntity extends EntityStructure,
+		TTargetField extends keyof TTargetEntity['fields'] &
+			string = keyof TTargetEntity['fields'] & string,
+	>(
+		entity: TTargetEntity,
+		field?: TTargetField,
+		options?: BasicRelationshipOptions & { inverseForeignKey?: string }
+	): EntityFieldReference<TSourceEntity, TTargetEntity, TTargetField>;
 
 	/**
-	 * Create a one-to-many relationship
+	 * Create a one-to-many relationship to another entity
 	 */
-	oneToMany: OneToManyHelper;
+	oneToMany<
+		TTargetEntity extends EntityStructure,
+		TTargetField extends keyof TTargetEntity['fields'] &
+			string = keyof TTargetEntity['fields'] & string,
+	>(
+		entity: TTargetEntity,
+		options: BasicRelationshipOptions & { targetField?: TTargetField }
+	): EntityFieldReference<TSourceEntity, TTargetEntity, TTargetField>;
 
 	/**
-	 * Create a many-to-many relationship
+	 * Create a many-to-many relationship with another entity via a join table
 	 */
-	manyToMany: ManyToManyHelper;
+	manyToMany<
+		TTargetEntity extends EntityStructure,
+		TTargetField extends keyof TTargetEntity['fields'] &
+			string = keyof TTargetEntity['fields'] & string,
+	>(
+		entity: TTargetEntity,
+		options: ManyToManyOptions
+	): EntityFieldReference<TSourceEntity, TTargetEntity, TTargetField>;
 }
