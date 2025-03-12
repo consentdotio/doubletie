@@ -5,7 +5,7 @@
  * to simplify testing and provide type-compatible mocks for Kysely and the Database class.
  */
 
-import {
+import type {
 	OrderByDirectionExpression,
 	ReferenceExpression,
 	SelectExpression,
@@ -54,9 +54,11 @@ export interface MockExpressionBuilder {
  * Create a mock expression builder that can be used in where clauses
  */
 export function createMockExpressionBuilder(): MockExpressionBuilder {
-	const eb = function (column: string, operator: string, value: any) {
-		return { column, operator, value };
-	} as MockExpressionBuilder;
+	const eb = ((column: string, operator: string, value: any) => ({
+		column,
+		operator,
+		value,
+	})) as MockExpressionBuilder;
 
 	// Add necessary methods to the expression builder
 	eb.and = (conditions: any[]) => ({ and: conditions });
@@ -265,7 +267,7 @@ export function createMockSelectChain<T = any>(
 /**
  * Creates a mock update chain that can be used for update queries
  */
-export function createMockUpdateChain(numUpdated: number = 1): MockChain {
+export function createMockUpdateChain(numUpdated = 1): MockChain {
 	return {
 		set: vi.fn().mockReturnThis(),
 		where: vi.fn().mockReturnThis(),
@@ -277,7 +279,7 @@ export function createMockUpdateChain(numUpdated: number = 1): MockChain {
 /**
  * Creates a mock delete chain that can be used for delete queries
  */
-export function createMockDeleteChain(numDeleted: number = 1): MockChain {
+export function createMockDeleteChain(numDeleted = 1): MockChain {
 	return {
 		where: vi.fn().mockReturnThis(),
 		whereIn: vi.fn().mockReturnThis(),
@@ -687,12 +689,10 @@ export function createMockDatabaseWithTransaction<TDatabase = any>(
 
 	// Set up dynamic helper
 	Object.defineProperty(mockDb, 'dynamic', {
-		get: function () {
-			return {
-				ref: vi.fn((column) => `${column}`),
-				raw: vi.fn((value) => `RAW:${value}`),
-			};
-		},
+		get: () => ({
+			ref: vi.fn((column) => `${column}`),
+			raw: vi.fn((value) => `RAW:${value}`),
+		}),
 	});
 
 	return mockDb as unknown as TestMockDatabase<TDatabase> &

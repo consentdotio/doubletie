@@ -2,16 +2,13 @@ import {
 	assertCondition,
 	assertType,
 	isEntityStructure,
-	isJoinTableConfig,
 	isObject,
-	isRelationshipConfig,
-	isRelationshipType,
 } from '../utils/type-guards';
-import {
+import type {
 	InferEntityFromReference,
 	InferFieldFromReference,
 } from '../utils/type-infer';
-import type { EntityFields, EntityStructure } from './entity.types';
+import type { EntityStructure } from './entity.types';
 import type {
 	BasicRelationshipOptions,
 	EntityFieldReference,
@@ -21,9 +18,7 @@ import type {
 	ManyToOneConfig,
 	OneToManyConfig,
 	OneToOneConfig,
-	RelationshipConfig,
 	RelationshipHelpers,
-	RelationshipType,
 } from './relationship.types';
 
 /**

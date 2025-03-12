@@ -1,28 +1,28 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
-import {
-	type DeleteQueryBuilder,
-	type DeleteResult,
-	type Dialect,
+import type { AsyncLocalStorage } from 'node:async_hooks';
+import type {
+	DeleteQueryBuilder,
+	DeleteResult,
+	Dialect,
 	DynamicModule,
-	type InsertQueryBuilder,
-	type InsertResult,
-	type Kysely,
-	type LogEvent,
-	type MigrationProvider,
+	InsertQueryBuilder,
+	InsertResult,
+	Kysely,
+	LogEvent,
+	MigrationProvider,
 	Migrator,
-	type NoResultError,
-	type SelectQueryBuilder,
-	type UpdateQueryBuilder,
-	type UpdateResult,
+	NoResultError,
+	SelectQueryBuilder,
+	UpdateQueryBuilder,
+	UpdateResult,
 	sql,
 } from 'kysely';
-import {
-	type ModelSchema,
-	type PrimaryKeySpecification,
+import type {
+	ModelSchema,
+	PrimaryKeySpecification,
 	createModel,
 } from './model';
-import { CommonTableExpression } from './utils/kysley-types';
-import { DeepPartial, DrainOuterGeneric } from './utils/type-utils';
+import type { CommonTableExpression } from './utils/kysley-types';
+import type { DeepPartial, DrainOuterGeneric } from './utils/type-utils';
 
 /**
  * Configuration options for the database.

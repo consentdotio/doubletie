@@ -24,12 +24,12 @@ import {
 
 import type { Database, TransactionCallback } from './database.types';
 
-import { ExtractRawTypeFromReferenceExpression } from './utils/kysley-types';
+import type { ExtractRawTypeFromReferenceExpression } from './utils/kysley-types';
 import type {
 	FieldDefinition,
 	RelationDefinition,
 } from './utils/model-builder';
-import {
+import type {
 	AtLeastOne,
 	DeepPartial,
 	DrainOuterGeneric,

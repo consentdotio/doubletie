@@ -1,4 +1,4 @@
-import { DatabaseHints } from '../../schema/fields/field-hints';
+import type { DatabaseHints } from '../../schema/fields/field-hints';
 /**
  * Base adapter implementation with common functionality for all database adapters
  */

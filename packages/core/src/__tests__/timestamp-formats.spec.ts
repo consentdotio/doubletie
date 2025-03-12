@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { defineEntity } from '../entity/entity';
 import {
-	TimestampFormat,
+	type TimestampFormat,
 	createdAtField,
 	expiresAtField,
 	stringField,

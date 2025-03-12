@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Database } from '../../database.types';
 import { createModel } from '../../model';
-import { MockFn, createMockDatabase } from '../fixtures/mock-db';
+import { type MockFn, createMockDatabase } from '../fixtures/mock-db';
 
 describe('unit: transaction handling', () => {
 	// Define test database types

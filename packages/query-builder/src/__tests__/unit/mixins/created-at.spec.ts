@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import withCreatedAt from '../../../mixins/created-at';
 import type { ModelFunctions } from '../../../model';
-import { DB, toSqliteDate } from '../../fixtures/migration';
+import { type DB, toSqliteDate } from '../../fixtures/migration';
 
 // Define test database type
 

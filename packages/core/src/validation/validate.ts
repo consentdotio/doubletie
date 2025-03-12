@@ -3,12 +3,10 @@ import type { EntityStructure } from '../entity/entity.types';
 import type {
 	EntitySchemaDefinition,
 	FieldValueType,
-	SchemaField,
 } from '../schema/schema.types';
 import {
 	assertCondition,
 	isEntitySchemaDefinition,
-	isObject,
 	isSchemaField,
 	isStandardSchema,
 	isValidationError,
@@ -128,12 +126,15 @@ export async function validateEntityWithFieldValidators<
 
 	// Skip validation on data type since entity.ts now pre-processes this
 	// and ensures dataToValidate is always a valid object
-	
+
 	// Remove the assertCondition check on data
-	
+
 	const errors: Array<{ field: string; issues: string }> = [];
 	// First create a deep copy of the input data to avoid mutations
-	const initialData = typeof data === 'object' && data !== null ? { ...data as Record<string, any> } : {};
+	const initialData =
+		typeof data === 'object' && data !== null
+			? { ...(data as Record<string, any>) }
+			: {};
 	// Then create our output object
 	const validatedData: Record<string, FieldValueType> = {};
 
@@ -146,7 +147,10 @@ export async function validateEntityWithFieldValidators<
 		);
 
 		// Get data safely with proper typing
-		const dataObj = typeof data === 'object' && data !== null ? data as Record<string, any> : {};
+		const dataObj =
+			typeof data === 'object' && data !== null
+				? (data as Record<string, any>)
+				: {};
 
 		// Check required fields
 		if (
@@ -158,7 +162,10 @@ export async function validateEntityWithFieldValidators<
 		}
 
 		// Handle default values for undefined fields
-		if (dataObj[fieldName] === undefined && fieldDef.defaultValue !== undefined) {
+		if (
+			dataObj[fieldName] === undefined &&
+			fieldDef.defaultValue !== undefined
+		) {
 			// Generate the default value (handle function or direct value)
 			const defaultValue =
 				typeof fieldDef.defaultValue === 'function'

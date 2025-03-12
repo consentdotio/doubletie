@@ -15,9 +15,7 @@ import {
 	isResolvedEntitySchema,
 	isStandardSchema,
 } from '../utils/type-guards';
-import type {
-	EntityInput,
-} from '../utils/type-infer';
+import type { EntityInput } from '../utils/type-infer';
 import { convertValueToFieldType } from '../validation/type-conversion';
 import {
 	validateEntity,
@@ -39,7 +37,6 @@ type EntityType<
 	TSchema extends EntitySchemaDefinition,
 	TValidator extends StandardSchemaV1,
 > = EntityFromDefinition<TSchema, TValidator>;
-
 
 /**
  * Define a new entity with validation and relationships
@@ -116,11 +113,12 @@ export function defineEntity<
 				resolved || (config ? resolveWithConfig(config) : baseEntity);
 
 			// Ensure data is in the correct format for validation
-			const dataToValidate = data === null || data === undefined 
-				? {}
-				: typeof data === 'object' 
-					? data 
-					: { value: data };
+			const dataToValidate =
+				data === null || data === undefined
+					? {}
+					: typeof data === 'object'
+						? data
+						: { value: data };
 
 			// Use field-level validators when there's no explicit validator
 			if (!validator) {
@@ -144,7 +142,9 @@ export function defineEntity<
 			for (const [fieldName, fieldDef] of Object.entries(schema.fields)) {
 				// Include all fields from the validated data if they exist
 				if (result && typeof result === 'object' && fieldName in result) {
-					const fieldValue = (result as Record<string, FieldValueType>)[fieldName];
+					const fieldValue = (result as Record<string, FieldValueType>)[
+						fieldName
+					];
 
 					// Apply automated type conversions based on field type
 					typedResult[fieldName] = convertValueToFieldType(

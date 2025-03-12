@@ -44,7 +44,9 @@ describe('ID Field Types', () => {
 		});
 
 		// Check that ID was generated and is a valid UUID
-		expect(user.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+		expect(user.id).toMatch(
+			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+		);
 		// Test other fields
 		expect(user.name).toBe('John Doe');
 		expect(user.email).toBe('john@example.com');

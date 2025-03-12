@@ -6,11 +6,11 @@ import type {
 	FieldValueType,
 	SchemaField,
 } from '../schema/schema.types';
+import type { EntityInput } from '../utils/type-infer';
 import type {
 	EntityFieldReference,
 	RelationshipHelpers,
 } from './relationship.types';
-import { EntityInput } from '../utils/type-infer';
 
 /**
  * Extract all field names from an entity with their types
@@ -21,7 +21,9 @@ export type EntityFields<
 	TEntity extends { fields: Record<string, SchemaField<any>> },
 	TFieldType extends string = string,
 > = keyof {
-	[K in keyof TEntity['fields'] as TEntity['fields'][K]['type'] extends TFieldType ? K : never]: any
+	[K in keyof TEntity['fields'] as TEntity['fields'][K]['type'] extends TFieldType
+		? K
+		: never]: any;
 };
 
 /**
@@ -133,8 +135,6 @@ export interface EntityFromDefinition<
 	): EntityWithRelationships<EntityFromDefinition<TSchema, TValidator>, TRel>;
 }
 
-
-
 /**
  * Helper type to infer an entity's relationship capabilities
  * @template TEntity The base entity type
@@ -149,14 +149,14 @@ export type WithRelationships<TEntity extends EntityStructure> = TEntity & {
 	) => EntityWithRelationships<TEntity, TRel>;
 };
 
-
-
 /**
  * Get required fields from an entity
  * @template TEntity The entity to extract required fields from
  */
 export type EntityRequiredFields<TEntity extends EntityStructure> = keyof {
-	[K in keyof TEntity['fields'] as TEntity['fields'][K]['required'] extends true ? K : never]: any
+	[K in keyof TEntity['fields'] as TEntity['fields'][K]['required'] extends true
+		? K
+		: never]: any;
 };
 
 /**
@@ -175,8 +175,8 @@ export type TypedEntityInput<TEntity extends EntityStructure> = {
 /**
  * Method to generate a table definition for the entity
  */
-export interface GetTableMethod<TSchema extends EntitySchemaDefinition> {
-	<TOptions extends TableOptions = TableOptions>(
-		config?: DatabaseConfig
-	): TableDefinition<TOptions>;
-}
+export type GetTableMethod<TSchema extends EntitySchemaDefinition> = <
+	TOptions extends TableOptions = TableOptions,
+>(
+	config?: DatabaseConfig
+) => TableDefinition<TOptions>;

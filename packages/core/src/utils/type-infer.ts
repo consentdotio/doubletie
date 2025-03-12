@@ -76,7 +76,6 @@ export type EntityInput<T extends EntityFromDefinition> =
 			: EntityRecord<T>
 		: Record<string, FieldValueType>;
 
-
 /**
  * Extract a type from a relationship field
  */

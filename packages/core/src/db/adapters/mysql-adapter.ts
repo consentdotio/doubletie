@@ -1,11 +1,7 @@
-import { DatabaseHints, MySQLHints } from '../../schema/fields/field-hints';
-import { SchemaField } from '../../schema/schema.types';
+import type { DatabaseHints } from '../../schema/fields/field-hints';
+import type { SchemaField } from '../../schema/schema.types';
 import type { EntitySchemaDefinition } from '../../schema/schema.types';
-import {
-	ColumnDefinition,
-	ForeignKeyDefinition,
-	TableDefinition,
-} from './adapter';
+import type { ColumnDefinition, TableDefinition } from './adapter';
 import { BaseAdapter } from './base-adapter';
 
 // Define interface to extend ColumnDefinition with MySQL-specific properties
@@ -90,7 +86,7 @@ export class MySQLAdapter extends BaseAdapter {
 		// Set default value if specified
 		if (field.defaultValue !== undefined) {
 			// Handle function defaults later during schema generation
-			columnDef.defaultValue = 
+			columnDef.defaultValue =
 				typeof field.defaultValue === 'function'
 					? null // Placeholder to indicate a default exists
 					: field.defaultValue;
@@ -101,25 +97,27 @@ export class MySQLAdapter extends BaseAdapter {
 			const rel = field.relationship.relationship;
 			const foreignTable = field.relationship.entity;
 			const foreignColumn = field.relationship.field || 'id';
-			
+
 			// Get foreignKey based on relationship type
-			const foreignKey = 
-				rel.type === 'oneToOne' || rel.type === 'oneToMany' || rel.type === 'manyToOne' 
-					? (rel as any).foreignKey 
+			const foreignKey =
+				rel.type === 'oneToOne' ||
+				rel.type === 'oneToMany' ||
+				rel.type === 'manyToOne'
+					? (rel as any).foreignKey
 					: undefined;
-			
+
 			if (foreignKey) {
 				// Add as a separate column with reference
 				(columnDef as any)._references = {
 					table: foreignTable,
 					column: foreignColumn,
 				};
-				
+
 				// Add cascade options if specified
 				if (rel.onDelete) {
 					(columnDef as any)._onDelete = rel.onDelete;
 				}
-				
+
 				if (rel.onUpdate) {
 					(columnDef as any)._onUpdate = rel.onUpdate;
 				}
@@ -143,10 +141,10 @@ export class MySQLAdapter extends BaseAdapter {
 			columnSQL += ' AUTO_INCREMENT';
 		}
 
-		if (!column.nullable) {
-			columnSQL += ' NOT NULL';
-		} else {
+		if (column.nullable) {
 			columnSQL += ' NULL';
+		} else {
+			columnSQL += ' NOT NULL';
 		}
 
 		if (column._unsigned) {
@@ -442,7 +440,9 @@ export class MySQLAdapter extends BaseAdapter {
 				return Boolean(dbValue);
 
 			case 'number':
-				return typeof dbValue === 'string' ? parseFloat(dbValue) : dbValue;
+				return typeof dbValue === 'string'
+					? Number.parseFloat(dbValue)
+					: dbValue;
 
 			case 'date':
 				// Convert MySQL datetime format to JS Date

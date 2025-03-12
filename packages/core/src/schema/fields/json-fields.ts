@@ -2,9 +2,8 @@
  * JSON field utilities for entity schema definitions
  */
 import { z } from 'zod';
-import { SchemaField } from '../schema.types';
+import type { SchemaField } from '../schema.types';
 import { createField } from './basic-fields';
-import { DatabaseHints } from './field-hints';
 
 export interface JsonFieldOptions extends Partial<Omit<SchemaField, 'type'>> {
 	/**

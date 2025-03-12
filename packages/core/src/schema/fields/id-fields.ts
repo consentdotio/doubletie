@@ -2,7 +2,7 @@
  * ID field creation utilities with multiple generation strategies
  */
 import { z } from 'zod';
-import { SchemaField } from '../schema.types';
+import type { SchemaField } from '../schema.types';
 import { createField } from './basic-fields';
 import type { DatabaseHints } from './field-hints';
 

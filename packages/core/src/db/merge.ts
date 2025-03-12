@@ -8,7 +8,6 @@ import type {
 	ResolvedField,
 	SchemaField,
 } from '../schema/schema.types';
-import { isBoolean, isNumber, isObject, isString } from '../utils/type-guards';
 
 /**
  * Resolved entity schema with merged config

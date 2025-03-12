@@ -188,12 +188,12 @@ export interface PostgresHints<
 	 * Whether to include time in date fields
 	 */
 	includeTime?: boolean;
-	
+
 	/**
 	 * Whether this field should use the UUID type
 	 */
 	uuid?: boolean;
-	
+
 	/**
 	 * Schema name for the table
 	 */
@@ -243,12 +243,12 @@ export interface DatabaseHints<
 	 * Integer type flag
 	 */
 	integer?: boolean;
-	
+
 	/**
 	 * Whether this field should auto-increment
 	 */
 	autoIncrement?: boolean;
-	
+
 	/**
 	 * Maximum length for string fields
 	 */

@@ -2,7 +2,7 @@ import type { Selectable } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import withAssign from '../../../mixins/assign';
 import type { ModelFunctions } from '../../../model';
-import { DB } from '../../fixtures/migration';
+import type { DB } from '../../fixtures/migration';
 
 // Define a type for a user record
 type UserRecord = Selectable<DB['users']>;

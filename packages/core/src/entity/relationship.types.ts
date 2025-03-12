@@ -1,5 +1,5 @@
 import type { FieldValueType } from '../schema/schema.types';
-import type { EntityFields, EntityStructure } from './entity.types';
+import type { EntityStructure } from './entity.types';
 
 /**
  * Types of relationships between entities

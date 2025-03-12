@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import withUpdatedAt from '../../../mixins/updated-at';
 import {
-	InsertObjectOrList,
-	UpdateObjectExpression,
+	type InsertObjectOrList,
+	type UpdateObjectExpression,
 	createModel,
 } from '../../../model';
 import {
-	DB,
+	type DB,
 	cleanupDatabase,
 	db,
 	initializeDatabase,

@@ -17,7 +17,7 @@ import type {
 	RelationshipType,
 } from '../entity/relationship.types';
 import type { FieldValueType, SchemaField } from '../schema/schema.types';
-import { FieldType } from '../validation/type-conversion';
+import type { FieldType } from '../validation/type-conversion';
 import type { ValidationError } from '../validation/validate';
 
 // Basic type guards

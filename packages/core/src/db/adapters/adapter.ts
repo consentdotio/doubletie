@@ -1,11 +1,5 @@
-/**
- * Database adapter interfaces for mapping schema fields to database structures
- */
-import { StandardSchemaV1 } from '@standard-schema/spec';
 import type { SchemaField } from '../../schema/schema.types';
-import type { EntityFieldsMap } from '../../entity/entity.types';
 import type { EntitySchemaDefinition } from '../../schema/schema.types';
-import type { FieldValueType } from '../../schema/schema.types';
 
 /**
  * Represents a database column definition

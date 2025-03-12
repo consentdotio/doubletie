@@ -4,7 +4,7 @@
  * This file contains the adapter registry for database adapters.
  * Each database type (SQLite, MySQL, PostgreSQL) has its own adapter implementation.
  */
-import { DatabaseAdapter } from './adapter';
+import type { DatabaseAdapter } from './adapter';
 import { MySQLAdapter } from './mysql-adapter';
 import { PostgresAdapter } from './postgres-adapter';
 import { SQLiteAdapter } from './sqlite-adapter';

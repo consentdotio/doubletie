@@ -1,12 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import withCreatedAt from '../../../mixins/created-at';
+import { type InsertObjectOrList, createModel } from '../../../model';
 import {
-	InsertObjectOrList,
-	ModelFunctions,
-	createModel,
-} from '../../../model';
-import {
-	DB,
+	type DB,
 	cleanupDatabase,
 	db,
 	initializeDatabase,

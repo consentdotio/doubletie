@@ -2,7 +2,7 @@
  * Timestamp field utilities for entity schema definitions
  */
 import { z } from 'zod';
-import { FieldValueType, SchemaField } from '../schema.types';
+import type { FieldValueType, SchemaField } from '../schema.types';
 import { createField } from './basic-fields';
 import type {
 	DatabaseHints,

@@ -1,6 +1,6 @@
 import type { Selectable } from 'kysely';
 import type { ModelFunctions } from '../model';
-import { DrainOuterGeneric } from '../utils/type-utils';
+import type { DrainOuterGeneric } from '../utils/type-utils';
 
 /**
  * Type for a model with assign functionality

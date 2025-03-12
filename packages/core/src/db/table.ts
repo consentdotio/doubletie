@@ -1,12 +1,10 @@
-import type { FieldValueType, SchemaField } from '../schema/schema.types';
+import type { FieldValueType } from '../schema/schema.types';
 import {
 	assertCondition,
 	isResolvedEntitySchema,
 	isSchemaField,
-	isSqlColumnType,
 	isSqlDialect,
 } from '../utils/type-guards';
-import type { FieldType } from '../validation/type-conversion';
 import type { ResolvedEntitySchema } from './merge';
 
 /**

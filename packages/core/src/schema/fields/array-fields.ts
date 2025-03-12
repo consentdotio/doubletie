@@ -3,7 +3,7 @@
  */
 import { z } from 'zod';
 import type { ZodArray, ZodTypeAny } from 'zod';
-import { SchemaField } from '../schema.types';
+import type { SchemaField } from '../schema.types';
 import { createField } from './basic-fields';
 
 export interface ArrayFieldOptions extends Partial<Omit<SchemaField, 'type'>> {

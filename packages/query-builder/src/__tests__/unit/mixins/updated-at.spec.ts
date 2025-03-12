@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import withUpdatedAt from '../../../mixins/updated-at';
 import type { ModelFunctions } from '../../../model';
-import { DB } from '../../fixtures/migration';
+import type { DB } from '../../fixtures/migration';
 
 // Define the type for the enhanced model with updateById
 type ModelWithUpdateById<

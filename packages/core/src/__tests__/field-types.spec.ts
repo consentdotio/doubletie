@@ -130,9 +130,19 @@ describe('Field Types', () => {
 		const user = await userEntity.validate(userData);
 
 		// Test auto-populated fields
-		expect(user.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
-		expect(typeof user.createdAt === 'string' ? user.createdAt : String(user.createdAt)).toMatch(/^\d{4}-\d{2}-\d{2}/);
-		expect(typeof user.updatedAt === 'string' ? user.updatedAt : String(user.updatedAt)).toMatch(/^\d{4}-\d{2}-\d{2}/);
+		expect(user.id).toMatch(
+			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+		);
+		expect(
+			typeof user.createdAt === 'string'
+				? user.createdAt
+				: String(user.createdAt)
+		).toMatch(/^\d{4}-\d{2}-\d{2}/);
+		expect(
+			typeof user.updatedAt === 'string'
+				? user.updatedAt
+				: String(user.updatedAt)
+		).toMatch(/^\d{4}-\d{2}-\d{2}/);
 		expect(user.deletedAt).toBeUndefined();
 
 		// Test other fields
@@ -188,8 +198,12 @@ describe('Field Types', () => {
 		expect(org.id).toMatch(/^org_[a-zA-Z0-9]+$/);
 
 		// Test auto-populated fields
-		expect(typeof org.createdAt === 'string' ? org.createdAt : String(org.createdAt)).toMatch(/^\d{4}-\d{2}-\d{2}/);
-		expect(typeof org.updatedAt === 'string' ? org.updatedAt : String(org.updatedAt)).toMatch(/^\d{4}-\d{2}-\d{2}/);
+		expect(
+			typeof org.createdAt === 'string' ? org.createdAt : String(org.createdAt)
+		).toMatch(/^\d{4}-\d{2}-\d{2}/);
+		expect(
+			typeof org.updatedAt === 'string' ? org.updatedAt : String(org.updatedAt)
+		).toMatch(/^\d{4}-\d{2}-\d{2}/);
 
 		// Test other fields
 		expect(org.name).toBe('Acme Inc');

@@ -3,7 +3,6 @@
 import { buttonVariants } from '~/components/docs/button';
 
 import Link from 'next/link';
-import { useRef } from 'react';
 import { cn } from '~/lib/cn';
 
 import { ArrowRight } from 'lucide-react';

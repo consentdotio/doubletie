@@ -1,8 +1,5 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
-import type {
-	EntityFieldReference,
-	RelationshipConfig,
-} from '../entity/relationship.types';
+import type { RelationshipConfig } from '../entity/relationship.types';
 import type { DatabaseHints } from './fields/field-hints';
 
 /**

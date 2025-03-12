@@ -2,7 +2,7 @@ import type {
 	ModelFunctions,
 	InsertObjectOrList as ModelInsertObjectOrList,
 } from '../model';
-import { DrainOuterGeneric } from '../utils/type-utils';
+import type { DrainOuterGeneric } from '../utils/type-utils';
 
 /**
  * Enhances a model with automatic created_at timestamp functionality
@@ -58,7 +58,7 @@ export default function withCreatedAt<
 			? Array<T[number] & { [K in typeof field]: Date }>
 			: T & { [K in typeof field]: Date } {
 			// Process with original method first
-			let processedData = originalProcessDataBeforeInsert(data);
+			const processedData = originalProcessDataBeforeInsert(data);
 
 			// Add timestamp to single object or each object in array
 			const timestamp = new Date();

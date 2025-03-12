@@ -1,6 +1,9 @@
-import { DatabaseHints } from '../../schema/fields/field-hints';
-import { SchemaField, EntitySchemaDefinition } from '../../schema/schema.types';
-import { ColumnDefinition, TableDefinition } from './adapter';
+import type { DatabaseHints } from '../../schema/fields/field-hints';
+import type {
+	EntitySchemaDefinition,
+	SchemaField,
+} from '../../schema/schema.types';
+import type { ColumnDefinition, TableDefinition } from './adapter';
 import { BaseAdapter } from './base-adapter';
 
 // Define PostgreSQL-specific hints interface
@@ -41,7 +44,9 @@ export class PostgresAdapter extends BaseAdapter {
 		entity: EntitySchemaDefinition
 	): ColumnDefinition<TColumnType> {
 		// Get database hints
-		const hints = field.databaseHints as DatabaseHints & PostgresExtendedHints | undefined;
+		const hints = field.databaseHints as
+			| (DatabaseHints & PostgresExtendedHints)
+			| undefined;
 		const pgHints = hints?.postgres;
 
 		// Get direct PostgreSQL column type if specified
@@ -57,7 +62,11 @@ export class PostgresAdapter extends BaseAdapter {
 		};
 
 		// Handle special case for UUID fields
-		if (field.type === 'uuid' || pgHints?.uuid === true || (field.primaryKey && field.type === 'string')) {
+		if (
+			field.type === 'uuid' ||
+			pgHints?.uuid === true ||
+			(field.primaryKey && field.type === 'string')
+		) {
 			columnDef.type = 'UUID' as TColumnType;
 		}
 
@@ -91,25 +100,27 @@ export class PostgresAdapter extends BaseAdapter {
 			const rel = field.relationship.relationship;
 			const foreignTable = field.relationship.entity;
 			const foreignColumn = field.relationship.field || 'id';
-			
+
 			// Get foreignKey based on relationship type
-			const foreignKey = 
-				rel.type === 'oneToOne' || rel.type === 'oneToMany' || rel.type === 'manyToOne' 
-					? (rel as any).foreignKey 
+			const foreignKey =
+				rel.type === 'oneToOne' ||
+				rel.type === 'oneToMany' ||
+				rel.type === 'manyToOne'
+					? (rel as any).foreignKey
 					: undefined;
-			
+
 			if (foreignKey) {
 				// Add as a separate column with reference
 				(columnDef as any)._references = {
 					table: foreignTable,
 					column: foreignColumn,
 				};
-				
+
 				// Add cascade options if specified
 				if (rel.onDelete) {
 					(columnDef as any)._onDelete = rel.onDelete;
 				}
-				
+
 				if (rel.onUpdate) {
 					(columnDef as any)._onUpdate = rel.onUpdate;
 				}
@@ -231,16 +242,19 @@ export class PostgresAdapter extends BaseAdapter {
 	 */
 	mapFieldTypeToPostgresType(field: SchemaField): string {
 		// Special case for username and email fields in the test
-		if (field.databaseHints?.indexed && field.databaseHints?.unique && 
-		   (field.type === 'string' || field.type === 'email')) {
+		if (
+			field.databaseHints?.indexed &&
+			field.databaseHints?.unique &&
+			(field.type === 'string' || field.type === 'email')
+		) {
 			return 'VARCHAR';
 		}
-		
+
 		// Special case for string array fields
 		if (field.type === 'array') {
 			return 'TEXT[]';
 		}
-		
+
 		switch (field.type) {
 			case 'string':
 				// Use VARCHAR when maxLength is specified
@@ -383,7 +397,11 @@ export class PostgresAdapter extends BaseAdapter {
 		}
 
 		// Handle PostgreSQL-specific conversions
-		if (field.type === 'json' || field.type === 'array' || field.type === 'object') {
+		if (
+			field.type === 'json' ||
+			field.type === 'array' ||
+			field.type === 'object'
+		) {
 			// Always stringify JSON objects for consistency with other adapters
 			return JSON.stringify(value);
 		}

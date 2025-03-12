@@ -24,8 +24,8 @@ describe('Database Adapters', () => {
 			id: uuidField({
 				databaseHints: {
 					postgres: { uuid: true, type: 'UUID' },
-					mysql: { type: 'VARCHAR(36)' }
-				}
+					mysql: { type: 'VARCHAR(36)' },
+				},
 			}),
 			username: stringField({
 				required: true,
@@ -61,8 +61,8 @@ describe('Database Adapters', () => {
 					integer: true,
 					autoIncrement: true,
 					mysql: { type: 'BIGINT' },
-					postgres: { type: 'BIGINT' }
-				}
+					postgres: { type: 'BIGINT' },
+				},
 			}),
 			name: stringField({ required: true }),
 			price: numberField({
@@ -283,7 +283,9 @@ describe('Database Adapters', () => {
 				if (fieldName in testEvent) {
 					// For JSON fields, manually parse for the test
 					if (fieldName === 'attendees' && field.type === 'json') {
-						dbData[fieldName] = JSON.stringify(testEvent[fieldName as keyof typeof testEvent]);
+						dbData[fieldName] = JSON.stringify(
+							testEvent[fieldName as keyof typeof testEvent]
+						);
 					} else {
 						dbData[fieldName] = adapter.toDatabase(
 							testEvent[fieldName as keyof typeof testEvent],
@@ -294,7 +296,11 @@ describe('Database Adapters', () => {
 			});
 
 			// Check specific transformations
-			if (adapterType === 'sqlite' || adapterType === 'mysql' || adapterType === 'postgres') {
+			if (
+				adapterType === 'sqlite' ||
+				adapterType === 'mysql' ||
+				adapterType === 'postgres'
+			) {
 				// All adapters stringify JSON for consistency
 				expect(typeof dbData.attendees).toBe('string');
 				// Verify it's a valid JSON string
@@ -312,7 +318,7 @@ describe('Database Adapters', () => {
 				// Use as any to bypass the index check - we know these fields exist
 				const field =
 					eventEntity.fields[fieldName as keyof typeof eventEntity.fields];
-				
+
 				// For JSON fields, manually parse for the test
 				if (fieldName === 'attendees' && typeof value === 'string') {
 					appData[fieldName] = JSON.parse(value);
@@ -324,7 +330,7 @@ describe('Database Adapters', () => {
 			// Data should be restored to original format
 			expect(appData.id).toBe(testEvent.id);
 			expect(appData.name).toBe(testEvent.name);
-			
+
 			// Compare JSON structures instead of string representations
 			expect(Array.isArray(appData.attendees)).toBe(true);
 			expect(appData.attendees.length).toBe(testEvent.attendees?.length || 0);
@@ -333,7 +339,7 @@ describe('Database Adapters', () => {
 			if (appData.attendees?.length && testEvent.attendees?.length) {
 				const appAttendee = appData.attendees[0];
 				const testAttendee = testEvent.attendees[0];
-				
+
 				if (appAttendee && testAttendee) {
 					expect(appAttendee.id).toBe(testAttendee.id);
 					expect(appAttendee.name).toBe(testAttendee.name);

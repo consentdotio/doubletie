@@ -19,14 +19,22 @@ export type FieldType =
 /**
  * Map field types to their JavaScript type
  */
-export type FieldTypeToValueType<T extends FieldType> =
-	T extends 'string' | 'uuid' | 'id' ? string :
-	T extends 'number' | 'incremental_id' ? number :
-	T extends 'boolean' ? boolean :
-	T extends 'date' | 'timestamp' ? Date :
-	T extends 'json' ? Record<string, unknown> :
-	T extends 'array' ? Array<unknown> :
-	unknown;
+export type FieldTypeToValueType<T extends FieldType> = T extends
+	| 'string'
+	| 'uuid'
+	| 'id'
+	? string
+	: T extends 'number' | 'incremental_id'
+		? number
+		: T extends 'boolean'
+			? boolean
+			: T extends 'date' | 'timestamp'
+				? Date
+				: T extends 'json'
+					? Record<string, unknown>
+					: T extends 'array'
+						? Array<unknown>
+						: unknown;
 
 /**
  * Helper function to convert values to appropriate types based on field definition
