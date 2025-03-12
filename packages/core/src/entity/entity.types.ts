@@ -18,7 +18,7 @@ import type {
  * @template TFieldType Optional field type filter
  */
 export type EntityFields<
-	TEntity extends { fields: Record<string, SchemaField<any>> },
+	TEntity extends EntityStructure,
 	TFieldType extends string = string,
 > = keyof {
 	[K in keyof TEntity['fields'] as TEntity['fields'][K]['type'] extends TFieldType
@@ -131,7 +131,9 @@ export interface EntityFromDefinition<
 	withRelationships<
 		TRel extends Record<string, TypedRelationshipReference<EntityStructure>>,
 	>(
-		relationshipFn: (helpers: any) => TRel
+		relationshipFn: (
+			helpers: RelationshipHelpers<EntityFromDefinition<TSchema, TValidator>>
+		) => TRel
 	): EntityWithRelationships<EntityFromDefinition<TSchema, TValidator>, TRel>;
 }
 

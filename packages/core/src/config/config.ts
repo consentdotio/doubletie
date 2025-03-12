@@ -10,7 +10,7 @@ class AppConfig {
 	 * Get the current database configuration
 	 */
 	get db(): DatabaseConfig {
-		return this._dbConfig;
+		return { ...this._dbConfig }; // Return a shallow copy to prevent direct modification
 	}
 
 	/**
@@ -18,11 +18,11 @@ class AppConfig {
 	 * @param config The database configuration to use
 	 */
 	setDatabaseConfig(config: DatabaseConfig): void {
-		this._dbConfig = config;
+		this._dbConfig = { ...config }; // Create a shallow copy of the input
 	}
 }
 
 /**
  * Singleton instance of the app configuration
  */
-export const appConfig = new AppConfig();
+export const appConfig = Object.freeze(new AppConfig());

@@ -89,7 +89,8 @@ export function timezoneField(
 		validator: z.string().refine(
 			(val) => {
 				// Basic region/location pattern check
-				const pattern = /^([A-Za-z_]+\/[A-Za-z_]+)$|^(Etc\/GMT[+-][0-9]{1,2})$/;
+				const pattern =
+					/^([A-Za-z_]+(?:\/[A-Za-z_]+)+)$|^(Etc\/GMT[+-][0-9]{1,2})$/;
 				return pattern.test(val);
 			},
 			{

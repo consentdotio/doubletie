@@ -27,6 +27,9 @@ import type {
 export class RelationshipError extends Error {
 	constructor(message: string) {
 		super(message);
+		if (Error.captureStackTrace) {
+			Error.captureStackTrace(this, RelationshipError);
+		}
 		this.name = 'RelationshipError';
 	}
 }

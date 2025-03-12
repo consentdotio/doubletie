@@ -1,5 +1,5 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
-import type { SchemaField } from '../schema/schema.types';
+import type { FieldValueType, SchemaField } from '../schema/schema.types';
 
 /**
  * Field override configuration options
@@ -7,9 +7,9 @@ import type { SchemaField } from '../schema/schema.types';
 export interface FieldOverrideConfig {
 	fieldName?: string; // Override the field name in the database
 	required?: boolean; // Override whether the field is required
-	defaultValue?: unknown; // Override the default value
+	defaultValue?: FieldValueType; // Override the default value
 	relationship?: {
-		model?: string; // Override the referenced model
+		model?: string; // Override the referenced model name
 		field?: string; // Override the referenced field
 	};
 	// Validator override
@@ -22,10 +22,11 @@ export interface FieldOverrideConfig {
 export interface EntityOverrideConfig {
 	entityName?: string; // Override the entity name
 	entityPrefix?: string; // Override the entity prefix
-	fields?: Record<string, string | FieldOverrideConfig>; // Field name overrides or full config
+	fieldAliases?: Record<string, string>; // Simple field name overrides
+	fieldOverrides?: Record<string, FieldOverrideConfig>; // Full field configurations
 	additionalFields?: Record<string, SchemaField>; // Extra fields to add
-	expiresIn?: number; // Entity-specific configuration
-	updateAge?: number; // Entity-specific configuration
+	expiresIn?: number; // Time in milliseconds before entity records expire
+	updateAge?: number; // Time in milliseconds to determine if a record needs updating
 	// Entity validator override
 	validator?: StandardSchemaV1;
 }

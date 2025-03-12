@@ -1,7 +1,12 @@
 /**
  * Database utility functions
  */
-import type { EntitySchemaDefinition } from '../schema/schema.types';
+import { StandardSchemaV1 } from '@standard-schema/spec';
+import type {
+	EntitySchemaDefinition,
+	FieldValueType,
+	SchemaField,
+} from '../schema/schema.types';
 import { getAdapter } from './adapters';
 import type { TableDefinition } from './adapters/adapter';
 
@@ -16,6 +21,9 @@ export function generateTableDefinition(
 	adapterType = 'sqlite'
 ): TableDefinition {
 	const adapter = getAdapter(adapterType);
+	if (!adapter) {
+		throw new Error(`Adapter not found for type: ${adapterType}`);
+	}
 	return adapter.generateTableDefinition(entity);
 }
 
@@ -41,15 +49,18 @@ export function generateSQLForEntity(
  * @param adapterType The database adapter type to use
  * @returns The transformed value
  */
-export function toDatabaseValue(
-	field: any,
-	value: any,
+export function toDatabaseValue<TField>(
+	field: TField,
+	value: SchemaField<
+		string,
+		FieldValueType,
+		StandardSchemaV1<unknown, unknown>
+	>,
 	adapterType = 'sqlite'
-): any {
+): unknown {
 	const adapter = getAdapter(adapterType);
 	return adapter.toDatabase(field, value);
 }
-
 /**
  * Helper function to transform a value from database format
  * @param field The field definition
@@ -57,9 +68,13 @@ export function toDatabaseValue(
  * @param adapterType The database adapter type to use
  * @returns The transformed value
  */
-export function fromDatabaseValue(
-	field: any,
-	dbValue: any,
+export function fromDatabaseValue<TField>(
+	field: TField,
+	dbValue: SchemaField<
+		string,
+		FieldValueType,
+		StandardSchemaV1<unknown, unknown>
+	>,
 	adapterType = 'sqlite'
 ): any {
 	const adapter = getAdapter(adapterType);

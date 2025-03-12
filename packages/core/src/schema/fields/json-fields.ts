@@ -34,48 +34,32 @@ export interface JsonFieldOptions extends Partial<Omit<SchemaField, 'type'>> {
 export function jsonField(options?: JsonFieldOptions): SchemaField {
 	const { schema, ...rest } = options || {};
 
+	// Helper function to parse JSON strings
+	const parseJsonString = (data: unknown) => {
+		if (typeof data === 'string') {
+			try {
+				return JSON.parse(data);
+			} catch (e) {
+				return data; // Let zod handle the validation error
+			}
+		}
+		return data;
+	};
+
 	// Create validator based on provided schema
 	let validator;
 	if (schema) {
-		validator = z.preprocess((data) => {
-			// Handle JSON strings by parsing them
-			if (typeof data === 'string') {
-				try {
-					return JSON.parse(data);
-				} catch (e) {
-					return data; // Let zod handle the validation error
-				}
-			}
-			return data;
-		}, schema);
+		validator = z.preprocess(parseJsonString, schema);
 	} else {
 		// Default validator just ensures it's a valid object or array
 		validator = z.preprocess(
-			(data) => {
-				if (typeof data === 'string') {
-					try {
-						return JSON.parse(data);
-					} catch (e) {
-						return data;
-					}
-				}
-				return data;
-			},
+			parseJsonString,
 			z.union([z.object({}).passthrough(), z.array(z.any())])
 		);
 	}
 
 	// Transform functions to handle serialization/deserialization
-	const inputTransform = (value: unknown) => {
-		if (typeof value === 'string') {
-			try {
-				return JSON.parse(value);
-			} catch (e) {
-				return value; // Let validation handle the error
-			}
-		}
-		return value;
-	};
+	const inputTransform = parseJsonString;
 
 	const outputTransform = (value: unknown) => {
 		if (value === null || value === undefined) {
@@ -83,7 +67,13 @@ export function jsonField(options?: JsonFieldOptions): SchemaField {
 		}
 		// Ensure the value is stringified if it's an object or array
 		if (typeof value === 'object') {
-			return JSON.stringify(value);
+			try {
+				return JSON.stringify(value);
+			} catch (e) {
+				console.error('Failed to stringify JSON value:', e);
+				// Return a fallback or throw a more descriptive error
+				return '{}';
+			}
 		}
 		return value;
 	};

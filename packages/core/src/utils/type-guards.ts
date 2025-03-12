@@ -341,9 +341,17 @@ export function isTableDefinition(value: unknown): value is TableDefinition {
 		'name' in value &&
 		isString(value.name) &&
 		'columns' in value &&
-		isObject(value.columns) &&
-		'primaryKey' in value &&
-		(isString(value.primaryKey) || isArrayOf(value.primaryKey, isString))
+		isArrayOf(value.columns, (col): col is unknown => {
+			// Check minimal shape for ColumnDefinition
+			return isObject(col) && 'name' in col && isString(col.name);
+		}) &&
+		// primaryKey is optional, but if present, must match PrimaryKeyDefinition
+		(!('primaryKey' in value) ||
+			(isObject(value.primaryKey) &&
+				'name' in value.primaryKey &&
+				isString(value.primaryKey.name) &&
+				'columns' in value.primaryKey &&
+				isArrayOf(value.primaryKey.columns, isString)))
 	);
 }
 

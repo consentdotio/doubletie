@@ -16,8 +16,8 @@ export * from './sqlite-adapter';
 export * from './postgres-adapter';
 export * from './mysql-adapter';
 
-// Adapter registry
-const adapters: Map<string, DatabaseAdapter> = new Map();
+// Adapter registry - internally mutable but exposed as readonly
+const adapters = new Map<string, DatabaseAdapter>();
 
 /**
  * Register a database adapter in the adapter registry
@@ -45,7 +45,11 @@ export function getAdapter(adapterType: string): DatabaseAdapter {
  * @returns A record of all registered adapters, keyed by type
  */
 export function getAdapters(): Record<string, DatabaseAdapter> {
-	return Object.fromEntries(adapters);
+	const result: Record<string, DatabaseAdapter> = {};
+	adapters.forEach((adapter, type) => {
+		result[type] = adapter;
+	});
+	return result;
 }
 
 // Register default adapters

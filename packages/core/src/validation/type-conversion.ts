@@ -65,25 +65,27 @@ export function convertValueToFieldType<
 	const fieldType = fieldDef.type;
 
 	// Timestamp/Date fields
+	const timestampPatterns = ['createdAt', 'updatedAt', 'deletedAt'];
+	const timestampSuffixes = ['At', '_at'];
+
 	if (
 		fieldType === 'date' ||
 		fieldType === 'timestamp' ||
-		fieldName === 'createdAt' ||
-		fieldName === 'updatedAt' ||
-		fieldName === 'deletedAt' ||
-		fieldName.endsWith('At') ||
-		fieldName.endsWith('_at')
+		timestampPatterns.includes(fieldName) ||
+		timestampSuffixes.some((suffix) => fieldName.endsWith(suffix))
 	) {
 		// Convert to Date if not already
 		return (value instanceof Date ? value : new Date(String(value))) as TValue;
 	}
 
 	// ID fields - ensure they're strings (except incremental IDs)
+	const idPatterns = ['id'];
+	const idSuffixes = ['Id', '_id'];
+
 	if (
-		fieldName === 'id' ||
+		idPatterns.includes(fieldName) ||
 		fieldDef.primaryKey === true ||
-		fieldName.endsWith('Id') ||
-		fieldName.endsWith('_id') ||
+		idSuffixes.some((suffix) => fieldName.endsWith(suffix)) ||
 		fieldType === 'uuid' ||
 		fieldType === 'id'
 	) {
@@ -99,6 +101,12 @@ export function convertValueToFieldType<
 		return (typeof value === 'number' ? value : Number(value)) as TValue;
 	}
 
+	const isTrueString = (str: string) =>
+		['true', 'yes', 'y', '1'].includes(str.toLowerCase());
+
+	const isFalseString = (str: string) =>
+		['false', 'no', 'n', '0'].includes(str.toLowerCase());
+
 	// Boolean fields
 	if (
 		fieldType === 'boolean' ||
@@ -106,7 +114,14 @@ export function convertValueToFieldType<
 		fieldName.startsWith('has')
 	) {
 		// Convert to boolean if not already
-		return (typeof value === 'boolean' ? value : Boolean(value)) as TValue;
+		if (typeof value === 'boolean') {
+			return value as TValue;
+		}
+		if (typeof value === 'string') {
+			if (isTrueString(value)) return true as TValue;
+			if (isFalseString(value)) return false as TValue;
+		}
+		return Boolean(value) as TValue;
 	}
 
 	// For all other cases, return as is

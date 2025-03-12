@@ -58,9 +58,13 @@ function mergeFields(
 
 	// Process base fields and apply any overrides
 	for (const [fieldName, fieldDef] of Object.entries(baseFields)) {
-		const override = entityConfig?.fields?.[fieldName];
+		// Check for alias (string) or full override (object)
+		const alias = entityConfig?.fieldAliases?.[fieldName];
+		const override = entityConfig?.fieldOverrides?.[fieldName];
+
+		// Determine the field override - prioritize full override over alias
 		const fieldOverride =
-			typeof override === 'string' ? { fieldName: override } : override;
+			override || (alias ? { fieldName: alias } : undefined);
 
 		// Set field with overrides
 		result[fieldName] = {

@@ -213,6 +213,13 @@ describe('Field Types', () => {
 		if (domains) {
 			if (Array.isArray(domains)) {
 				expect(domains.length).toBe(2);
+				// More specific assertions
+				expect(domains[0].domain).toBe('acme.com');
+				expect(domains[0].verified).toBe(true);
+				expect(domains[0].primary).toBe(true);
+				expect(domains[1].domain).toBe('acme.org');
+				expect(domains[1].verified).toBe(false);
+				expect(domains[1].primary).toBe(false);
 			} else {
 				// If domains is not an array but exists, it should be convertible to an array
 				expect(typeof domains).toBeTruthy();

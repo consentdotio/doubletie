@@ -60,9 +60,7 @@ export async function validateEntity<T extends StandardSchemaV1>(
 
 	// Skip validation check on data since entity.ts now pre-processes this
 	// No need for assertCondition on data
-
-	let result = schema['~standard'].validate(data);
-	if (result instanceof Promise) result = await result;
+	const result = await schema['~standard'].validate(data);
 
 	// Check if result has issues property
 	if ('issues' in result && result.issues) {
