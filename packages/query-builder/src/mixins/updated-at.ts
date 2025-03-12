@@ -103,7 +103,7 @@ export default function withUpdatedAt<
 				get(target, prop) {
 					if (prop === 'set') {
 						// Return a custom set function
-						return function (data: any) {
+						return (data: any) => {
 							// Add the updated_at timestamp
 							const now = new Date();
 							const sqliteDate = formatDateForSqlite(now);

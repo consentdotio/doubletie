@@ -1,4 +1,4 @@
-import {
+import type {
 	AliasableExpression,
 	CommonTableExpressionNameNode,
 	DeleteQueryBuilder,
@@ -11,8 +11,8 @@ import {
 	UpdateObject,
 	UpdateQueryBuilder,
 } from 'kysely';
-import { UpdateObjectFactory } from '../model';
-import { ShallowRecord } from './type-utils';
+import type { UpdateObjectFactory } from '../model';
+import type { ShallowRecord } from './type-utils';
 
 /**
  * Parses a string like 'id, first_name' into a type 'id' | 'first_name'

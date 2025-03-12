@@ -1,6 +1,6 @@
 //@ts-ignore
 import SQLiteDatabase from 'better-sqlite3';
-import { ColumnType, type Kysely, sql } from 'kysely';
+import { type ColumnType, type Kysely, sql } from 'kysely';
 import { SqliteDialect } from 'kysely';
 import { createDatabase } from '../../database';
 

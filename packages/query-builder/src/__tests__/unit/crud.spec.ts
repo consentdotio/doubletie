@@ -273,7 +273,7 @@ describe('Basic CRUD Operations - Unit Tests', () => {
 			const query = mockDb.selectFrom('users').selectAll();
 
 			if (cursor) {
-				const decodedCursor = parseInt(
+				const decodedCursor = Number.parseInt(
 					Buffer.from(cursor, 'base64').toString('ascii'),
 					10
 				);

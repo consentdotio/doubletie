@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { withGlobalId } from '../../../mixins/global-id';
 import { createModel } from '../../../model';
-import { MockFn, createMockDatabase } from '../../fixtures/mock-db';
+import { type MockFn, createMockDatabase } from '../../fixtures/mock-db';
 
 describe('unit: Global ID mixin', () => {
 	// Define test database types and model
@@ -69,7 +69,7 @@ describe('unit: Global ID mixin', () => {
 
 		it('should support custom ID encoders', () => {
 			// Create a mock parser function that returns appropriate ID type
-			const customEncoder = vi.fn((id: string) => parseInt(id, 10));
+			const customEncoder = vi.fn((id: string) => Number.parseInt(id, 10));
 
 			const userModel = withGlobalId(
 				baseUserModel as any,
@@ -117,13 +117,13 @@ describe('unit: Global ID mixin', () => {
 			expect(parts[0]).toBe('User');
 			// Add null check/assertion to fix string | undefined error
 			if (parts[1]) {
-				expect(parseInt(parts[1], 10)).toBe(123);
+				expect(Number.parseInt(parts[1], 10)).toBe(123);
 			}
 		});
 
 		it('should handle custom ID decoders', () => {
 			// Create a custom parser function
-			const customParser = vi.fn((id: string) => parseInt(id, 10));
+			const customParser = vi.fn((id: string) => Number.parseInt(id, 10));
 
 			const userModel = withGlobalId(
 				baseUserModel as any,

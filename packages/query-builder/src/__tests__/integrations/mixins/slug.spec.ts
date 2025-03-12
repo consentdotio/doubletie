@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { type SlugModelType, withSlug } from '../../../mixins/slug';
 import { createModel } from '../../../model';
 import {
-	DB,
+	type DB,
 	cleanupDatabase,
 	db,
 	initializeDatabase,

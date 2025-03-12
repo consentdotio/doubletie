@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import withCursorable from '../../../mixins/cursorable';
 import type { ModelFunctions } from '../../../model';
-import { DB } from '../../fixtures/migration';
+import type { DB } from '../../fixtures/migration';
 
 describe('unit: cursorable mixin', () => {
 	let mockModel: ModelFunctions<DB, 'users', 'id'>;

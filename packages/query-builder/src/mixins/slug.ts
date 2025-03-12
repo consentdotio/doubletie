@@ -5,7 +5,7 @@
  */
 import slugify from 'url-slug';
 import type { ModelFunctions } from '../model';
-import { DrainOuterGeneric } from '../utils/type-utils';
+import type { DrainOuterGeneric } from '../utils/type-utils';
 
 import type {
 	InsertObject,
@@ -37,7 +37,7 @@ const Operation = {
 /**
  * Type for slug operations
  */
-type Operation = (typeof Operation)[keyof typeof Operation];
+export type Operation = (typeof Operation)[keyof typeof Operation];
 
 /**
  * Options for slug generation
@@ -300,7 +300,7 @@ function implementSlug<
 		const numbers = existingSlugs
 			.map((record) => {
 				const match = String(record[options.field]).match(slugPattern);
-				return match ? parseInt(match[1] || '1', 10) : 0;
+				return match ? Number.parseInt(match[1] || '1', 10) : 0;
 			})
 			.filter((n) => !isNaN(n));
 
@@ -421,7 +421,7 @@ function implementSlug<
 			const numbers = existingSlugs
 				.map((record) => {
 					const match = String(record[options.field]).match(slugPattern);
-					return match ? parseInt(match[1] || '1', 10) : 0;
+					return match ? Number.parseInt(match[1] || '1', 10) : 0;
 				})
 				.filter((n) => !isNaN(n));
 

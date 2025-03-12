@@ -2,7 +2,6 @@ import {
 	Brain,
 	CodeIcon,
 	DatabaseIcon,
-	NetworkIcon,
 	PackageIcon,
 	ServerIcon,
 	ShieldIcon,

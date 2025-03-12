@@ -1,9 +1,9 @@
 import type { Selectable } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import withAssign, { ModelWithAssign } from '../../../mixins/assign';
+import withAssign, { type ModelWithAssign } from '../../../mixins/assign';
 import { createModel } from '../../../model';
 import {
-	DB,
+	type DB,
 	cleanupDatabase,
 	db,
 	initializeDatabase,

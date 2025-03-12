@@ -2,7 +2,7 @@ import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createModel } from '../../model';
 import {
-	DB,
+	type DB,
 	cleanupDatabase,
 	initializeDatabase,
 	db as testDb,

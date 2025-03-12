@@ -1,9 +1,8 @@
-import { SelectQueryBuilder } from 'kysely';
+import type { SelectQueryBuilder } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import withCursorable from '../../../mixins/cursorable';
 import { createModel } from '../../../model';
 import {
-	DB,
 	cleanupDatabase,
 	db,
 	initializeDatabase,

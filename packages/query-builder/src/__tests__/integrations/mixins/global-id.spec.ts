@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { withGlobalId } from '../../../mixins/global-id';
 import { createModel } from '../../../model';
 import {
-	DB,
 	cleanupDatabase,
 	db,
 	initializeDatabase,

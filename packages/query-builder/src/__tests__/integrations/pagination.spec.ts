@@ -1,6 +1,6 @@
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Database } from '../../database.types';
+import type { Database } from '../../database.types';
 import { createModel } from '../../model';
 
 interface TestDB {
@@ -75,11 +75,10 @@ describe('Pagination - Integration Tests', () => {
 		};
 
 		// Add the bind method to the transaction function to prevent errors
-		db.transaction.bind = function (thisArg: any) {
-			return async (callback: (trx: any) => Promise<any>) => {
+		db.transaction.bind =
+			(thisArg: any) => async (callback: (trx: any) => Promise<any>) => {
 				return await callback({ mock: true });
 			};
-		};
 
 		// Create table
 		await db.schema

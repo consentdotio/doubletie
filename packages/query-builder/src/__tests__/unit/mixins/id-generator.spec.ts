@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MockFn, createModelWithIdGenerator } from '../../fixtures/mock-db';
+import {
+	type MockFn,
+	createModelWithIdGenerator,
+} from '../../fixtures/mock-db';
 
 /**
  * Test database for ID generator functionality

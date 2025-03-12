@@ -1,4 +1,4 @@
-import { OrderByDirectionExpression, type Selectable, sql } from 'kysely';
+import { type OrderByDirectionExpression, type Selectable, sql } from 'kysely';
 import type { ModelFunctions } from '../model';
 /**
  * Configuration options for how a column should be sorted in cursor pagination.

@@ -14,16 +14,16 @@ import {
 	SqliteDialect,
 	sql,
 } from 'kysely';
-import {
-	type Database,
-	type DatabaseConfig,
+import type {
+	Database,
+	DatabaseConfig,
 	MigratorOptions,
-	type ModelRegistry,
-	type TransactionCallback,
-	type TransactionState,
+	ModelRegistry,
+	TransactionCallback,
+	TransactionState,
 } from './database.types';
 import { type ModelSchema, createModel } from './model';
-import { CommonTableExpression } from './utils/kysley-types';
+import type { CommonTableExpression } from './utils/kysley-types';
 
 /**
  * Creates a new Database instance.

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createModel } from '../../model';
 import {
-	MockFn,
-	TestMockDatabase,
+	type MockFn,
+	type TestMockDatabase,
 	createMockDatabase,
 	createMockReturnThis,
 } from '../fixtures/mock-db';
@@ -121,7 +121,7 @@ describe('unit: pagination functionality', () => {
 				const countValue = mockDb.executeTakeFirst() as unknown as {
 					count: string;
 				};
-				const totalCount = parseInt(countValue?.count || '0', 10);
+				const totalCount = Number.parseInt(countValue?.count || '0', 10);
 				const totalPages = Math.ceil(totalCount / limit);
 				const currentPage = page || Math.floor(offset / limit) + 1;
 
