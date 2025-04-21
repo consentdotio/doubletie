@@ -11,7 +11,7 @@ let defaultTracer: Tracer | undefined;
 
 /**
  * Set a global default tracer for log spans.
- * 
+ *
  * @param tracer - The OpenTelemetry tracer to use
  */
 export const setDefaultTracer = (tracer: Tracer): void => {
@@ -25,7 +25,7 @@ let telemetryDisabled = false;
 
 /**
  * Disable or enable telemetry globally.
- * 
+ *
  * @param disabled - Whether to disable telemetry
  */
 export const setTelemetryDisabled = (disabled: boolean): void => {
@@ -39,7 +39,7 @@ let defaultAttributes: Record<string, string | number | boolean> = {};
 
 /**
  * Set default attributes to add to all log spans.
- * 
+ *
  * @param attributes - The attributes to add
  */
 export const setDefaultAttributes = (
@@ -50,7 +50,7 @@ export const setDefaultAttributes = (
 
 /**
  * Create a span for a log message and execute a callback function.
- * 
+ *
  * @param level - The log level
  * @param message - The log message
  * @param args - Additional log arguments
@@ -61,7 +61,7 @@ export const setDefaultAttributes = (
 export const withLogSpan = async <T>(
 	level: LogLevel,
 	message: string,
-	args: unknown[] = [],
+	args: unknown[],
 	callback: () => Promise<T> | T,
 	tracerOptions?: {
 		tracer?: Tracer;
@@ -126,4 +126,4 @@ export const withLogSpan = async <T>(
 			}
 		}
 	);
-}; 
+};

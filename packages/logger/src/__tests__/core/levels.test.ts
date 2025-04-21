@@ -70,4 +70,4 @@ describe('log-levels', () => {
 			expect(testFn('error', 'warn')).toBe(shouldPublishLog('error', 'warn'));
 		});
 	});
-}); 
+});

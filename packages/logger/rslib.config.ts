@@ -27,9 +27,8 @@ export default defineConfig({
 		externals: {
 			next: 'commonjs next',
 			'next/dist/build/output/log': 'commonjs next/dist/build/output/log',
-			'@opentelemetry/api': 'commonjs @opentelemetry/api'
+			'@opentelemetry/api': 'commonjs @opentelemetry/api',
 		},
 		cleanDistPath: true,
 	},
 });
-

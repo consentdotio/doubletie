@@ -2,7 +2,7 @@ import type { LogLevel } from '../core/types';
 
 /**
  * Format a message for console output with optional colors.
- * 
+ *
  * @param level - The log level
  * @param message - The message to format
  * @param appName - The application name to include in the log
@@ -15,4 +15,4 @@ export const formatMessage = (
 ): string => {
 	const timestamp = new Date().toISOString();
 	return `${timestamp} ${level.toUpperCase()} [${appName}]: ${message}`;
-}; 
+};

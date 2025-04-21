@@ -1,8 +1,8 @@
 import { err, errAsync } from 'neverthrow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createLogger } from '../../core/logger';
-import { logResult, logResultAsync } from '../../utils/result';
 import type { LoggableError } from '../../core/types';
+import { logResult, logResultAsync } from '../../utils/result';
 
 describe('logger integration', () => {
 	beforeEach(() => {
@@ -175,4 +175,4 @@ describe('logger integration', () => {
 			);
 		});
 	});
-}); 
+});

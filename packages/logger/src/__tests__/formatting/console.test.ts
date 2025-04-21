@@ -28,4 +28,4 @@ describe('console-formatter', () => {
 			expect(formattedMessage).toContain('Custom app');
 		});
 	});
-}); 
+});

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { LogLevel, LoggableError, Logger, LoggerOptions } from '../../core/types';
+import type {
+	LogLevel,
+	LoggableError,
+	Logger,
+	LoggerOptions,
+} from '../../core/types';
 
 describe('types', () => {
 	// These tests mainly serve as type checks during compilation
@@ -91,4 +96,4 @@ describe('types', () => {
 			expect(fullError).toHaveProperty('stack');
 		});
 	});
-}); 
+});

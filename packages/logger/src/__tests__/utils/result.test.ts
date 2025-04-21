@@ -7,8 +7,8 @@ import {
 	okAsync,
 } from 'neverthrow';
 import { describe, expect, it, vi } from 'vitest';
-import { logResult, logResultAsync } from '../../utils/result';
 import type { LoggableError } from '../../core/types';
+import { logResult, logResultAsync } from '../../utils/result';
 
 describe('result-logging', () => {
 	describe('logResult', () => {
@@ -188,4 +188,4 @@ describe('result-logging', () => {
 			);
 		});
 	});
-}); 
+});

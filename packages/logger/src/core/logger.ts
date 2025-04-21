@@ -1,7 +1,14 @@
-import { formatMessage } from '../formatting/console';
-import { levels, shouldPublishLog } from './levels';
+import { getFormatter } from '../formatting/formatter';
 import { withLogSpan } from '../utils/telemetry';
-import type { LogEntry, LogLevel, Logger, LoggerOptions, LoggerExtensions, ExtendedLogger } from './types';
+import { levels, shouldPublishLog } from './levels';
+import type {
+	ExtendedLogger,
+	LogEntry,
+	LogLevel,
+	Logger,
+	LoggerExtensions,
+	LoggerOptions,
+} from './types';
 
 /**
  * Creates a configured logger instance with methods for each log level.
@@ -60,7 +67,8 @@ export const createLogger = (options?: LoggerOptions | Logger): Logger => {
 		}
 
 		await withLogSpan(level, message, args, async () => {
-			const formattedMessage = formatMessage(level, message, appName);
+			const formatter = getFormatter('default');
+			const formattedMessage = formatter(level, message, args, appName);
 
 			if (!loggerOptions || typeof loggerOptions.log !== 'function') {
 				if (level === 'error') {
@@ -122,11 +130,11 @@ export const logger = createLogger();
 
 /**
  * Extends a logger with additional methods.
- * 
+ *
  * @param baseLogger - The logger to extend
  * @param extensions - Object containing extension methods
  * @returns Extended logger with added functionality
- * 
+ *
  * @example
  * ```typescript
  * // Create a logger with custom methods
@@ -135,12 +143,12 @@ export const logger = createLogger();
  *   http: (message, ...args) => logger.info(`HTTP: ${message}`, ...args),
  *   database: (message, ...args) => logger.info(`DB: ${message}`, ...args)
  * });
- * 
+ *
  * // Now you can use the extended methods
  * extendedLogger.http('GET /users');
  * extendedLogger.database('Query executed in 10ms');
  * ```
- * 
+ *
  * @public
  */
 export function extendLogger<T extends LoggerExtensions>(
@@ -148,4 +156,4 @@ export function extendLogger<T extends LoggerExtensions>(
 	extensions: T
 ): ExtendedLogger<T> {
 	return Object.assign({}, baseLogger, extensions);
-} 
+}

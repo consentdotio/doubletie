@@ -5,12 +5,12 @@ import {
 	CookieBanner,
 } from '@c15t/react';
 
-import { Fira_Mono, Inter } from 'next/font/google';
 import { RootProvider } from 'fumadocs-ui/provider';
+import { Fira_Mono, Inter } from 'next/font/google';
 import type { ReactNode } from 'react';
 
-import logger from '~/lib/logger';
 import { cn } from '~/lib/cn';
+import logger from '~/lib/logger';
 import '~/lib/logger';
 import './styles/global.css';
 
@@ -29,7 +29,6 @@ const firaMono = Fira_Mono({
 });
 
 export default function Layout({ children }: { children: ReactNode }) {
-
 	const bgColor = '#FFFFFF';
 	const bgColorDark = '#000000';
 	const primaryColor = 'hsl(355, 100%, 70.4%)';
@@ -63,7 +62,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 			<body className="flex min-h-screen flex-col">
 				<RootProvider>
 					<ConsentManagerProvider options={c15tConfig}>
-							<CookieBanner
+						<CookieBanner
 							theme={{
 								'banner.root': {
 									style: {
@@ -100,7 +99,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 						/>
 						{process.env.NODE_ENV === 'development' && <C15TDevTools />}
 						{children}
-						<Test/>
+						<Test />
 					</ConsentManagerProvider>
 				</RootProvider>
 			</body>

@@ -143,7 +143,7 @@ export interface LoggableError {
  * @template T - The type of the extension
  */
 export interface LoggerExtensions {
-	/** 
+	/**
 	 * Optional marker to identify the type of extension
 	 */
 	_extensionType?: string;
@@ -152,4 +152,4 @@ export interface LoggerExtensions {
 /**
  * Extended logger type that combines the base Logger with custom extensions.
  */
-export type ExtendedLogger<T extends LoggerExtensions> = Logger & T; 
+export type ExtendedLogger<T extends LoggerExtensions> = Logger & T;

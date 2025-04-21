@@ -1,4 +1,3 @@
-
 import {
 	DocsBody,
 	DocsDescription,
@@ -21,10 +20,7 @@ interface SharedDocsPageProps {
 	otherComponents?: Record<string, ComponentType>;
 }
 
-function SharedDocsPage({
-	params,
-	source,
-}: SharedDocsPageProps) {
+function SharedDocsPage({ params, source }: SharedDocsPageProps) {
 	const page = source.getPage(params.slug);
 
 	if (!page) {
@@ -44,7 +40,7 @@ function SharedDocsPage({
 			</DocsTitle>
 			<DocsDescription>{page.data.description}</DocsDescription>
 			<DocsBody className={cn()}>
-			<MDXContent
+				<MDXContent
 					components={getMDXComponents({
 						// this allows you to link to other pages with relative file paths
 						a: createRelativeLink(source, page),

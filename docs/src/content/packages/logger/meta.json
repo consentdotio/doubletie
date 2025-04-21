@@ -1,22 +1,22 @@
 {
-    "title": "Logger",
-    "root": true,
-    "pages": [
-      "---Getting Started---",
-      "index",
-      "getting-started",
-      "---Guides---",
-      "guides/formatting",
-      "guides/error-handling",
-      "guides/redirects",
-      "---API Reference---",
-      "api/logger",
-      "api/result",
-      "api/formatters",
-      "api/redirects",
-      "---Concepts & Best Practices---",
-      "concepts",
-      "best-practices",
-      "troubleshooting"
-    ]
-  }
+	"title": "Logger",
+	"root": true,
+	"pages": [
+		"---Getting Started---",
+		"index",
+		"getting-started",
+		"---Guides---",
+		"guides/formatting",
+		"guides/error-handling",
+		"guides/redirects",
+		"---API Reference---",
+		"api/logger",
+		"api/result",
+		"api/formatters",
+		"api/redirects",
+		"---Concepts & Best Practices---",
+		"concepts",
+		"best-practices",
+		"troubleshooting"
+	]
+}

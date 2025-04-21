@@ -41,4 +41,4 @@ export const shouldPublishLog = (
 
 	// Allow if the message level is same or higher severity than current level
 	return messageLevelIndex <= currentLevelIndex;
-}; 
+};

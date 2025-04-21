@@ -105,9 +105,9 @@ describe('logger', () => {
 			expect(firstCallArg).toContain('[c15t]');
 			expect(firstCallArg).toContain('Test message');
 
-			// Check that timestamp matches ISO format
+			// Check that timestamp matches the current time-only format (HH:MM:SS.mmm)
 			// biome-ignore lint/performance/useTopLevelRegex: its okay its a test
-			expect(firstCallArg).toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+			expect(firstCallArg).toMatch(/\d{2}:\d{2}:\d{2}\.\d{3}/);
 
 			vi.mocked(logLevels.shouldPublishLog).mockRestore();
 		});
@@ -154,4 +154,4 @@ describe('logger', () => {
 			vi.mocked(logLevels.shouldPublishLog).mockRestore();
 		});
 	});
-}); 
+});
