@@ -14,18 +14,6 @@
 			"import": "./dist/index.js",
 			"require": "./dist/index.cjs"
 		},
-		"./core": {
-			"import": "./dist/core.js",
-			"require": "./dist/core.cjs"
-		},
-		"./formatting": {
-			"import": "./dist/formatting.js",
-			"require": "./dist/formatting.cjs"
-		},
-		"./utils": {
-			"import": "./dist/utils.js",
-			"require": "./dist/utils.cjs"
-		},
 		"./rewrite-nextjs": {
 			"import": "./dist/rewrite-nextjs.js", 
 			"require": "./dist/rewrite-nextjs.cjs"

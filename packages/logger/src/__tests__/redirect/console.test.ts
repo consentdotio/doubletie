@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { redirectConsoleMethods } from '../../redirect/console';
-import { createLogger } from '../../core/logger';
+import * as loggerModule from '../../core/logger';
 
 describe('console redirection', () => {
   // Setup and teardown
@@ -43,27 +43,28 @@ describe('console redirection', () => {
   });
 
   it('should use default logger when no custom logger provided', () => {
-    // Create a spy on the default logger's methods
-    const defaultLogger = createLogger();
-    vi.spyOn(defaultLogger, 'info');
-    vi.spyOn(defaultLogger, 'error');
+    // Mock the default logger
+    const mockDefaultLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      success: vi.fn()
+    };
     
-    // Mock module to return our spy logger
-    vi.mock('../../core/logger', () => ({
-      logger: defaultLogger,
-      createLogger: vi.fn()
-    }));
+    // Spy on the logger module
+    vi.spyOn(loggerModule, 'logger', 'get').mockReturnValue(mockDefaultLogger);
 
-    // Redirect console methods
+    // Redirect console methods without providing a custom logger
     redirectConsoleMethods();
 
-    // Use console method
+    // Use console methods
     console.log('Default logger test');
     console.error('Default logger error');
 
     // Check that default logger was used
-    expect(defaultLogger.info).toHaveBeenCalledWith('Default logger test');
-    expect(defaultLogger.error).toHaveBeenCalledWith('Default logger error');
+    expect(mockDefaultLogger.info).toHaveBeenCalledWith('Default logger test');
+    expect(mockDefaultLogger.error).toHaveBeenCalledWith('Default logger error');
   });
 
   it('should pass additional arguments to logger methods', () => {

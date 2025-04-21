@@ -4,9 +4,6 @@ export default defineConfig({
 	source: {
 		entry: {
 			index: ['./src/index.ts'],
-			core: ['./src/core/index.ts'],
-			formatting: ['./src/formatting/index.ts'],
-			utils: ['./src/utils/index.ts'],
 			'rewrite-nextjs': ['./src/redirect/nextjs.ts'],
 			'rewrite-console': ['./src/redirect/console.ts'],
 			'rewrite-all': ['./src/redirect/all.ts'],
