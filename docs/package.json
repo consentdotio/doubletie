@@ -1,5 +1,5 @@
 {
-	"name": "@c15t/docs",
+	"name": "@doubletie/docs",
 	"private": true,
 	"scripts": {
 		"build": "next build",

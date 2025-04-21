@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { LogLevel, LoggableError, Logger, LoggerOptions } from '../types';
+import type { LogLevel, LoggableError, Logger, LoggerOptions } from '../../core/types';
 
 describe('types', () => {
 	// These tests mainly serve as type checks during compilation
@@ -22,7 +22,7 @@ describe('types', () => {
 			const options: LoggerOptions = {
 				disabled: false,
 				level: 'warn',
-				log: (level, message, ...args) => {
+				log: (level: LogLevel, message: string, ...args: unknown[]) => {
 					// This is just for type checking
 					// biome-ignore lint/suspicious/noConsole: its okay its a test
 					// biome-ignore lint/suspicious/noConsoleLog: its okay its a test
@@ -91,4 +91,4 @@ describe('types', () => {
 			expect(fullError).toHaveProperty('stack');
 		});
 	});
-});
+}); 

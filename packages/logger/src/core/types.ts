@@ -136,3 +136,20 @@ export interface LoggableError {
 	/** Error stack trace */
 	stack?: string;
 }
+
+/**
+ * Base interface for logger extensions.
+ * Implementations can extend this to add custom methods to a logger.
+ * @template T - The type of the extension
+ */
+export interface LoggerExtensions {
+	/** 
+	 * Optional marker to identify the type of extension
+	 */
+	_extensionType?: string;
+}
+
+/**
+ * Extended logger type that combines the base Logger with custom extensions.
+ */
+export type ExtendedLogger<T extends LoggerExtensions> = Logger & T; 

@@ -1,7 +1,7 @@
-import { formatMessage } from './console-formatter';
-import { levels, shouldPublishLog } from './log-levels';
-import { withLogSpan } from './telemetry';
-import type { LogEntry, LogLevel, Logger, LoggerOptions } from './types';
+import { formatMessage } from '../formatting/console';
+import { levels, shouldPublishLog } from './levels';
+import { withLogSpan } from '../utils/telemetry';
+import type { LogEntry, LogLevel, Logger, LoggerOptions, LoggerExtensions, ExtendedLogger } from './types';
 
 /**
  * Creates a configured logger instance with methods for each log level.
@@ -119,3 +119,33 @@ export const createLogger = (options?: LoggerOptions | Logger): Logger => {
  * @public
  */
 export const logger = createLogger();
+
+/**
+ * Extends a logger with additional methods.
+ * 
+ * @param baseLogger - The logger to extend
+ * @param extensions - Object containing extension methods
+ * @returns Extended logger with added functionality
+ * 
+ * @example
+ * ```typescript
+ * // Create a logger with custom methods
+ * const logger = createLogger({ level: 'info' });
+ * const extendedLogger = extendLogger(logger, {
+ *   http: (message, ...args) => logger.info(`HTTP: ${message}`, ...args),
+ *   database: (message, ...args) => logger.info(`DB: ${message}`, ...args)
+ * });
+ * 
+ * // Now you can use the extended methods
+ * extendedLogger.http('GET /users');
+ * extendedLogger.database('Query executed in 10ms');
+ * ```
+ * 
+ * @public
+ */
+export function extendLogger<T extends LoggerExtensions>(
+	baseLogger: Logger,
+	extensions: T
+): ExtendedLogger<T> {
+	return Object.assign({}, baseLogger, extensions);
+} 

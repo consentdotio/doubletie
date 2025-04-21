@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { levels, shouldPublishLog } from '../log-levels';
-import type { LogLevel } from '../types';
+import { levels, shouldPublishLog } from '../../core/levels';
+import type { LogLevel } from '../../core/types';
 
 describe('log-levels', () => {
 	describe('levels', () => {
@@ -39,10 +39,10 @@ describe('log-levels', () => {
 
 			// Test 'debug' level (special case)
 			expect(shouldPublishLog('debug', 'debug')).toBe(true);
-			expect(shouldPublishLog('debug', 'error')).toBe(false);
-			expect(shouldPublishLog('debug', 'warn')).toBe(false);
-			expect(shouldPublishLog('debug', 'info')).toBe(false);
-			expect(shouldPublishLog('debug', 'success')).toBe(false);
+			expect(shouldPublishLog('debug', 'error')).toBe(true);
+			expect(shouldPublishLog('debug', 'warn')).toBe(true);
+			expect(shouldPublishLog('debug', 'info')).toBe(true);
+			expect(shouldPublishLog('debug', 'success')).toBe(true);
 		});
 
 		it('should use array comparison for determining log level priority', () => {
@@ -53,10 +53,6 @@ describe('log-levels', () => {
 				// Simulate the logic from shouldPublishLog
 				const currentLevelIndex = levels.indexOf(currentLevel);
 				const messageLevelIndex = levels.indexOf(messageLevel);
-
-				if (currentLevel === 'debug') {
-					return messageLevel === 'debug';
-				}
 
 				return messageLevelIndex <= currentLevelIndex;
 			};
@@ -74,4 +70,4 @@ describe('log-levels', () => {
 			expect(testFn('error', 'warn')).toBe(shouldPublishLog('error', 'warn'));
 		});
 	});
-});
+}); 

@@ -1,5 +1,5 @@
-import { logger } from '../logger-factory';
-import type { Logger } from '../types';
+import { logger } from '../core/logger';
+import type { Logger } from '../core/types';
 
 /**
  * Gets the appropriate logging method for a console method.

@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { levels } from '../log-levels';
-import * as logLevels from '../log-levels';
-import { createLogger } from '../logger-factory';
+import { levels } from '../../core/levels';
+import * as logLevels from '../../core/levels';
+import { createLogger } from '../../core/logger';
+import type { LogLevel } from '../../core/types';
 
-describe('logger-factory', () => {
+describe('logger', () => {
 	// Mock console methods
 	beforeEach(() => {
 		// biome-ignore lint/suspicious/noEmptyBlockStatements: its okay its a test
@@ -37,7 +38,7 @@ describe('logger-factory', () => {
 		it('should respect log level option', () => {
 			// Mock the shouldPublishLog function to return expected values for our test
 			vi.spyOn(logLevels, 'shouldPublishLog').mockImplementation(
-				(currentLevel, messageLevel) => {
+				(currentLevel: LogLevel, messageLevel: LogLevel) => {
 					if (currentLevel === 'warn') {
 						return messageLevel === 'warn' || messageLevel === 'error';
 					}
@@ -153,4 +154,4 @@ describe('logger-factory', () => {
 			vi.mocked(logLevels.shouldPublishLog).mockRestore();
 		});
 	});
-});
+}); 

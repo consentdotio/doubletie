@@ -7,8 +7,8 @@ import {
 	okAsync,
 } from 'neverthrow';
 import { describe, expect, it, vi } from 'vitest';
-import { logResult, logResultAsync } from '../result-logging';
-import type { LoggableError } from '../types';
+import { logResult, logResultAsync } from '../../utils/result';
+import type { LoggableError } from '../../core/types';
 
 describe('result-logging', () => {
 	describe('logResult', () => {
@@ -36,19 +36,13 @@ describe('result-logging', () => {
 
 			// Verify the logger was called with the correct arguments
 			expect(logger.error).toHaveBeenCalledTimes(1);
-			expect(logger.error).toHaveBeenCalledWith('Error occurred: Test error', {
-				code: 'TEST_ERROR',
-				status: 400,
-				meta: { test: true },
-				category: 'test',
-				stack: 'Error stack',
-			});
+			expect(logger.error).toHaveBeenCalledWith('Error: Test error', testError);
 
 			// Verify the original Result is returned unchanged
 			expect(result).toStrictEqual(errorResult);
 
 			// Verify the error inside the Result is unchanged
-			result.mapErr((error) => {
+			result.mapErr((error: LoggableError) => {
 				expect(error).toEqual(testError);
 				return error;
 			});
@@ -104,14 +98,8 @@ describe('result-logging', () => {
 			logResult(errorResult, logger);
 
 			expect(logger.error).toHaveBeenCalledWith(
-				'Error occurred: Minimal error',
-				{
-					code: undefined,
-					status: undefined,
-					meta: undefined,
-					category: undefined,
-					stack: undefined,
-				}
+				'Error: Minimal error',
+				minimalError
 			);
 		});
 	});
@@ -144,14 +132,8 @@ describe('result-logging', () => {
 			// Verify the logger was called with the correct arguments
 			expect(logger.error).toHaveBeenCalledTimes(1);
 			expect(logger.error).toHaveBeenCalledWith(
-				'Error occurred: Async test error',
-				{
-					code: 'ASYNC_TEST_ERROR',
-					status: 500,
-					meta: undefined,
-					category: undefined,
-					stack: undefined,
-				}
+				'Error: Async test error',
+				testError
 			);
 		});
 
@@ -206,4 +188,4 @@ describe('result-logging', () => {
 			);
 		});
 	});
-});
+}); 

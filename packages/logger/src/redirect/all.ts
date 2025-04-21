@@ -1,6 +1,6 @@
 import { redirectConsoleMethods } from './console';
 import { redirectNextjsLogger } from './nextjs';
-import type { Logger } from '../types';
+import type { Logger } from '../core/types';
 
 /**
  * Redirects all supported logging systems to use DoubleTie logger.

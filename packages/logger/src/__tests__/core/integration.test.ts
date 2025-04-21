@@ -1,8 +1,8 @@
 import { err, errAsync } from 'neverthrow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createLogger } from '../logger-factory';
-import { logResult, logResultAsync } from '../result-logging';
-import type { LoggableError } from '../types';
+import { createLogger } from '../../core/logger';
+import { logResult, logResultAsync } from '../../utils/result';
+import type { LoggableError } from '../../core/types';
 
 describe('logger integration', () => {
 	beforeEach(() => {
@@ -42,13 +42,7 @@ describe('logger integration', () => {
 			expect(mockedConsoleError.mock.calls[0]?.[0]).toContain(
 				'Integration test error'
 			);
-			expect(mockedConsoleError.mock.calls[0]?.[1]).toEqual({
-				code: 'INTEGRATION_TEST',
-				status: undefined,
-				meta: undefined,
-				category: undefined,
-				stack: undefined,
-			});
+			expect(mockedConsoleError.mock.calls[0]?.[1]).toEqual(testError);
 		});
 
 		it('should work with custom log level and error logging together', () => {
@@ -85,7 +79,7 @@ describe('logger integration', () => {
 			const logger = createLogger({
 				level: 'info', // Change from 'debug' to 'info' to allow info, warn, and error logs
 				log: customLogHandler,
-				appName: 'c15t',
+				appName: '🪢 DoubleTie',
 			});
 
 			// Use direct logging
@@ -106,7 +100,7 @@ describe('logger integration', () => {
 			const mockedCustomLogHandler = vi.mocked(customLogHandler);
 			expect(mockedCustomLogHandler.mock.calls[2]?.[0]).toBe('error');
 			expect(mockedCustomLogHandler.mock.calls[2]?.[1]).toBe(
-				'Error occurred: Result error'
+				'Error: Result error'
 			);
 		});
 
@@ -181,4 +175,4 @@ describe('logger integration', () => {
 			);
 		});
 	});
-});
+}); 

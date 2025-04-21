@@ -4,7 +4,7 @@
  *
  * A lightweight, customizable logging utility for Node.js and TypeScript applications.
  * It provides structured logging capabilities, error logging utilities for the Result pattern,
- * and flexible configuration options.
+ * flexible configuration options, and logger extension support.
  *
  * @remarks
  * This package is designed to work standalone or as part of the DoubleTie SDK.
@@ -30,32 +30,22 @@
  * ```
  */
 
-// Types
-export type {
-	LogLevel,
-	Logger,
-	LoggerOptions,
-	LogEntry,
-	LoggableError,
-} from './types';
+// Export everything from core
+export * from './core';
 
-// Log level handling
+// Export formatting utilities
 export {
-	levels,
-	shouldPublishLog,
-} from './log-levels';
+	formatArgs,
+	formatMessage,
+	registerFormatter,
+	getFormatter,
+} from './formatting';
 
-// Logger creation
-export {
-	createLogger,
-	logger,
-} from './logger-factory';
-
-// Result-based error logging
+// Export result logging utilities
 export {
 	logResult,
 	logResultAsync,
 	logResult as logError,
 	logResultAsync as logErrorAsync,
-} from './result-logging';
+} from './utils';
 

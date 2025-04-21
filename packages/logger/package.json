@@ -13,6 +13,30 @@
 		".": {
 			"import": "./dist/index.js",
 			"require": "./dist/index.cjs"
+		},
+		"./core": {
+			"import": "./dist/core.js",
+			"require": "./dist/core.cjs"
+		},
+		"./formatting": {
+			"import": "./dist/formatting.js",
+			"require": "./dist/formatting.cjs"
+		},
+		"./utils": {
+			"import": "./dist/utils.js",
+			"require": "./dist/utils.cjs"
+		},
+		"./rewrite-nextjs": {
+			"import": "./dist/rewrite-nextjs.js", 
+			"require": "./dist/rewrite-nextjs.cjs"
+		},
+		"./rewrite-console": {
+			"import": "./dist/rewrite-console.js",
+			"require": "./dist/rewrite-console.cjs"
+		},
+		"./rewrite-all": {
+			"import": "./dist/rewrite-all.js",
+			"require": "./dist/rewrite-all.cjs"
 		}
 	},
 	"main": "dist/index.cjs",
