@@ -1,0 +1,192 @@
+---
+title: "Error Handling with Result Types"
+description: "Learn how to integrate DoubleTie Logger with the Result pattern for robust error handling."
+---
+
+## How to Handle Errors with Result Types
+
+This guide shows you how to log errors using the Result pattern from the `neverthrow` library with DoubleTie Logger.
+
+### Prerequisites
+- DoubleTie Logger installation
+- The `neverthrow` package
+
+### Steps
+
+#### 1. Set up error logging with Result
+
+The Result pattern provides a clean way to handle errors without exceptions. DoubleTie Logger integrates with this pattern through special utility functions:
+
+```typescript
+import { err, ok } from 'neverthrow';
+import { logResult, createLogger } from '@doubletie/logger';
+import type { LoggableError } from '@doubletie/logger';
+
+const logger = createLogger();
+
+// Function that returns a Result
+function validateUser(data: unknown) {
+  if (!data || typeof data !== 'object') {
+    return err({
+      message: 'Invalid user data',
+      code: 'INVALID_USER_DATA'
+    });
+  }
+  
+  // Validation passed
+  return ok({ id: '123', name: 'John Doe' });
+}
+
+// Use the validation function with error logging
+function processUser(data: unknown) {
+  // Log errors but continue the Result flow
+  const result = logResult(
+    validateUser(data),
+    logger,
+    'User validation error:'
+  );
+  
+  // Continue processing with the Result
+  return result.match(
+    (user) => {
+      logger.info('Processing user', { id: user.id });
+      return user;
+    },
+    () => {
+      // Error was already logged by logResult
+      return null;
+    }
+  );
+}
+```
+
+#### 2. Use with async operations
+
+For asynchronous operations, use `logResultAsync` instead:
+
+```typescript
+import { errAsync, okAsync } from 'neverthrow';
+import { logResultAsync } from '@doubletie/logger';
+
+// Async function that returns a ResultAsync
+async function fetchUserData(userId: string) {
+  try {
+    const response = await fetch(`/api/users/${userId}`);
+    if (!response.ok) {
+      return errAsync({
+        message: `API returned ${response.status}`,
+        code: 'API_ERROR',
+        status: response.status
+      });
+    }
+    const data = await response.json();
+    return okAsync(data);
+  } catch (error) {
+    return errAsync({
+      message: error instanceof Error ? error.message : 'Unknown error',
+      code: 'FETCH_ERROR'
+    });
+  }
+}
+
+// Log async errors
+async function getUserProfile(userId: string) {
+  const resultAsync = logResultAsync(
+    fetchUserData(userId),
+    logger,
+    'Error fetching user data:'
+  );
+  
+  return await resultAsync.match(
+    (userData) => {
+      logger.info('User data retrieved successfully');
+      return userData;
+    },
+    () => {
+      // Error already logged by logResultAsync
+      return null;
+    }
+  );
+}
+```
+
+#### 3. Structure your error objects
+
+To get the most out of error logging with the Result pattern, structure your error objects consistently:
+
+```typescript
+interface AppError {
+  // A human-readable message describing the error
+  message: string;
+  
+  // A unique code identifying the error type
+  code: string;
+  
+  // Optional: Any additional context about the error
+  context?: Record<string, unknown>;
+  
+  // Optional: The original error that caused this error
+  cause?: Error | unknown;
+}
+
+function processPayment(amount: number) {
+  if (amount <= 0) {
+    return err({
+      message: 'Payment amount must be positive',
+      code: 'INVALID_PAYMENT_AMOUNT',
+      context: { providedAmount: amount }
+    });
+  }
+  
+  // Process payment...
+  return ok({ success: true, transactionId: 'tx_123' });
+}
+```
+
+#### 4. Chain multiple results with logging
+
+You can chain multiple Result operations and log any errors that occur:
+
+```typescript
+import { pipe } from 'neverthrow';
+import { logResult } from '@doubletie/logger';
+
+function validateInput(data: unknown) {
+  /* validation logic */
+}
+
+function processData(data: ValidData) {
+  /* processing logic */
+}
+
+function saveResult(result: ProcessedData) {
+  /* saving logic */
+}
+
+// Chain operations with logging at each step
+function handleRequest(input: unknown) {
+  return pipe(
+    validateInput(input),
+    result => logResult(result, logger, 'Validation error:'),
+    result => result.andThen(processData),
+    result => logResult(result, logger, 'Processing error:'),
+    result => result.andThen(saveResult),
+    result => logResult(result, logger, 'Save error:')
+  );
+}
+```
+
+### Benefits of This Approach
+
+Using the Result pattern with DoubleTie Logger offers several advantages:
+
+1. **Automatic Error Handling**: Errors are logged without interrupting the flow
+2. **Consistent Error Structure**: All errors follow the same format
+3. **Explicit Error Paths**: Error handling is explicit, not hidden behind try/catch
+4. **Type Safety**: TypeScript ensures correct handling of both success and error cases
+5. **Clean Code**: No need for if/else checks or try/catch blocks
+
+### See Also
+
+- [Result Pattern API Reference](/packages/logger/api/result)
+- [Neverthrow Documentation](https://github.com/supermacro/neverthrow) 

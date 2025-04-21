@@ -41,5 +41,9 @@ export const homePageOptions: BaseLayoutProps = {
 			text: 'Query Builder',
 			url: '/docs/packages/query-builder',
 		},
+		{
+			text: 'Logger',
+			url: '/docs/packages/logger',
+		},
 	],
 };

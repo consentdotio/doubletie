@@ -1,0 +1,249 @@
+---
+title: "Redirects API Reference"
+description: "API reference for console and Next.js redirection utilities in DoubleTie Logger."
+---
+
+## Redirects API Reference
+
+This reference documents the console and Next.js redirection utilities in DoubleTie Logger.
+
+### `redirectConsoleMethods(customLogger?)`
+
+Redirects global console methods to use a DoubleTie logger.
+
+**Signature**:
+```typescript
+function redirectConsoleMethods(customLogger?: Logger): void;
+```
+
+**Parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `customLogger` | `Logger` | default logger | Logger to use instead of the default one |
+
+**Example**:
+```typescript
+import { createLogger, redirectConsoleMethods } from '@doubletie/logger';
+
+// Create a custom logger
+const logger = createLogger({
+  level: 'debug',
+  appName: 'api-service'
+});
+
+// Redirect console methods to this logger
+redirectConsoleMethods(logger);
+
+// These will now go through the custom logger
+console.log('User logged in');
+console.error('Authentication failed');
+```
+
+**Console to Logger Method Mapping**:
+
+| Console Method | Logger Method |
+|----------------|--------------|
+| console.log    | logger.info  |
+| console.error  | logger.error |
+| console.warn   | logger.warn  |
+| console.debug  | logger.debug |
+| console.info   | logger.info  |
+
+### `redirectNextjsLogger(customLogger?)`
+
+Redirects Next.js built-in logger to use the DoubleTie logger.
+
+**Signature**:
+```typescript
+function redirectNextjsLogger(customLogger?: Logger): boolean;
+```
+
+**Parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `customLogger` | `Logger` | default logger | Logger to use instead of the default one |
+
+**Returns**: Boolean indicating whether the redirection was successful
+
+**Note**: This function will return `false` if the Next.js logger is not available, which can happen if:
+- Next.js is not installed
+- The redirection is attempted before Next.js is fully loaded
+- You're using a version of Next.js that has a different internal logger structure
+
+**Example**:
+```typescript
+import { createLogger, redirectNextjsLogger } from '@doubletie/logger';
+
+const logger = createLogger({ level: 'debug' });
+
+// Attempt to redirect Next.js logger
+const success = redirectNextjsLogger(logger);
+
+if (!success) {
+  logger.warn('Failed to redirect Next.js logger - it may not be loaded yet');
+}
+```
+
+### `redirectAllLoggers(customLogger?)`
+
+Redirects all supported logging systems to use the DoubleTie logger.
+
+**Signature**:
+```typescript
+function redirectAllLoggers(customLogger?: Logger): {
+  console: true;
+  next: boolean;
+};
+```
+
+**Parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `customLogger` | `Logger` | default logger | Logger to use instead of the default one |
+
+**Returns**: Object indicating which redirections were successfully applied
+- `console`: Always `true` (console redirection always succeeds)
+- `next`: Boolean indicating if Next.js redirection succeeded
+
+**Example**:
+```typescript
+import { createLogger, redirectAllLoggers } from '@doubletie/logger';
+
+const logger = createLogger({
+  level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug',
+  appName: 'my-app'
+});
+
+// Set up unified logging for all systems
+const results = redirectAllLoggers(logger);
+
+if (!results.next) {
+  logger.warn('Next.js logger redirection failed - you may need to retry later');
+}
+```
+
+### Implementation Details
+
+#### Console Redirection
+
+The console redirection works by replacing the global `console` methods with custom functions that:
+1. Call the corresponding logger method
+2. Preserve the original method's functionality (optionally)
+3. Handle all arguments correctly
+
+#### Next.js Redirection
+
+The Next.js redirection works by:
+1. Attempting to access the internal Next.js logger object
+2. Replacing its log functions with redirected versions
+3. Preserving its behavior while sending logs through the DoubleTie logger
+
+### Best Practices
+
+#### Early Initialization
+
+```typescript
+// _app.tsx or app/layout.tsx for Next.js
+import '../lib/logger'; // This should be the first import
+
+// Rest of your imports
+import { AppProps } from 'next/app';
+
+function MyApp({ Component, pageProps }: AppProps) {
+  return <Component {...pageProps} />;
+}
+
+export default MyApp;
+```
+
+#### Environment-Specific Configuration
+
+```typescript
+// lib/logger.ts
+import { createLogger, redirectAllLoggers } from '@doubletie/logger';
+
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
+// Configure based on environment
+const logger = createLogger({
+  level: isDevelopment ? 'debug' : 'warn',
+  appName: 'my-app'
+});
+
+// Only redirect in certain environments
+if (isDevelopment || process.env.ENABLE_UNIFIED_LOGGING === 'true') {
+  redirectAllLoggers(logger);
+}
+
+export default logger;
+```
+
+#### Client vs Server Handling
+
+For Next.js applications with both client and server rendering:
+
+```typescript
+// lib/logger.ts
+import { createLogger, redirectAllLoggers } from '@doubletie/logger';
+
+const logger = createLogger({
+  level: process.env.NODE_ENV !== 'production' ? 'debug' : 'warn'
+});
+
+// Client-side only
+if (typeof window !== 'undefined') {
+  redirectAllLoggers(logger);
+}
+
+// For server-side
+export function setupServerLogger() {
+  redirectAllLoggers(logger);
+  return logger;
+}
+
+export default logger;
+```
+
+### Troubleshooting
+
+#### Next.js Redirection Failing
+
+If Next.js redirection fails, try:
+
+1. Delaying the redirection until after Next.js has initialized:
+
+```typescript
+// Wait for Next.js to initialize
+setTimeout(() => {
+  const success = redirectNextjsLogger(logger);
+  if (!success) {
+    logger.warn('Still unable to redirect Next.js logger');
+  }
+}, 1000);
+```
+
+2. Using a different approach for server vs client:
+
+```typescript
+// For client-side 
+if (typeof window !== 'undefined') {
+  // Browser-side redirection
+  redirectAllLoggers(logger);
+} else {
+  // Server-side - may need additional handling
+  try {
+    redirectAllLoggers(logger);
+  } catch (error) {
+    // Fallback if redirection fails
+    console.warn('Failed to redirect loggers on server side:', error);
+  }
+}
+```
+
+### See Also
+
+- [Unified Logging Guide](/packages/logger/guides/redirects)
+- [Logger API Reference](/packages/logger/api/logger) 

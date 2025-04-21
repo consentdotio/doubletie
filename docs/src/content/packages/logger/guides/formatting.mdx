@@ -1,0 +1,164 @@
+---
+title: "Customizing Log Formatting"
+description: "Learn how to customize the formatting of your log messages with DoubleTie Logger."
+---
+
+## How to Customize Log Formatting
+
+This guide shows you how to customize the formatting of your log messages with DoubleTie Logger.
+
+### Prerequisites
+- A basic logger setup from the [Getting Started](/packages/logger/getting-started) section
+
+### Steps
+
+#### 1. Register a custom formatter
+
+DoubleTie Logger allows you to create custom formatters that control how your log messages appear. Let's create a JSON formatter for machine-readable logs:
+
+```typescript
+import { registerFormatter, createLogger } from '@doubletie/logger';
+
+// Create a custom formatter for JSON logging
+registerFormatter('json', (level, message, args, appName = 'app') => {
+  return JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level,
+    app: appName,
+    message,
+    data: args.length > 0 ? args[0] : undefined
+  });
+});
+
+// Create a logger that uses the custom formatter
+const logger = createLogger();
+
+// Use the formatter when logging
+logger.info('User logged in', { userId: 'user123' });
+```
+
+When this code runs, your logs will be output as JSON strings.
+
+#### 2. Apply formatters to specific logs
+
+You can also manually format individual log messages using a specific formatter:
+
+```typescript
+import { formatMessage } from '@doubletie/logger';
+
+// Format a message manually using a specific formatter
+const jsonLog = formatMessage(
+  'error',
+  'Database connection failed',
+  [{ retries: 3 }],
+  'json',  // Formatter name
+  'db-service'  // App name
+);
+
+console.log(jsonLog);
+// Output: {"timestamp":"2023-10-10T12:34:56.789Z","level":"error","app":"db-service","message":"Database connection failed","data":{"retries":3}}
+```
+
+#### 3. Creating a minimal formatter
+
+Here's an example of a minimal formatter that removes colors and timestamps:
+
+```typescript
+registerFormatter('minimal', (level, message, args) => {
+  return `[${level.toUpperCase()}] ${message}`;
+});
+
+// Use the minimal formatter
+const plainLogger = createLogger({
+  formatter: 'minimal'
+});
+
+plainLogger.warn('Disk space low');
+// Output: [WARN] Disk space low
+```
+
+#### 4. Creating a custom colorful formatter
+
+You can also create formatters with custom colors:
+
+```typescript
+import chalk from 'chalk';
+import { registerFormatter } from '@doubletie/logger';
+
+// Create a formatter with custom colors
+registerFormatter('colorful', (level, message, args, appName) => {
+  const timestamp = new Date().toISOString();
+  let coloredLevel;
+  
+  switch (level) {
+    case 'error':
+      coloredLevel = chalk.bgRed.white(' ERROR ');
+      break;
+    case 'warn':
+      coloredLevel = chalk.bgYellow.black(' WARN  ');
+      break;
+    case 'info':
+      coloredLevel = chalk.bgBlue.white(' INFO  ');
+      break;
+    case 'success':
+      coloredLevel = chalk.bgGreen.black('SUCCESS');
+      break;
+    case 'debug':
+      coloredLevel = chalk.bgGray.white(' DEBUG ');
+      break;
+    default:
+      coloredLevel = chalk.bgWhite.black(` ${level.toUpperCase()} `);
+  }
+  
+  const prefix = appName ? `[${appName}] ` : '';
+  const formattedMessage = `${timestamp} ${coloredLevel} ${prefix}${message}`;
+  
+  if (args.length > 0) {
+    return `${formattedMessage} ${JSON.stringify(args[0], null, 2)}`;
+  }
+  
+  return formattedMessage;
+});
+```
+
+### Formatter API
+
+A formatter is a function with the following signature:
+
+```typescript
+type Formatter = (
+  level: LogLevel,
+  message: string,
+  args: unknown[],
+  appName?: string
+) => string;
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `level`   | The log level ('error', 'warn', 'info', 'success', 'debug') |
+| `message` | The message string being logged |
+| `args`    | Array of additional arguments passed to the log method |
+| `appName` | Optional application name for namespace separation |
+
+### Default Formatter
+
+DoubleTie Logger comes with a default formatter that:
+
+1. Shows timestamps
+2. Color-codes log levels
+3. Includes the app name when provided
+4. Pretty-formats any objects passed as arguments
+
+You can always revert to the default formatter if needed:
+
+```typescript
+const logger = createLogger({
+  formatter: 'default' // This is actually the default setting
+});
+```
+
+### See Also
+
+- [Core Logger API](/packages/logger/api/logger)
+- [Formatters API Reference](/packages/logger/api/formatters) 

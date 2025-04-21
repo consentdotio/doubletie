@@ -1,0 +1,212 @@
+---
+title: "Result Logging API Reference"
+description: "API reference for Result pattern logging utilities in DoubleTie Logger."
+---
+
+## Result Logging API Reference
+
+This reference documents the Result pattern logging utilities in DoubleTie Logger.
+
+### `logResult(result, logger?, messagePrefix?)`
+
+Logs any errors in a Result without changing the Result flow.
+
+**Signature**:
+```typescript
+function logResult<T, E extends LoggableError>(
+  result: Result<T, E>,
+  logger?: Pick<Logger, 'error'>,
+  messagePrefix?: string
+): Result<T, E>;
+```
+
+**Parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `result` | `Result<T, E>` | - | The Result to check for errors |
+| `logger` | `Pick<Logger, 'error'>` | default logger | An object with an error method for logging |
+| `messagePrefix` | `string` | `''` | Prefix for the error message |
+
+**Returns**: The original Result unchanged
+
+**Example**:
+```typescript
+import { err, ok } from 'neverthrow';
+import { logResult, createLogger } from '@doubletie/logger';
+
+const logger = createLogger();
+
+function validateEmail(email: string) {
+  if (!email.includes('@')) {
+    return err({
+      message: 'Invalid email format',
+      code: 'INVALID_EMAIL'
+    });
+  }
+  return ok(email);
+}
+
+// If the result is an error, it will be logged but the Result is returned unchanged
+const result = logResult(
+  validateEmail('test-email'),
+  logger,
+  'Email validation failed:'
+);
+
+// Continue processing with the result
+const validEmail = result.match(
+  (email) => email,
+  () => 'fallback@example.com'
+);
+```
+
+### `logResultAsync(resultAsync, logger?, messagePrefix?)`
+
+Logs any errors in a ResultAsync without changing the ResultAsync flow.
+
+**Signature**:
+```typescript
+function logResultAsync<T, E extends LoggableError>(
+  resultAsync: ResultAsync<T, E>,
+  logger?: Pick<Logger, 'error'>,
+  messagePrefix?: string
+): ResultAsync<T, E>;
+```
+
+**Parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `resultAsync` | `ResultAsync<T, E>` | - | The ResultAsync to check for errors |
+| `logger` | `Pick<Logger, 'error'>` | default logger | An object with an error method for logging |
+| `messagePrefix` | `string` | `''` | Prefix for the error message |
+
+**Returns**: The original ResultAsync unchanged
+
+**Example**:
+```typescript
+import { errAsync, okAsync } from 'neverthrow';
+import { logResultAsync } from '@doubletie/logger';
+
+async function fetchUserData(userId: string) {
+  try {
+    const response = await fetch(`/api/users/${userId}`);
+    if (!response.ok) {
+      return errAsync({
+        message: `API returned ${response.status}`,
+        code: 'API_ERROR',
+        status: response.status
+      });
+    }
+    const data = await response.json();
+    return okAsync(data);
+  } catch (error) {
+    return errAsync({
+      message: error instanceof Error ? error.message : 'Unknown error',
+      code: 'FETCH_ERROR'
+    });
+  }
+}
+
+// If an error occurs during the async operation, it will be logged
+const resultAsync = logResultAsync(
+  fetchUserData('user123'),
+  logger,
+  'Failed to fetch user data:'
+);
+
+// Continue processing with the ResultAsync
+const userData = await resultAsync.match(
+  (data) => data,
+  () => ({ id: 'user123', name: 'Unknown User' }) // Fallback
+);
+```
+
+### `LoggableError` Interface
+
+The interface for error objects that can be properly logged.
+
+**Signature**:
+```typescript
+interface LoggableError {
+  message: string;
+  code?: string;
+  [key: string]: unknown;
+}
+```
+
+**Properties**:
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `message` | `string` | Yes | A human-readable error message |
+| `code` | `string` | No | An optional error code |
+| `[key: string]` | `unknown` | No | Any additional properties |
+
+**Example**:
+```typescript
+// Example LoggableError
+const error: LoggableError = {
+  message: 'Resource not found',
+  code: 'NOT_FOUND',
+  resource: 'users',
+  id: '123',
+  timestamp: new Date()
+};
+```
+
+### Pattern: Using with Custom Error Types
+
+For custom error types, ensure they implement the `LoggableError` interface:
+
+```typescript
+class ApiError implements LoggableError {
+  message: string;
+  code: string;
+  status: number;
+  
+  constructor(message: string, code: string, status: number) {
+    this.message = message;
+    this.code = code;
+    this.status = status;
+  }
+}
+
+function fetchData() {
+  // In case of error
+  return err(new ApiError(
+    'Failed to fetch data',
+    'FETCH_FAILED',
+    500
+  ));
+}
+
+// This works because ApiError implements LoggableError
+const result = logResult(fetchData(), logger);
+```
+
+### Pattern: Chaining Multiple Operations
+
+You can chain multiple operations with logging at each step:
+
+```typescript
+import { pipe } from 'neverthrow';
+import { logResult } from '@doubletie/logger';
+
+function process(input: unknown) {
+  return pipe(
+    validateInput(input),
+    result => logResult(result, logger, 'Validation error:'),
+    result => result.andThen(transform),
+    result => logResult(result, logger, 'Transform error:'),
+    result => result.andThen(save),
+    result => logResult(result, logger, 'Save error:')
+  );
+}
+```
+
+### See Also
+
+- [Error Handling Guide](/packages/logger/guides/error-handling)
+- [Neverthrow Documentation](https://github.com/supermacro/neverthrow) 

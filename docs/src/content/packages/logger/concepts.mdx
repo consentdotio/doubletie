@@ -1,0 +1,217 @@
+---
+title: "DoubleTie Logger Concepts"
+description: "Understand the key concepts and patterns behind DoubleTie Logger."
+---
+
+## Key Concepts
+
+This page explains the core concepts and design principles behind DoubleTie Logger.
+
+### Understanding Log Levels
+
+Log levels in DoubleTie Logger indicate the severity and importance of log messages. They are ordered from highest to lowest severity:
+
+1. **error** - Critical issues requiring immediate attention
+2. **warn** - Potential problems that don't prevent operation
+3. **info** - General information about system operation
+4. **success** - Successful operations (treated as info level when using custom handlers)
+5. **debug** - Detailed information useful for debugging
+
+When you configure a logger with a specific level, it will only show messages of that level or higher severity. For example:
+
+```typescript
+// This logger will show error, warn, and info messages but not debug
+const logger = createLogger({ level: 'info' });
+
+logger.error('This will be shown'); // Shows
+logger.warn('This will be shown');  // Shows
+logger.info('This will be shown');  // Shows
+logger.debug('This won't be shown'); // Hidden
+```
+
+This filtering happens automatically based on your configuration, saving you from manually checking log levels throughout your code. It allows you to control verbosity with a single setting.
+
+### The Benefits of Unified Logging
+
+Unified logging is a pattern where all logging in your application flows through a single system. DoubleTie Logger enables this through its redirection features, offering several advantages:
+
+1. **Consistency**: All logs follow the same format, making them easier to read and process
+2. **Centralized Control**: Configure log levels and handling in one place
+3. **Better Tooling**: Apply the same analysis and storage to all logs
+4. **Simplified Debugging**: See the full picture of your application's behavior
+
+Without unified logging, you might have:
+- Console logs with one format
+- Framework logs with another format
+- Custom logs with yet another format
+
+This fragmentation makes it difficult to get a complete view of your application's behavior. With DoubleTie Logger's redirection features, you can bring all logs under one roof.
+
+### Structured Logging vs. String Concatenation
+
+DoubleTie Logger encourages structured logging, where you pass discrete data alongside your message rather than concatenating everything into a string.
+
+#### String Concatenation (Poor Practice)
+```typescript
+// Don't do this
+logger.info(`User ${userId} logged in from ${ipAddress} at ${timestamp}`);
+```
+
+#### Structured Logging (Good Practice)
+```typescript
+// Do this instead
+logger.info('User logged in', { 
+  userId, 
+  ipAddress, 
+  timestamp: new Date().toISOString() 
+});
+```
+
+The structured approach offers several advantages:
+
+1. **Searchability**: Easily search for specific values
+2. **Parsing**: Automatically extract data for analysis
+3. **Filtering**: Apply filters based on specific fields
+4. **Schema Evolution**: Add new fields without breaking existing processing
+
+This approach also makes it easier to integrate with log aggregation systems and monitoring tools.
+
+### Logger Extension Pattern
+
+DoubleTie Logger uses an extension pattern that allows you to create specialized loggers with domain-specific methods while preserving the core logging functionality:
+
+```typescript
+import { createLogger, extendLogger } from '@doubletie/logger';
+
+// Create an HTTP request logger
+const httpLogger = extendLogger(
+  createLogger({ level: 'info' }),
+  {
+    request: (method, url, body) => {
+      return httpLogger.debug(`→ ${method} ${url}`, { body });
+    },
+    response: (status, body, timeMs) => {
+      const level = status >= 400 ? 'error' : 'debug';
+      return httpLogger[level](`← ${status}`, { body, timeMs });
+    }
+  }
+);
+
+// Use the specialized logger
+httpLogger.request('POST', '/api/users', { name: 'Alice' });
+httpLogger.response(201, { id: 123, name: 'Alice' }, 45);
+```
+
+This pattern allows you to:
+
+1. Create domain-specific logging APIs
+2. Apply consistent formatting and level rules
+3. Keep your application code clean and readable
+4. Group related logging functions together
+
+### Result Pattern for Error Handling
+
+DoubleTie Logger integrates with the Result pattern (from libraries like `neverthrow`) to provide clean error handling that:
+
+1. Makes error paths explicit
+2. Ensures errors are logged consistently
+3. Avoids try/catch blocks and exception handling
+4. Maintains the functional flow of your code
+
+```typescript
+import { err, ok } from 'neverthrow';
+import { logResult } from '@doubletie/logger';
+
+function validateEmail(email: string) {
+  if (!email.includes('@')) {
+    return err({
+      message: 'Invalid email format',
+      code: 'INVALID_EMAIL'
+    });
+  }
+  return ok(email);
+}
+
+// If this returns an error, it will be logged automatically
+const result = logResult(validateEmail('user-email'));
+
+// Continue with the result handling
+result.match(
+  (validEmail) => {
+    // Success path
+  },
+  () => {
+    // Error path (error already logged)
+  }
+);
+```
+
+This pattern is especially powerful for:
+- API request handling
+- Validation operations
+- Database operations
+- Any code where errors are expected and should be explicitly handled
+
+### Formatters and Output Control
+
+DoubleTie Logger separates the concerns of:
+
+1. **What** to log (message and data)
+2. **How** to log it (formatting)
+3. **Where** to send it (output)
+
+This separation allows you to adapt the logger to different environments without changing your application code:
+
+```typescript
+// Development: Terminal-friendly colored output
+registerFormatter('dev', colorfulDevFormatter);
+
+// Production: JSON formatting for log aggregation
+registerFormatter('prod', jsonLineFormatter);
+
+// Test: Minimal output
+registerFormatter('test', minimalFormatter);
+
+// Configure based on environment
+const logger = createLogger({
+  formatter: process.env.NODE_ENV === 'production' ? 'prod' : 
+             process.env.NODE_ENV === 'test' ? 'test' : 'dev'
+});
+```
+
+The same application code will produce different outputs depending on the environment, without any changes to how you call the logger methods.
+
+### OpenTelemetry Integration
+
+DoubleTie Logger integrates with OpenTelemetry to provide:
+
+1. **Distributed Tracing**: Track operations across services
+2. **Automatic Spans**: Create spans for each log operation
+3. **Contextual Enrichment**: Add trace IDs to logs
+
+This integration allows you to:
+- Correlate logs with traces
+- Measure performance of operations
+- Debug complex distributed systems
+
+```typescript
+import { createLogger } from '@doubletie/logger';
+import { trace } from '@opentelemetry/api';
+
+// Create a logger with telemetry
+const logger = createLogger({
+  level: 'info',
+  telemetry: {
+    tracer: trace.getTracer('my-service'),
+    defaultAttributes: {
+      'service.name': 'payment-processor',
+      'deployment.environment': process.env.NODE_ENV
+    }
+  }
+});
+```
+
+### See Also
+
+- [Getting Started with DoubleTie Logger](/packages/logger/getting-started)
+- [Best Practices](/packages/logger/best-practices) 

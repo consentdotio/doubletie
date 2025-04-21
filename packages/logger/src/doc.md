@@ -1,12 +1,12 @@
 ## Overview
 
-The DoubleTie Logger is a lightweight, flexible logging utility designed for Node.js and TypeScript applications. It provides structured logging capabilities with configurable log levels, color-coded console output, and special utilities for error handling with the Result pattern.
+The Double tie Logger is a lightweight, flexible logging utility designed for Node.js and TypeScript applications. It provides structured logging capabilities with configurable log levels, color-coded console output, and special utilities for error handling with the Result pattern.
 
-This documentation provides comprehensive guidance on setting up, configuring, and using the DoubleTie Logger in your applications.
+This documentation provides comprehensive guidance on setting up, configuring, and using the Double tie Logger in your applications.
 
 ## Installation
 
-Install the DoubleTie Logger package using your preferred package manager:
+Install the Double tie Logger package using your preferred package manager:
 
 ```bash
 # Using npm
@@ -566,4 +566,4 @@ if (logger.shouldLog('debug')) {
 
 ## License
 
-The DoubleTie Logger is licensed under the MIT License.
+The Doubletie Logger is licensed under the MIT License.

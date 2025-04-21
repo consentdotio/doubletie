@@ -1,4 +1,4 @@
-# DoubleTie Logger
+# @doubletie/logger
 
 A lightweight, customizable logging utility for Node.js and TypeScript applications. It provides structured logging capabilities, Result pattern integration, and flexible configuration options.
 

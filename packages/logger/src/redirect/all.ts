@@ -22,7 +22,7 @@ import type { Logger } from '../core/types';
  * ```typescript
  * // lib/logger.ts
  * import { createLogger } from '@doubletie/logger';
- * import { redirectAllLoggers } from '@doubletie/rewrite-all';
+ * import { redirectAllLoggers } from '@doubletie/logger/redirect-all';
  * 
  * // Create your custom logger
  * const logger = createLogger({

@@ -1,6 +1,4 @@
-import { createTypeTable } from 'fumadocs-typescript/ui';
-import { Step, Steps } from 'fumadocs-ui/components/steps';
-import defaultMdxComponents from 'fumadocs-ui/mdx';
+
 import {
 	DocsBody,
 	DocsDescription,
@@ -10,25 +8,12 @@ import {
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import type { ComponentType } from 'react';
-import { Card } from '~/components/docs/card';
-import { Preview } from '~/components/docs/preview';
-import { Tab, Tabs } from '~/components/docs/tabs';
 import { cn } from '~/lib/cn';
 import { docsSource } from '~/lib/source';
 import type { Source } from '~/lib/source';
+import { getMDXComponents } from '~/mdx-components';
 
-const { AutoTypeTable } = createTypeTable();
-
-const components = {
-	...defaultMdxComponents,
-	AutoTypeTable,
-	Tabs,
-	Tab,
-	Preview,
-	Steps,
-	Step,
-	Card,
-};
+import { createRelativeLink } from 'fumadocs-ui/mdx';
 
 interface SharedDocsPageProps {
 	params: { slug?: string[] };
@@ -39,7 +24,6 @@ interface SharedDocsPageProps {
 function SharedDocsPage({
 	params,
 	source,
-	otherComponents,
 }: SharedDocsPageProps) {
 	const page = source.getPage(params.slug);
 
@@ -47,7 +31,7 @@ function SharedDocsPage({
 		notFound();
 	}
 
-	const MDX = page.data.body;
+	const MDXContent = page.data.body;
 
 	return (
 		<DocsPage
@@ -60,7 +44,12 @@ function SharedDocsPage({
 			</DocsTitle>
 			<DocsDescription>{page.data.description}</DocsDescription>
 			<DocsBody className={cn()}>
-				<MDX components={{ ...components, ...otherComponents }} />
+			<MDXContent
+					components={getMDXComponents({
+						// this allows you to link to other pages with relative file paths
+						a: createRelativeLink(source, page),
+					})}
+				/>
 			</DocsBody>
 		</DocsPage>
 	);

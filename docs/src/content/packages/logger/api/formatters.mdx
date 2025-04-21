@@ -1,0 +1,200 @@
+---
+title: "Formatters API Reference"
+description: "API reference for message formatting utilities in DoubleTie Logger."
+---
+
+## Formatters API Reference
+
+This reference documents the message formatting utilities in DoubleTie Logger.
+
+### `registerFormatter(name, formatter)`
+
+Registers a custom formatter for log messages.
+
+**Signature**:
+```typescript
+function registerFormatter(name: string, formatter: Formatter): void;
+```
+
+**Parameters**:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `string` | Name to identify the formatter |
+| `formatter` | `Formatter` | The formatter function |
+
+**Example**:
+```typescript
+import { registerFormatter } from '@doubletie/logger';
+
+// Register a simple JSON formatter
+registerFormatter('json', (level, message, args, appName = 'app') => {
+  return JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level,
+    app: appName,
+    message,
+    data: args.length > 0 ? args[0] : undefined
+  });
+});
+```
+
+### `getFormatter(name?)`
+
+Gets a formatter by name, falling back to default if not found.
+
+**Signature**:
+```typescript
+function getFormatter(name?: string): Formatter;
+```
+
+**Parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `string` | `'default'` | The formatter name to retrieve |
+
+**Returns**: The formatter function
+
+**Example**:
+```typescript
+import { getFormatter } from '@doubletie/logger';
+
+// Get the JSON formatter registered earlier
+const jsonFormatter = getFormatter('json');
+
+// Format a message using this formatter
+const formattedMessage = jsonFormatter('error', 'Database error', [{ code: 500 }], 'api-service');
+```
+
+### `formatMessage(level, message, args?, formatterName?, appName?)`
+
+Formats a log message using the specified formatter.
+
+**Signature**:
+```typescript
+function formatMessage(
+  level: LogLevel,
+  message: string,
+  args?: unknown[],
+  formatterName?: string,
+  appName?: string
+): string;
+```
+
+**Parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `level` | `LogLevel` | - | Log level |
+| `message` | `string` | - | Log message |
+| `args` | `unknown[]` | `[]` | Additional log arguments |
+| `formatterName` | `string` | `'default'` | Name of formatter to use |
+| `appName` | `string` | `undefined` | Application name |
+
+**Returns**: Formatted log message
+
+**Example**:
+```typescript
+import { formatMessage } from '@doubletie/logger';
+
+// Format a message using the JSON formatter
+const jsonLog = formatMessage(
+  'error',
+  'Database connection failed',
+  [{ retries: 3 }],
+  'json',  // Formatter name
+  'db-service'  // App name
+);
+
+console.log(jsonLog);
+// Output: {"timestamp":"2023-10-10T12:34:56.789Z","level":"error","app":"db-service","message":"Database connection failed","data":{"retries":3}}
+```
+
+### `Formatter` Type
+
+The type definition for formatter functions.
+
+**Signature**:
+```typescript
+type Formatter = (
+  level: LogLevel,
+  message: string,
+  args: unknown[],
+  appName?: string
+) => string;
+```
+
+**Parameters**:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `level` | `LogLevel` | The log level ('error', 'warn', 'info', 'success', 'debug') |
+| `message` | `string` | The message string being logged |
+| `args` | `unknown[]` | Array of additional arguments passed to the log method |
+| `appName` | `string` | Optional application name for namespace separation |
+
+**Returns**: A formatted string
+
+### Built-in Formatters
+
+DoubleTie Logger includes the following built-in formatters:
+
+#### `'default'`
+
+The default formatter that includes timestamps, colored log levels, and structured data formatting.
+
+**Features**:
+- Color-coded log levels (in terminal environments)
+- ISO timestamp
+- Application name prefix (when provided)
+- Pretty-printed JSON for object arguments
+- Support for multiple arguments
+
+**Example Output**:
+```
+2023-10-10T12:34:56.789Z [ERROR] [my-app] Database connection failed { "retries": 3 }
+```
+
+### Creating Specialized Formatters
+
+Here are examples of specialized formatters for different use cases:
+
+#### Minimal Formatter
+
+```typescript
+registerFormatter('minimal', (level, message) => {
+  return `[${level.toUpperCase()}] ${message}`;
+});
+```
+
+#### JSON Lines Formatter
+
+```typescript
+registerFormatter('jsonl', (level, message, args, appName) => {
+  return JSON.stringify({
+    time: new Date().toISOString(),
+    level,
+    app: appName || 'app',
+    msg: message,
+    data: args.length > 0 ? args[0] : null
+  });
+});
+```
+
+#### CSV Formatter
+
+```typescript
+registerFormatter('csv', (level, message, args, appName) => {
+  const timestamp = new Date().toISOString();
+  const escapedMessage = message.replace(/"/g, '""');
+  const data = args.length > 0 ? JSON.stringify(args[0]).replace(/"/g, '""') : '';
+  
+  return `"${timestamp}","${level}","${appName || ''}","${escapedMessage}","${data}"`;
+});
+```
+
+### See Also
+
+- [Customizing Log Formatting Guide](/packages/logger/guides/formatting)
+- [Logger API Reference](/packages/logger/api/logger) 

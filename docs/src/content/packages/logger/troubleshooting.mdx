@@ -1,0 +1,326 @@
+---
+title: "DoubleTie Logger Troubleshooting"
+description: "Solutions for common issues when using DoubleTie Logger."
+---
+
+## Troubleshooting
+
+This page provides solutions for common issues you might encounter when using DoubleTie Logger.
+
+### Logs Not Appearing
+
+If your logs aren't showing up as expected, check these potential causes:
+
+#### 1. Check your configured log level
+
+The logger only shows messages at or above the configured level:
+
+```typescript
+// This will only show error logs
+const logger = createLogger({ level: 'error' });
+logger.info('This won't appear'); // Lower priority than error
+logger.debug('This won't appear either'); // Lower priority than error
+```
+
+**Solution**: Adjust your log level to match your needs:
+
+```typescript
+// Show all logs in development
+const logger = createLogger({ level: 'debug' });
+
+// Or dynamically configure it
+const logger = createLogger({ 
+  level: process.env.NODE_ENV === 'production' ? 'error' : 'debug' 
+});
+```
+
+#### 2. Verify the logger isn't disabled
+
+```typescript
+// No logs will appear with this configuration
+const logger = createLogger({ disabled: true });
+```
+
+**Solution**: Make sure to check if you've disabled logging:
+
+```typescript
+const logger = createLogger({ 
+  disabled: process.env.DISABLE_LOGGING === 'true',
+  level: 'info'
+});
+```
+
+#### 3. Ensure custom log handlers are correctly implemented
+
+```typescript
+// This handler never actually outputs anything
+const badHandler = (level, message) => {
+  // Doesn't do anything with the message
+};
+
+// Fix: Actually log the message
+const goodHandler = (level, message, ...args) => {
+  console.log(`[${level.toUpperCase()}] ${message}`, ...args);
+};
+```
+
+**Solution**: Verify your custom log handler is actually emitting logs somewhere.
+
+### TypeScript Errors
+
+If you encounter TypeScript errors when using the logger:
+
+#### 1. Import the types you need
+
+```typescript
+// Import the types you need
+import type { Logger, LoggerOptions, LogLevel } from '@doubletie/logger';
+
+// Use the types in your code
+const options: LoggerOptions = {
+  level: 'info' as LogLevel,
+  appName: 'my-app'
+};
+
+const logger: Logger = createLogger(options);
+```
+
+#### 2. For extending loggers with custom methods
+
+```typescript
+import { createLogger, extendLogger } from '@doubletie/logger';
+import type { Logger, LoggerExtensions } from '@doubletie/logger';
+
+// Create your extension interface
+interface HttpLoggerExtensions extends LoggerExtensions {
+  request: (method: string, url: string) => void;
+  response: (status: number, body: unknown) => void;
+}
+
+// Create the extended logger
+const httpLogger = extendLogger<HttpLoggerExtensions>(
+  createLogger(),
+  {
+    request: (method, url) => logger.info(`${method} ${url}`),
+    response: (status, body) => logger.debug('Response', { status, body })
+  }
+);
+
+// TypeScript now knows about your custom methods
+httpLogger.request('GET', '/api/users');
+```
+
+### Circular References
+
+If you encounter issues with circular objects in your logs:
+
+```typescript
+// This will cause problems in logs
+const user = { name: 'John' };
+const manager = { name: 'Alice', reports: [] };
+
+// Circular reference
+user.manager = manager;
+manager.reports.push(user);
+
+// This will cause a circular reference error
+logger.debug('User structure', { user });
+```
+
+**Solution**: Use a JSON-safe version for logging:
+
+```typescript
+import { createLogger } from '@doubletie/logger';
+
+// Create a function to handle circular references
+function sanitizeForLogs(obj) {
+  const cache = new Set();
+  return JSON.parse(JSON.stringify(obj, (key, value) => {
+    if (typeof value === 'object' && value !== null) {
+      if (cache.has(value)) {
+        return '[Circular Reference]';
+      }
+      cache.add(value);
+    }
+    return value;
+  }));
+}
+
+// Use it when logging
+logger.debug('User structure', sanitizeForLogs({ user }));
+```
+
+### Next.js Redirection Issues
+
+If you're having trouble redirecting Next.js logs:
+
+#### 1. Timing issues
+
+```typescript
+// This might fail if called too early
+import { redirectNextjsLogger } from '@doubletie/logger';
+redirectNextjsLogger();  // Next.js logger might not be initialized yet
+```
+
+**Solution**: Delay the redirection or retry if it fails:
+
+```typescript
+import { createLogger, redirectNextjsLogger } from '@doubletie/logger';
+
+const logger = createLogger();
+
+// Try to redirect, and if it fails, retry after a delay
+let success = redirectNextjsLogger(logger);
+
+if (!success && typeof window !== 'undefined') {
+  // In the browser, retry after Next.js has had time to initialize
+  setTimeout(() => {
+    redirectNextjsLogger(logger);
+  }, 1000);
+}
+```
+
+#### 2. Different behavior on client and server
+
+```typescript
+// lib/logger.ts
+import { createLogger, redirectAllLoggers } from '@doubletie/logger';
+
+const logger = createLogger();
+
+// This will work differently in client vs server contexts
+redirectAllLoggers(logger);
+```
+
+**Solution**: Handle client and server differently:
+
+```typescript
+// lib/logger.ts
+import { createLogger, redirectAllLoggers } from '@doubletie/logger';
+
+const logger = createLogger();
+
+// For client-side only
+if (typeof window !== 'undefined') {
+  // Only redirect in the browser
+  redirectAllLoggers(logger);
+}
+
+// For server-side, export a function to be called when needed
+export function setupServerLogger() {
+  redirectAllLoggers(logger);
+  return logger;
+}
+
+export default logger;
+```
+
+### Custom Formatters Not Applied
+
+If your custom formatters aren't being applied:
+
+```typescript
+// Register a custom formatter
+registerFormatter('custom', myCustomFormatter);
+
+// But it doesn't seem to be used
+const logger = createLogger();
+logger.info('Test message');  // Uses default formatter
+```
+
+**Solution**: Specify the formatter in your logger configuration:
+
+```typescript
+// Register a custom formatter
+registerFormatter('custom', myCustomFormatter);
+
+// Specify it when creating the logger
+const logger = createLogger({
+  formatter: 'custom'
+});
+```
+
+### Performance Issues
+
+If logging is causing performance issues:
+
+#### 1. Consider disabling lower-priority logs in production
+
+```typescript
+const logger = createLogger({
+  level: process.env.NODE_ENV === 'production' ? 'error' : 'debug',
+});
+```
+
+#### 2. Lazy evaluation for expensive operations
+
+```typescript
+// BAD: This always calculates the expensive data, even if not logged
+logger.debug('System status', calculateExpensiveMetrics());
+
+// GOOD: Only calculate if actually being logged
+if (logger.isLevelEnabled('debug')) {
+  logger.debug('System status', calculateExpensiveMetrics());
+}
+```
+
+#### 3. Disable logging entirely for performance-critical paths
+
+```typescript
+// Create a special high-performance logger for critical paths
+const criticalPathLogger = createLogger({
+  disabled: process.env.NODE_ENV === 'production',
+  level: 'error'
+});
+
+// Use it in performance-critical code
+function highPerformanceOperation() {
+  criticalPathLogger.debug('Starting operation'); // No-op in production
+  // Critical code
+}
+```
+
+### Result Pattern Issues
+
+If you're experiencing issues with the Result pattern integration:
+
+#### 1. Ensure you have the correct typings
+
+```typescript
+import { err, ok, Result } from 'neverthrow';
+import { logResult, createLogger } from '@doubletie/logger';
+import type { LoggableError } from '@doubletie/logger';
+
+// Ensure error object satisfies LoggableError interface
+interface MyError extends LoggableError {
+  message: string; // Required
+  code: string;    // Optional but useful
+  details?: any;   // Any additional fields
+}
+
+function validate(): Result<string, MyError> {
+  // Implementation...
+}
+
+// Now this will work correctly
+const result = logResult(validate(), logger);
+```
+
+#### 2. Results wrapped in Promises
+
+```typescript
+// This won't work as expected
+const promise = fetchData().then(result => {
+  return logResult(result, logger); // result is not a Result, it's the unwrapped value!
+});
+
+// Fix: Use logResultAsync for ResultAsync
+import { logResultAsync } from '@doubletie/logger';
+
+const resultAsync = logResultAsync(fetchDataAsync(), logger);
+```
+
+### See Also
+
+- [Logger API Reference](/packages/logger/api/logger)
+- [Best Practices](/packages/logger/best-practices) 

@@ -30,8 +30,27 @@
  * ```
  */
 
-// Export everything from core
-export * from './core';
+// Export from core with explicit imports instead of wildcard
+export type {
+	LogLevel,
+	Logger,
+	LoggerOptions,
+	LogEntry,
+	LoggableError,
+	LoggerExtensions,
+	ExtendedLogger,
+} from './core/types';
+
+export {
+	levels,
+	shouldPublishLog,
+} from './core/levels';
+
+export {
+	createLogger,
+	logger,
+	extendLogger,
+} from './core/logger';
 
 // Export formatting utilities
 export {
@@ -48,4 +67,3 @@ export {
 	logResult as logError,
 	logResultAsync as logErrorAsync,
 } from './utils';
-

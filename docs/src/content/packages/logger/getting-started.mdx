@@ -1,0 +1,87 @@
+---
+title: "Getting Started with DoubleTie Logger"
+description: "Learn how to set up and use the DoubleTie Logger in your Node.js or TypeScript project."
+---
+
+## Getting Started Tutorial
+
+In this tutorial, you'll set up the DoubleTie Logger and use its basic functionality. By the end, you'll understand how to create loggers, use different log levels, and format your messages.
+
+### Step 1: Create a basic logger
+
+Create a new file in your project called `logger.ts`:
+
+```typescript
+import { createLogger } from '@doubletie/logger';
+
+// Create a logger with default settings (only logs errors)
+const logger = createLogger();
+
+// Export for use throughout your application
+export default logger;
+```
+
+### Step 2: Use your logger
+
+Now you can use the logger in any file:
+
+```typescript
+import logger from './logger';
+
+// Log at different severity levels
+logger.error('Critical failure in system', { component: 'auth', userId: '123' });
+logger.warn('Resource nearly depleted', { resource: 'memory', current: '85%' });
+logger.info('User login successful', { userId: '123', timestamp: new Date() });
+logger.debug('Processing request', { url: '/api/users', method: 'GET' });
+```
+
+### Step 3: Configure log levels
+
+By default, the logger only shows error messages. Let's modify it to show all messages in development and only warnings and errors in production:
+
+```typescript
+import { createLogger } from '@doubletie/logger';
+
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
+const logger = createLogger({
+  level: isDevelopment ? 'debug' : 'warn',
+  appName: 'my-app'
+});
+
+export default logger;
+```
+
+You should now see all log messages in development but only warnings and errors in production.
+
+### Step 4: Using the default logger
+
+If you prefer not to create your own logger instance, you can use the default one:
+
+```typescript
+import { logger } from '@doubletie/logger';
+
+logger.error('Something went wrong');
+logger.info('Operation completed');
+```
+
+The default logger is configured to only show error messages, so you'll need to reconfigure it if you want to see other log levels:
+
+```typescript
+import { logger, setLogLevel } from '@doubletie/logger';
+
+// Show all log levels in development
+if (process.env.NODE_ENV !== 'production') {
+  setLogLevel('debug');
+}
+
+logger.debug('Now this debug message will appear');
+```
+
+### Next Steps
+
+Now that you have a basic logger set up, you can explore more advanced features:
+
+- [Customize log formatting](/packages/logger/guides/formatting)
+- [Handle errors with Result types](/packages/logger/guides/error-handling)
+- [Unify logging from console and Next.js](/packages/logger/guides/redirects) 

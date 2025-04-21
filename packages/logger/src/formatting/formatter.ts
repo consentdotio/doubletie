@@ -1,4 +1,5 @@
 import type { LogLevel } from '../core/types';
+import pc from 'picocolors';
 
 /**
  * Log message formatter function signature.
@@ -16,19 +17,45 @@ export type LogFormatter = (
 const formatters: Record<string, LogFormatter> = {};
 
 /**
- * Default formatter - simple format with no color.
+ * Default formatter - formatted output with color and timestamp.
  */
 const defaultFormatter: LogFormatter = (level, message, args, appName = '🪢 doubletie') => {
-  const timestamp = new Date().toISOString();
-  const prefix = `${timestamp} ${level.toUpperCase()} [${appName}]:`;
+  // Extract only time portion from timestamp (HH:MM:SS.sss)
+  const now = new Date();
+  const timestamp = `${now.toTimeString().split(' ')[0]}.${now.getMilliseconds().toString().padStart(3, '0')}`;
+  const formattedArgs = formatArgs(args);
   
-  if (args.length === 0) {
-    return `${prefix} ${message}`;
+  // Format message based on log level with colorized badges
+  let levelBadge: string;
+  
+  switch (level) {
+    case 'error': {
+      levelBadge = pc.bgRed(pc.black(` ${level.toUpperCase()} `));
+      break;
+    }
+    case 'warn': {
+      levelBadge = pc.bgYellow(pc.black(` ${level.toUpperCase()} `));
+      break;
+    }
+    case 'info': {
+      levelBadge = pc.bgBlue(pc.white(` ${level.toUpperCase()} `));
+      break;
+    }
+    case 'debug': {
+      levelBadge = pc.bgBlack(pc.white(` ${level.toUpperCase()} `));
+      break;
+    }
+    case 'success': {
+      levelBadge = pc.bgGreen(pc.black(` ${level.toUpperCase()} `));
+      break;
+    }
+    default: {
+      levelBadge = pc.bold(`[${String(level).toUpperCase()}]`);
+      break;
+    }
   }
   
-  // Format args as JSON strings with indentation
-  const formattedArgs = formatArgs(args);
-  return `${prefix} ${message}${formattedArgs}`;
+  return `${pc.gray(timestamp)} ${levelBadge} ${pc.bold(`[${appName}]`)} ${message}${formattedArgs}`;
 };
 
 /**
@@ -55,7 +82,7 @@ export const formatArgs = (args: unknown[]): string => {
         
         // Format other objects
         return `  - ${JSON.stringify(arg, null, 2).replace(/\n/g, '\n    ')}`;
-      } catch (e) {
+      } catch {
         // Fallback for objects that can't be stringified
         return `  - [Object: ${Object.prototype.toString.call(arg)}]`;
       }
@@ -63,8 +90,26 @@ export const formatArgs = (args: unknown[]): string => {
     .join('\n')}`;
 };
 
+/**
+ * Next.js specific formatter with time-only timestamps and cleaner format
+ */
+export const nextjsFormatter: LogFormatter = (level, message, args, appName = '🪢 doubletie') => {
+  // Extract only time portion from timestamp (HH:MM:SS.sss)
+  const now = new Date();
+  const timestamp = `${now.toTimeString().split(' ')[0]}.${now.getMilliseconds().toString().padStart(3, '0')}`;
+  const formattedArgs = formatArgs(args);
+  
+  // Format message based on log level with markers that work well in Next.js output
+  const levelMarker = `[${level.toUpperCase()}]`;
+  const appMarker = `[${appName}]`;
+  
+  return `${timestamp} ${levelMarker} ${appMarker} ${message}${formattedArgs}`;
+};
+
 // Register the default formatter
 formatters.default = defaultFormatter;
+// Register the Next.js formatter
+formatters.nextjs = nextjsFormatter;
 
 /**
  * Register a custom formatter for log messages.

@@ -1,0 +1,254 @@
+---
+title: "Logger API Reference"
+description: "Comprehensive API reference for the core logger functionality in DoubleTie Logger."
+---
+
+## Logger API Reference
+
+This reference documents the core logger functionality in DoubleTie Logger.
+
+### `createLogger(options?)`
+
+Creates a configured logger instance with methods for each log level.
+
+**Signature**:
+```typescript
+function createLogger(options?: LoggerOptions | Logger): Logger;
+```
+
+**Parameters**:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `options` | `LoggerOptions \| Logger` | Optional configuration options or an existing logger to extend |
+
+**LoggerOptions**:
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `disabled` | `boolean` | `false` | Whether logging is disabled |
+| `level` | `LogLevel` | `'error'` | Minimum log level to publish |
+| `appName` | `string` | `undefined` | Custom application name to display in logs |
+| `log` | `LogHandler` | built-in | Custom log handler function |
+| `formatter` | `string` | `'default'` | Name of the formatter to use |
+| `telemetry` | `TelemetryOptions` | `undefined` | OpenTelemetry configuration |
+
+**Returns**: A logger object with methods for each log level
+
+**Example**:
+```typescript
+import { createLogger } from '@doubletie/logger';
+
+const logger = createLogger({
+  level: 'info',
+  appName: 'payment-service',
+  log: (level, message, ...args) => {
+    // Custom log handling
+    sendToLogService({ level, message, data: args[0] });
+  }
+});
+```
+
+### `logger`
+
+Default logger instance with standard configuration (error level only).
+
+**Type**: `Logger`
+
+**Example**:
+```typescript
+import { logger } from '@doubletie/logger';
+
+logger.error('Something went wrong');
+```
+
+### `LogLevel`
+
+The supported log levels in order of severity (highest to lowest).
+
+**Type**: `'error' | 'warn' | 'info' | 'success' | 'debug'`
+
+**Note**: The `'success'` level is treated as `'info'` level when using custom handlers.
+
+### `extendLogger(baseLogger, extensions)`
+
+Creates a new logger with additional methods.
+
+**Signature**:
+```typescript
+function extendLogger<Extensions extends LoggerExtensions>(
+  baseLogger: Logger,
+  extensions: Extensions
+): Logger & Extensions;
+```
+
+**Parameters**:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `baseLogger` | `Logger` | The base logger to extend |
+| `extensions` | `Extensions` | Object containing additional methods to add |
+
+**Returns**: A logger with the original methods plus the extensions
+
+**Example**:
+```typescript
+import { createLogger, extendLogger } from '@doubletie/logger';
+
+// Create a database logger with custom methods
+const dbLogger = extendLogger(
+  createLogger({ level: 'debug' }),
+  {
+    query: (sql: string, params?: any[]) => {
+      return dbLogger.debug(`Executing query: ${sql}`, { params });
+    },
+    connect: (url: string) => {
+      return dbLogger.info('Database connected', { url });
+    }
+  }
+);
+
+// Use the extended logger
+dbLogger.query('SELECT * FROM users WHERE id = ?', [123]);
+dbLogger.connect('postgresql://localhost:5432/mydb');
+```
+
+### `setLogLevel(level)`
+
+Sets the minimum log level for the default logger.
+
+**Signature**:
+```typescript
+function setLogLevel(level: LogLevel): void;
+```
+
+**Parameters**:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `level` | `LogLevel` | The minimum log level to set |
+
+**Example**:
+```typescript
+import { logger, setLogLevel } from '@doubletie/logger';
+
+// Enable all logs in development
+if (process.env.NODE_ENV !== 'production') {
+  setLogLevel('debug');
+}
+```
+
+### Logger Methods
+
+Each logger instance has the following methods:
+
+#### `error(message, ...args)`
+
+Log critical issues requiring immediate attention.
+
+**Signature**:
+```typescript
+error(message: string, ...args: unknown[]): void;
+```
+
+**Parameters**:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `message` | `string` | The message to log |
+| `...args` | `unknown[]` | Additional data to include in the log |
+
+**Example**:
+```typescript
+logger.error('Failed to connect to database', { 
+  host: 'db.example.com',
+  port: 5432,
+  error: err.message
+});
+```
+
+#### `warn(message, ...args)`
+
+Log potential problems that don't prevent operation.
+
+**Signature**:
+```typescript
+warn(message: string, ...args: unknown[]): void;
+```
+
+**Parameters**: Same as `error` method.
+
+**Example**:
+```typescript
+logger.warn('API rate limit approaching', { 
+  currentRate: 980,
+  limit: 1000,
+  resetIn: '30 seconds'
+});
+```
+
+#### `info(message, ...args)`
+
+Log general information about system operation.
+
+**Signature**:
+```typescript
+info(message: string, ...args: unknown[]): void;
+```
+
+**Parameters**: Same as `error` method.
+
+**Example**:
+```typescript
+logger.info('User authenticated', { 
+  userId: 'user123',
+  method: 'oauth',
+  provider: 'github'
+});
+```
+
+#### `success(message, ...args)`
+
+Log successful operations.
+
+**Signature**:
+```typescript
+success(message: string, ...args: unknown[]): void;
+```
+
+**Parameters**: Same as `error` method.
+
+**Example**:
+```typescript
+logger.success('Payment processed successfully', { 
+  amount: 99.99,
+  currency: 'USD',
+  transactionId: 'tx_12345'
+});
+```
+
+#### `debug(message, ...args)`
+
+Log detailed information useful for debugging.
+
+**Signature**:
+```typescript
+debug(message: string, ...args: unknown[]): void;
+```
+
+**Parameters**: Same as `error` method.
+
+**Example**:
+```typescript
+logger.debug('Processing request payload', { 
+  headers: req.headers,
+  body: req.body,
+  params: req.params
+});
+```
+
+### See Also
+
+- [Getting Started with DoubleTie Logger](/packages/logger/getting-started)
+- [Formatters API Reference](/packages/logger/api/formatters)
+- [Telemetry Configuration](/packages/logger/api/telemetry) 
