@@ -11,13 +11,12 @@
  * It includes:
  * - Configurable log levels and filters
  * - Color-coded console output
- * - Error logging for Result/ResultAsync types from neverthrow
  * - Custom log handlers
  * - Patching functionality for console and Next.js loggers
  *
  * @example
  * ```ts
- * import { createLogger, logResult } from '@doubletie/logger';
+ * import { createLogger } from '@doubletie/logger';
  *
  * // Create a custom logger
  * const logger = createLogger({ level: 'debug', appName: 'c15t' });
@@ -60,10 +59,4 @@ export {
 	getFormatter,
 } from './formatting';
 
-// Export result logging utilities
-export {
-	logResult,
-	logResultAsync,
-	logResult as logError,
-	logResultAsync as logErrorAsync,
-} from './utils';
+export { gradient } from './formatting/gradient';

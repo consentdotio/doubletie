@@ -1,4 +1,4 @@
-import type { Tracer } from '@opentelemetry/api';
+import type { LogFormatter } from '../formatting';
 
 /**
  * Represents the available log severity levels.
@@ -11,6 +11,11 @@ import type { Tracer } from '@opentelemetry/api';
  * @public
  */
 export type LogLevel = 'info' | 'success' | 'warn' | 'error' | 'debug';
+
+/**
+ * Available named formatters
+ */
+export type FormatterNames = 'default' | 'json';
 
 /**
  * Configuration interface for logger instances.
@@ -57,29 +62,17 @@ export interface LoggerOptions {
 	 * @remarks
 	 * When provided, this will override the default app name in the log format.
 	 *
-	 * @default '🪢 doubletie'
 	 */
 	appName?: string;
 
 	/**
-	 * OpenTelemetry configuration options
+	 * Formatter to use for log messages
+	 *
+	 * @remarks
+	 * Can be either a name of a registered formatter ('default' or 'json')
+	 * or a custom formatter function
 	 */
-	telemetry?: {
-		/**
-		 * Custom tracer to use for OpenTelemetry integration
-		 */
-		tracer?: Tracer;
-
-		/**
-		 * Whether to disable OpenTelemetry tracing
-		 */
-		disabled?: boolean;
-
-		/**
-		 * Additional attributes to add to all spans
-		 */
-		defaultAttributes?: Record<string, string | number | boolean>;
-	};
+	formatter?: FormatterNames | LogFormatter;
 }
 
 /**
@@ -106,7 +99,13 @@ export type LogEntry = Parameters<NonNullable<LoggerOptions['log']>> extends [
  *
  * @public
  */
-export type Logger = Record<LogLevel, (...params: LogEntry) => void>;
+export type Logger = Record<
+	LogLevel,
+	{
+		(message: string, ...args: unknown[]): void;
+		(...args: unknown[]): void;
+	}
+>;
 
 /**
  * Base error interface that must be implemented by errors used with the logger.

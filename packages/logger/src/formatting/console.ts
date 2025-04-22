@@ -11,8 +11,8 @@ import type { LogLevel } from '../core/types';
 export const formatMessage = (
 	level: LogLevel,
 	message: string,
-	appName = '🪢 doubletie'
+	appName?: string
 ): string => {
 	const timestamp = new Date().toISOString();
-	return `${timestamp} ${level.toUpperCase()} [${appName}]: ${message}`;
+	return `${timestamp} ${level.toUpperCase()}${appName ? ` [${appName}] ` : ' '}${message}`;
 };

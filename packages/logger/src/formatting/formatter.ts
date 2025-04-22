@@ -16,19 +16,23 @@ export type LogFormatter = (
  */
 const formatters: Record<string, LogFormatter> = {};
 
+// Check if running in Edge runtime
+const isEdgeRuntime =
+	typeof process !== 'undefined' && process.env.NEXT_RUNTIME === 'edge';
+
 /**
  * Default formatter - formatted output with color and timestamp.
  */
-const defaultFormatter: LogFormatter = (
-	level,
-	message,
-	args,
-	appName = '🪢 doubletie'
-) => {
+const defaultFormatter: LogFormatter = (level, message, args, appName) => {
 	// Extract only time portion from timestamp (HH:MM:SS.sss)
-	const now = new Date();
-	const timestamp = `${now.toTimeString().split(' ')[0]}.${now.getMilliseconds().toString().padStart(3, '0')}`;
 	const formattedArgs = formatArgs(args);
+
+	// In Edge Runtime, use plain text without colors
+	if (isEdgeRuntime) {
+		const levelStr = `[${level.toUpperCase()}]`;
+		const appStr = appName ? ` [${appName}]` : '';
+		return `${levelStr}${appStr} ${message}${formattedArgs}`;
+	}
 
 	// Format message based on log level with colorized badges
 	let levelBadge: string;
@@ -60,7 +64,47 @@ const defaultFormatter: LogFormatter = (
 		}
 	}
 
-	return `${pc.gray(timestamp)} ${levelBadge} ${pc.bold(`[${appName}]`)} ${message}${formattedArgs}`;
+	const appMarker = appName ? pc.bold(` [${appName}] `) : ' ';
+	return `${levelBadge}${appMarker}${message}${formattedArgs}`;
+};
+
+/**
+ * JSON formatter for structured logging - optimal for log drains and aggregation tools.
+ */
+const jsonFormatter: LogFormatter = (level, message, args, appName) => {
+	// Create a structured log object
+	const logObject = {
+		timestamp: new Date().toISOString(), // ISO format for better parsing in log systems
+		level: level.toUpperCase(),
+		app: appName || 'doubletie',
+		message: message,
+		// If there are multiple args or a single non-object arg, put them in a data array
+		// Otherwise, if it's a single object, merge it directly into the log object for better querying
+		...(args.length === 0
+			? {}
+			: // biome-ignore lint/nursery/noNestedTernary: <explanation>
+				args.length === 1 &&
+					typeof args[0] === 'object' &&
+					args[0] !== null &&
+					!(args[0] instanceof Error)
+				? { data: args[0] }
+				: { data: args }),
+	};
+
+	// Special handling for errors
+	const error = args.find((arg): arg is Error => arg instanceof Error);
+	if (error) {
+		Object.assign(logObject, {
+			error: {
+				name: error.name,
+				message: error.message,
+				stack: error.stack,
+			},
+		});
+	}
+
+	// Return the formatted JSON string
+	return JSON.stringify(logObject);
 };
 
 /**
@@ -98,32 +142,6 @@ export const formatArgs = (args: unknown[]): string => {
 		})
 		.join('\n')}`;
 };
-
-/**
- * Next.js specific formatter with time-only timestamps and cleaner format
- */
-export const nextjsFormatter: LogFormatter = (
-	level,
-	message,
-	args,
-	appName = '🪢 doubletie'
-) => {
-	// Extract only time portion from timestamp (HH:MM:SS.sss)
-	const now = new Date();
-	const timestamp = `${now.toTimeString().split(' ')[0]}.${now.getMilliseconds().toString().padStart(3, '0')}`;
-	const formattedArgs = formatArgs(args);
-
-	// Format message based on log level with markers that work well in Next.js output
-	const levelMarker = `[${level.toUpperCase()}]`;
-	const appMarker = `[${appName}]`;
-
-	return `${timestamp} ${levelMarker} ${appMarker} ${message}${formattedArgs}`;
-};
-
-// Register the default formatter
-formatters.default = defaultFormatter;
-// Register the Next.js formatter
-formatters.nextjs = nextjsFormatter;
 
 /**
  * Register a custom formatter for log messages.
@@ -168,3 +186,7 @@ export const formatMessage = (
 	const formatter = getFormatter(formatterName);
 	return formatter(level, message, args, appName);
 };
+
+// Register the formatters
+formatters.default = defaultFormatter;
+formatters.json = jsonFormatter;

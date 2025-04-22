@@ -1,8 +1,5 @@
-import { err, errAsync } from 'neverthrow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createLogger } from '../../core/logger';
-import type { LoggableError } from '../../core/types';
-import { logResult, logResultAsync } from '../../utils/result';
 
 describe('logger integration', () => {
 	beforeEach(() => {
@@ -21,30 +18,6 @@ describe('logger integration', () => {
 	});
 
 	describe('full logger pipeline', () => {
-		it('should work with default logger and result logging together', () => {
-			// Create a default logger
-			const logger = createLogger();
-
-			// Create an error result
-			const testError: LoggableError = {
-				message: 'Integration test error',
-				code: 'INTEGRATION_TEST',
-			};
-			const errorResult = err(testError);
-
-			// Log the error using the result logging utility
-			logResult(errorResult, logger);
-
-			// Verify that console.error was called with a formatted message
-			expect(console.error).toHaveBeenCalledTimes(1);
-			const mockedConsoleError = vi.mocked(console.error);
-			expect(mockedConsoleError.mock.calls[0]?.[0]).toContain('ERROR');
-			expect(mockedConsoleError.mock.calls[0]?.[0]).toContain(
-				'Integration test error'
-			);
-			expect(mockedConsoleError.mock.calls[0]?.[1]).toEqual(testError);
-		});
-
 		it('should work with custom log level and error logging together', () => {
 			// Create a logger with custom configuration
 			const logger = createLogger({
@@ -59,16 +32,6 @@ describe('logger integration', () => {
 			expect(console.log).toHaveBeenCalledTimes(1);
 			expect(console.debug).toHaveBeenCalledTimes(0); // Debug won't be logged with info level
 			expect(console.warn).toHaveBeenCalledTimes(1);
-
-			// Create an error for result logging
-			const testError: LoggableError = {
-				message: 'Integration error',
-			};
-
-			// Log using the result logging utility
-			logResult(err(testError), logger);
-
-			expect(console.error).toHaveBeenCalledTimes(1);
 		});
 
 		it('should work with custom log handler and result logging', () => {
@@ -88,42 +51,12 @@ describe('logger integration', () => {
 
 			expect(customLogHandler).toHaveBeenCalledTimes(2);
 
-			// Use result logging
-			const testError: LoggableError = {
-				message: 'Result error',
-			};
-
-			logResult(err(testError), logger);
-
 			// Check that the custom handler was called again
 			expect(customLogHandler).toHaveBeenCalledTimes(3);
 			const mockedCustomLogHandler = vi.mocked(customLogHandler);
 			expect(mockedCustomLogHandler.mock.calls[2]?.[0]).toBe('error');
 			expect(mockedCustomLogHandler.mock.calls[2]?.[1]).toBe(
 				'Error: Result error'
-			);
-		});
-
-		it('should support async result logging with the logger', async () => {
-			const logger = createLogger();
-
-			const testError: LoggableError = {
-				message: 'Async integration error',
-			};
-
-			const errorResultAsync = errAsync(testError);
-
-			await logResultAsync(errorResultAsync, logger).match(
-				// biome-ignore lint/suspicious/noEmptyBlockStatements: its okay its a test
-				() => {},
-				// biome-ignore lint/suspicious/noEmptyBlockStatements: its okay its a test
-				() => {}
-			);
-
-			expect(console.error).toHaveBeenCalledTimes(1);
-			const mockedConsoleError = vi.mocked(console.error);
-			expect(mockedConsoleError.mock.calls[0]?.[0]).toContain(
-				'Async integration error'
 			);
 		});
 
@@ -159,13 +92,6 @@ describe('logger integration', () => {
 			expect(mockedConsoleLog.mock.calls[0]?.[0]).not.toContain(
 				'[🪢 doubletie]'
 			);
-
-			// Check that the custom app name works with result logging too
-			const testError: LoggableError = {
-				message: 'Integration error with custom app name',
-			};
-
-			logResult(err(testError), logger);
 
 			expect(mockedConsoleError.mock.calls[1]?.[0]).toContain(
 				`[${customAppName}]`

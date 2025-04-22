@@ -45,30 +45,6 @@ describe('types', () => {
 		});
 	});
 
-	describe('Logger', () => {
-		it('should have methods for all log levels', () => {
-			// Create an object that satisfies the Logger type
-			const logger: Logger = {
-				// biome-ignore lint/suspicious/noEmptyBlockStatements: its okay its a test
-				info: (_message: string, ..._args: unknown[]) => {},
-				// biome-ignore lint/suspicious/noEmptyBlockStatements: its okay its a test
-				success: (_message: string, ..._args: unknown[]) => {},
-				// biome-ignore lint/suspicious/noEmptyBlockStatements: its okay its a test
-				warn: (_message: string, ..._args: unknown[]) => {},
-				// biome-ignore lint/suspicious/noEmptyBlockStatements: its okay its a test
-				error: (_message: string, ..._args: unknown[]) => {},
-				// biome-ignore lint/suspicious/noEmptyBlockStatements: its okay its a test
-				debug: (_message: string, ..._args: unknown[]) => {},
-			};
-
-			expect(logger).toHaveProperty('info');
-			expect(logger).toHaveProperty('success');
-			expect(logger).toHaveProperty('warn');
-			expect(logger).toHaveProperty('error');
-			expect(logger).toHaveProperty('debug');
-		});
-	});
-
 	describe('LoggableError', () => {
 		it('should allow creating error objects with required properties', () => {
 			// Create a minimal LoggableError

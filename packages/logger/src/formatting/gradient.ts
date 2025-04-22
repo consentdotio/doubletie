@@ -65,7 +65,7 @@ type GradientFunction = {
 };
 
 // Simplified creator function
-const gradient = (
+export const gradient = (
 	colors: ColorInput[],
 	options?: GradientOptions
 ): GradientFunction => {
@@ -177,6 +177,3 @@ function validateOptions(opts?: GradientOptions): GradientOptions {
 
 	return options;
 }
-
-// Export the gradient function
-export default gradient;

@@ -1,0 +1,17 @@
+{
+	"$schema": "https://unpkg.com/knip@latest/schema.json",
+	"entry": ["./src/index.ts"],
+	"ignore": [
+		"**/*.spec.{js,ts}",
+		"**/*.test.{js,ts}",
+		"rslib.config.ts",
+		"vitest.config.ts"
+	],
+	"rules": {
+		"exports": "warn",
+		"types": "warn",
+		"dependencies": "error",
+		"files": "warn"
+	},
+	"ignoreExportsUsedInFile": true
+}
