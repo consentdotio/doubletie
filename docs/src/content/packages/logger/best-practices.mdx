@@ -1,0 +1,295 @@
+---
+title: "DoubleTie Logger Best Practices"
+description: "Best practices and recommended patterns for using DoubleTie Logger effectively."
+---
+
+## Best Practices
+
+This page outlines best practices and recommended patterns for using DoubleTie Logger effectively in your applications.
+
+### Configure Log Levels by Environment
+
+Adjust log levels based on the environment to balance visibility and performance:
+
+```typescript
+const logLevel = process.env.NODE_ENV === 'production' 
+  ? 'error'  // Only log errors in production
+  : process.env.NODE_ENV === 'test' 
+    ? 'warn'   // Log warnings and errors in test
+    : 'debug'; // Log everything in development
+
+const logger = createLogger({ level: logLevel });
+```
+
+### Create Domain-Specific Loggers
+
+Create specialized loggers for different parts of your application:
+
+```typescript
+// Database logger
+const dbLogger = extendLogger(createLogger({ level: 'info' }), {
+  query: (sql, params) => dbLogger.debug(`Executing SQL: ${sql}`, { params }),
+  connect: (url) => dbLogger.info('Database connected', { url }),
+  error: (operation, err) => dbLogger.error(`DB error during ${operation}`, { 
+    error: err.message, 
+    code: err.code 
+  })
+});
+
+// API logger
+const apiLogger = extendLogger(createLogger({ level: 'info' }), {
+  request: (method, url, body) => apiLogger.debug(`→ ${method} ${url}`, { body }),
+  response: (status, body, timeMs) => {
+    const level = status >= 400 ? 'error' : 'debug';
+    return apiLogger[level](`← ${status} (${timeMs}ms)`, { body });
+  }
+});
+```
+
+This approach:
+- Makes logging calls more semantic
+- Reduces repetition in your code
+- Centralizes logging logic
+- Makes it easier to add context specific to each domain
+
+### Never Log Sensitive Information
+
+Be careful about what you log to avoid security issues:
+
+```typescript
+// BAD: Logging sensitive data
+logger.debug('User credentials', { 
+  username: 'john.doe', 
+  password: 'secret123' // Don't log passwords!
+});
+
+// GOOD: Redact sensitive information
+logger.debug('Login attempt', {
+  username: 'john.doe',
+  passwordProvided: true,
+  timestamp: new Date().toISOString()
+});
+```
+
+Consider creating a utility function to sanitize data before logging:
+
+```typescript
+function sanitizeForLogging(data) {
+  const sanitized = { ...data };
+  
+  // Remove sensitive fields
+  const sensitiveFields = ['password', 'token', 'secret', 'credit_card', 'ssn'];
+  
+  for (const field of sensitiveFields) {
+    if (field in sanitized) {
+      sanitized[field] = '[REDACTED]';
+    }
+  }
+  
+  return sanitized;
+}
+
+logger.info('Processing user data', sanitizeForLogging(userData));
+```
+
+### Use Telemetry for Performance Insights
+
+Integrate with OpenTelemetry for better performance monitoring:
+
+```typescript
+import { createLogger } from '@doubletie/logger';
+import { trace } from '@opentelemetry/api';
+
+// Create a logger with telemetry
+const logger = createLogger({
+  level: 'info',
+  telemetry: {
+    tracer: trace.getTracer('my-service'),
+    defaultAttributes: {
+      'service.name': 'payment-processor',
+      'deployment.environment': process.env.NODE_ENV
+    }
+  }
+});
+
+// Now your logs will create spans for performance tracking
+logger.info('Processing payment', { orderId: 'ORDER-123' });
+```
+
+### Use Context Objects Consistently
+
+Structure your log context objects consistently:
+
+```typescript
+// Define a consistent structure for user context
+const userContext = (user) => ({
+  userId: user.id,
+  email: user.email,
+  role: user.role
+});
+
+// Use it consistently in logs
+logger.info('User logged in', userContext(user));
+logger.info('User updated profile', { ...userContext(user), updatedFields: ['name', 'avatar'] });
+```
+
+### Keep Messages Actionable
+
+Write log messages that help you understand what happened and what to do about it:
+
+```typescript
+// BAD: Vague message
+logger.error('Database error');
+
+// GOOD: Clear message with actionable information
+logger.error('Failed to connect to primary database - falling back to replica', {
+  database: 'postgres-primary',
+  error: err.message,
+  connectionParams: {
+    host: dbConfig.host,
+    port: dbConfig.port,
+    database: dbConfig.name
+  }
+});
+```
+
+### Use Proper Log Levels
+
+Use the right log level for each message:
+
+| Level | When to Use |
+|-------|-------------|
+| error | For fatal issues that need immediate attention - things that are broken |
+| warn | For potential issues that don't break functionality but should be addressed |
+| info | For important events in normal operation that should always be visible |
+| success | For successful completion of important operations |
+| debug | For detailed information useful during development or debugging |
+
+### Create a Logging Strategy
+
+Define a consistent logging strategy across your application:
+
+1. **Entry/Exit Logs**: Log at the beginning and end of important operations
+   ```typescript
+   function processOrder(order) {
+     logger.debug('Starting order processing', { orderId: order.id });
+     // Processing logic
+     logger.info('Order processed successfully', { 
+       orderId: order.id, 
+       processingTimeMs: performance.now() - startTime 
+     });
+   }
+   ```
+
+2. **Error Boundary Logs**: Log at error boundaries
+   ```typescript
+   try {
+     await saveToDatabase(data);
+   } catch (error) {
+     logger.error('Failed to save to database', { 
+       operation: 'saveToDatabase', 
+       data: sanitizeForLogging(data), 
+       error: error.message 
+     });
+     // Handle error
+   }
+   ```
+
+3. **State Transition Logs**: Log significant state changes
+   ```typescript
+   function updateOrderStatus(order, newStatus) {
+     logger.info('Order status changing', { 
+       orderId: order.id, 
+       oldStatus: order.status, 
+       newStatus,
+       changedBy: currentUser.id
+     });
+     
+     // Update the status
+   }
+   ```
+
+### Initialize Early and Use Throughout
+
+Initialize your logger early in your application lifecycle:
+
+```typescript
+// logger.ts - Create this file first
+import { createLogger } from '@doubletie/logger';
+
+// Configure the logger
+const logger = createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  appName: 'my-service'
+});
+
+// Export for use throughout your app
+export default logger;
+```
+
+Then import and use it throughout your application:
+
+```typescript
+// In other files
+import logger from './logger';
+
+logger.info('Application started');
+```
+
+### Use with Dependency Injection
+
+If you're using dependency injection, inject the logger:
+
+```typescript
+// Using a class
+class UserService {
+  constructor(private logger) {}
+  
+  async createUser(userData) {
+    this.logger.debug('Creating user', { email: userData.email });
+    // User creation logic
+  }
+}
+
+// Or using functional approach
+function createUserService(logger) {
+  return {
+    createUser: async (userData) => {
+      logger.debug('Creating user', { email: userData.email });
+      // User creation logic
+    }
+  };
+}
+```
+
+### Use Type Safety
+
+Take advantage of TypeScript for better typing:
+
+```typescript
+import { createLogger, extendLogger } from '@doubletie/logger';
+import type { Logger, LoggerExtensions } from '@doubletie/logger';
+
+// Define extensions with proper types
+interface DbLoggerExtensions extends LoggerExtensions {
+  query: (sql: string, params?: unknown[]) => void;
+  connect: (url: string) => void;
+}
+
+// Create the extended logger with proper typing
+const dbLogger = extendLogger<DbLoggerExtensions>(
+  createLogger(),
+  {
+    query: (sql, params) => dbLogger.debug(`Running SQL: ${sql}`, { params }),
+    connect: (url) => dbLogger.info('Connected to database', { url })
+  }
+);
+
+// TypeScript now knows about your custom methods
+dbLogger.query('SELECT * FROM users WHERE id = ?', [123]);
+```
+
+### See Also
+
+- [Logger API Reference](/packages/logger/api/logger)
+- [Concepts](/packages/logger/concepts) 

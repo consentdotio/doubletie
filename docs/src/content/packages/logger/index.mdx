@@ -1,0 +1,51 @@
+---
+title: "DoubleTie Logger"
+description: "A lightweight, customizable logging utility for Node.js and TypeScript applications with structured logging capabilities, error handling utilities, and redirection features."
+---
+
+## Introduction
+
+The DoubleTie Logger is a flexible and powerful logging utility designed for TypeScript and Node.js applications. It provides structured logging with configurable levels, color-coded output, utilities for error handling with the Result pattern, and features to redirect console and Next.js logging.
+
+## Installation
+
+Install the package using your preferred package manager:
+
+```bash
+# Using npm
+npm install @doubletie/logger
+
+# Using pnpm
+pnpm add @doubletie/logger
+
+# Using yarn
+yarn add @doubletie/logger
+```
+
+## Documentation Sections
+
+- [Getting Started](/packages/logger/getting-started) - Quick tutorial to set up and use the logger
+- Guides
+  - [Formatting](/packages/logger/guides/formatting) - Customize log formatting
+  - [Error Handling](/packages/logger/guides/error-handling) - Work with Result types
+  - [Redirects](/packages/logger/guides/redirects) - Unify logging from console and Next.js
+- API Reference
+  - [Logger](/packages/logger/api/logger) - Core logger API
+  - [Result](/packages/logger/api/result) - Result logging utilities
+  - [Formatters](/packages/logger/api/formatters) - Message formatting
+  - [Redirects](/packages/logger/api/redirects) - Redirection API
+- [Concepts](/packages/logger/concepts) - Understanding logger concepts
+- [Best Practices](/packages/logger/best-practices) - Recommended patterns
+- [Troubleshooting](/packages/logger/troubleshooting) - Common issues and solutions
+
+## Key Features
+
+- **Configurable Log Levels** - Control verbosity with error, warn, info, and debug levels
+- **Structured Logging** - Pass structured data alongside log messages for better analysis
+- **Color-Coded Output** - Visual distinction between log levels in terminal output
+- **Result Pattern Integration** - Seamless logging with the Result/Either pattern
+- **Console Redirection** - Unify all console.log calls through your logger
+- **Next.js Integration** - Capture framework logs in your logging system
+- **OpenTelemetry Support** - Create spans and traces for performance monitoring
+- **Custom Formatters** - Define how log messages are formatted
+- **Extensible API** - Create domain-specific loggers with extended functionality

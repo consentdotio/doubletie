@@ -1,7 +1,7 @@
 {
-	"name": "@doubletie/query-builder",
+	"name": "@doubletie/logger",
 	"version": "1.0.0",
-	"description": "A type-safe, functional query builder and model layer built on top of Kysely",
+	"description": "A logger for typescript",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/consentdotio/doubletie.git"
@@ -12,7 +12,23 @@
 	"exports": {
 		".": {
 			"import": "./dist/index.js",
-			"require": "./dist/index.cjs"
+			"require": "./dist/index.cjs",
+			"types": "./dist/index.d.ts"
+		},
+		"./redirect-nextjs": {
+			"import": "./dist/redirect-nextjs.js",
+			"require": "./dist/redirect-nextjs.cjs",
+			"types": "./dist/redirect/nextjs.d.ts"
+		},
+		"./redirect-console": {
+			"import": "./dist/redirect-console.js",
+			"require": "./dist/redirect-console.cjs",
+			"types": "./dist/redirect/console.d.ts"
+		},
+		"./redirect-all": {
+			"import": "./dist/redirect-all.js",
+			"require": "./dist/redirect-all.cjs",
+			"types": "./dist/redirect/all.d.ts"
 		}
 	},
 	"main": "dist/index.cjs",
@@ -29,8 +45,13 @@
 		"valid": "tsc --noEmit"
 	},
 	"dependencies": {
-		"base-x": "^5.0.1",
-		"url-slug": "^4.0.1"
+		"@opentelemetry/api": "^1.9.0",
+		"chalk": "^5.4.1",
+		"neverthrow": "^8.2.0",
+		"next": "15.2.2",
+		"picocolors": "^1.1.1",
+		"tinycolor2": "^1.6.0",
+		"tinygradient": "^2.0.1"
 	},
 	"devDependencies": {
 		"@doubletie/typescript-config": "workspace:*",
@@ -38,14 +59,11 @@
 		"@types/node": "^22.14.1",
 		"@types/pg": "^8.11.13",
 		"@types/rollup": "^0.54.0",
+		"@types/tinycolor2": "^1.4.6",
 		"better-sqlite3": "^11.9.1",
 		"dotenv": "^16.5.0",
-		"kysely": "0.27.6",
 		"typescript": "5.8.3",
 		"vitest": "^3.1.2"
-	},
-	"peerDependencies": {
-		"kysely": "~0.27.6"
 	},
 	"engines": {
 		"node": ">=16.2.0"

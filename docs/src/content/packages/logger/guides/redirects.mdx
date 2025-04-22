@@ -1,0 +1,166 @@
+---
+title: "Unified Logging with Redirects"
+description: "Learn how to redirect console and Next.js logs through your DoubleTie Logger for unified logging."
+---
+
+## How to Unify Logging by Redirecting Console and Next.js
+
+This guide shows you how to redirect all console and Next.js logs through your DoubleTie logger, creating a unified logging experience.
+
+### Prerequisites
+- A basic logger setup from the [Getting Started](/packages/logger/getting-started) section
+- Next.js (optional, for Next.js redirection)
+
+### Steps
+
+#### 1. Create a unified logging setup
+
+First, create a logger configuration file that sets up redirection:
+
+```typescript
+// lib/logger.ts
+import { createLogger, redirectAllLoggers } from '@doubletie/logger';
+
+// Create a custom logger
+const logger = createLogger({
+  level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug',
+  appName: 'my-app'
+});
+
+// Set up unified logging
+const redirectResults = redirectAllLoggers(logger);
+
+if (!redirectResults.next) {
+  logger.warn('Next.js logger redirection failed - Next.js may not be loaded yet');
+}
+
+export default logger;
+```
+
+#### 2. Import the logger early in your application
+
+For the redirection to work properly, you need to import your logger file early in your application's lifecycle:
+
+##### For Next.js applications:
+
+```typescript
+// pages/_app.tsx (for Pages Router) or app/layout.tsx (for App Router)
+import '../lib/logger'; // This will execute the redirection
+
+function MyApp({ Component, pageProps }) {
+  return <Component {...pageProps} />;
+}
+
+export default MyApp;
+```
+
+##### For standard Node.js applications:
+
+```typescript
+// index.ts or main.ts (your entry point)
+import './lib/logger'; // Do this import first
+import express from 'express';
+
+const app = express();
+// rest of your application...
+```
+
+#### 3. Use console methods directly
+
+Once redirection is set up, you can use standard console methods anywhere in your code, and they'll go through your logger:
+
+```typescript
+// Any file in your application
+console.log('This will go through your logger as info level');
+console.error('This will go through your logger as error level');
+console.warn('This will go through your logger as warn level');
+console.debug('This will go through your logger as debug level');
+```
+
+### Redirection Mappings
+
+When you redirect console methods, they map to logger methods as follows:
+
+| Console Method | Logger Method |
+|----------------|--------------|
+| console.log    | logger.info  |
+| console.error  | logger.error |
+| console.warn   | logger.warn  |
+| console.debug  | logger.debug |
+| console.info   | logger.info  |
+
+### Console-Only Redirection
+
+If you only want to redirect console methods but not Next.js:
+
+```typescript
+import { createLogger, redirectConsoleMethods } from '@doubletie/logger';
+
+const logger = createLogger({ level: 'debug' });
+
+// Only redirect console methods
+redirectConsoleMethods(logger);
+
+console.log('This goes through the logger now');
+```
+
+### Next.js-Only Redirection
+
+If you only want to redirect Next.js logger but keep console methods as they are:
+
+```typescript
+import { createLogger, redirectNextjsLogger } from '@doubletie/logger';
+
+const logger = createLogger({ level: 'debug' });
+
+// Only redirect Next.js logger
+const success = redirectNextjsLogger(logger);
+
+if (!success) {
+  console.warn('Failed to redirect Next.js logger - it may not be loaded yet');
+}
+```
+
+### Dynamic Redirection in Next.js
+
+In Next.js, the timing of redirection matters. If you're using server-side rendering, you might need to set up redirection differently:
+
+```typescript
+// lib/logger.ts
+import { createLogger, redirectAllLoggers } from '@doubletie/logger';
+
+const logger = createLogger({
+  level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug'
+});
+
+// For client-side only
+if (typeof window !== 'undefined') {
+  // Only redirect in the browser
+  redirectAllLoggers(logger);
+}
+
+// For server-side
+export function setupServerLogger() {
+  // Call this from getServerSideProps or similar
+  redirectAllLoggers(logger);
+  return logger;
+}
+
+export default logger;
+```
+
+### Best Practices for Unified Logging
+
+1. **Set up early**: Redirect as early as possible in your application lifecycle
+2. **Be consistent**: Use the same logger configuration across all parts of your app
+3. **Check environment**: Consider different log levels for development vs. production
+4. **Handle timing**: Be aware of when the Next.js logger becomes available
+5. **Use structured data**: Even with console.log, pass objects for better logging:
+   ```typescript
+   console.log('User action', { userId: '123', action: 'login' });
+   ```
+
+### See Also
+
+- [Redirects API Reference](/packages/logger/api/redirects)
+- [The Benefits of Unified Logging](/packages/logger/concepts#the-benefits-of-unified-logging) 

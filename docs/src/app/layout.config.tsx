@@ -21,7 +21,7 @@ export const linkItems: LinkItemType[] = [
  */
 export const docsOptions: BaseLayoutProps = {
 	nav: {
-		title: "🪢 Double Tie",
+		title: '🪢 Double Tie',
 		transparentMode: 'top',
 	},
 	links: [...linkItems],
@@ -29,7 +29,7 @@ export const docsOptions: BaseLayoutProps = {
 
 export const homePageOptions: BaseLayoutProps = {
 	nav: {
-		title: "🪢 Double Tie",
+		title: '🪢 Double Tie',
 		transparentMode: 'top',
 	},
 	links: [
@@ -40,6 +40,10 @@ export const homePageOptions: BaseLayoutProps = {
 		{
 			text: 'Query Builder',
 			url: '/docs/packages/query-builder',
+		},
+		{
+			text: 'Logger',
+			url: '/docs/packages/logger',
 		},
 	],
 };
