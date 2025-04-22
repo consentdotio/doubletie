@@ -15,7 +15,6 @@ import '~/lib/logger';
 import './styles/global.css';
 
 import { c15tConfig } from '../../c15t.config';
-import Test from './test';
 
 const inter = Inter({
 	subsets: ['latin'],
@@ -99,7 +98,6 @@ export default function Layout({ children }: { children: ReactNode }) {
 						/>
 						{process.env.NODE_ENV === 'development' && <C15TDevTools />}
 						{children}
-						<Test />
 					</ConsentManagerProvider>
 				</RootProvider>
 			</body>
